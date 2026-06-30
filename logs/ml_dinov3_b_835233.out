@@ -1,0 +1,282 @@
+[slurm] host=nodemm07  job=835233  start=2026-05-28T19:49:15+02:00
+[slurm] btype=dinov3 id=default size=512 epochs=80 batch=32 lr=1e-3 head=linear multi_block=none multilabel=1 out=dinoseg_dw_dinov3_512_ml
+NVIDIA H100 NVL, 95830 MiB
+[data] train=3489  val=739  fg classes=20  mode=multilabel
+[model] head=linear  trainable_params=15,380
+  e000 it0050/110 loss=1.2402 lr=1.00e-03 elapsed=0.6min
+  e000 it0100/110 loss=1.1532 lr=1.00e-03 elapsed=1.0min
+[epoch 000] train=1.1431  val_loss=1.0526  mIoU_fg=0.0867
+  [best] mIoU_fg=0.0867 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e001 it0050/110 loss=1.0424 lr=9.99e-04 elapsed=1.9min
+  e001 it0100/110 loss=1.0396 lr=9.99e-04 elapsed=2.3min
+[epoch 001] train=1.0382  val_loss=1.0307  mIoU_fg=0.2025
+  [best] mIoU_fg=0.2025 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e002 it0050/110 loss=1.0277 lr=9.98e-04 elapsed=3.2min
+  e002 it0100/110 loss=1.0255 lr=9.97e-04 elapsed=3.6min
+[epoch 002] train=1.0248  val_loss=1.0217  mIoU_fg=0.2636
+  [best] mIoU_fg=0.2636 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e003 it0050/110 loss=1.0196 lr=9.95e-04 elapsed=4.4min
+  e003 it0100/110 loss=1.0191 lr=9.94e-04 elapsed=4.9min
+[epoch 003] train=1.0186  val_loss=1.0173  mIoU_fg=0.2851
+  [best] mIoU_fg=0.2851 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e004 it0050/110 loss=1.0153 lr=9.92e-04 elapsed=5.7min
+  e004 it0100/110 loss=1.0151 lr=9.91e-04 elapsed=6.1min
+[epoch 004] train=1.0148  val_loss=1.0140  mIoU_fg=0.3035
+  [best] mIoU_fg=0.3035 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e005 it0050/110 loss=1.0120 lr=9.89e-04 elapsed=7.0min
+  e005 it0100/110 loss=1.0125 lr=9.87e-04 elapsed=7.4min
+[epoch 005] train=1.0123  val_loss=1.0117  mIoU_fg=0.3268
+  [best] mIoU_fg=0.3268 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e006 it0050/110 loss=1.0107 lr=9.84e-04 elapsed=8.3min
+  e006 it0100/110 loss=1.0103 lr=9.82e-04 elapsed=8.7min
+[epoch 006] train=1.0103  val_loss=1.0103  mIoU_fg=0.3338
+  [best] mIoU_fg=0.3338 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e007 it0050/110 loss=1.0094 lr=9.79e-04 elapsed=9.6min
+  e007 it0100/110 loss=1.0088 lr=9.76e-04 elapsed=10.0min
+[epoch 007] train=1.0091  val_loss=1.0092  mIoU_fg=0.3385
+  [best] mIoU_fg=0.3385 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e008 it0050/110 loss=1.0085 lr=9.73e-04 elapsed=10.9min
+  e008 it0100/110 loss=1.0079 lr=9.70e-04 elapsed=11.3min
+[epoch 008] train=1.0074  val_loss=1.0080  mIoU_fg=0.3409
+  [best] mIoU_fg=0.3409 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e009 it0050/110 loss=1.0069 lr=9.66e-04 elapsed=12.1min
+  e009 it0100/110 loss=1.0068 lr=9.63e-04 elapsed=12.6min
+[epoch 009] train=1.0066  val_loss=1.0072  mIoU_fg=0.3400
+  e010 it0050/110 loss=1.0052 lr=9.58e-04 elapsed=13.4min
+  e010 it0100/110 loss=1.0058 lr=9.55e-04 elapsed=13.8min
+[epoch 010] train=1.0059  val_loss=1.0064  mIoU_fg=0.3411
+  [best] mIoU_fg=0.3411 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e011 it0050/110 loss=1.0052 lr=9.50e-04 elapsed=14.7min
+  e011 it0100/110 loss=1.0051 lr=9.46e-04 elapsed=15.1min
+[epoch 011] train=1.0050  val_loss=1.0058  mIoU_fg=0.3434
+  [best] mIoU_fg=0.3434 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e012 it0050/110 loss=1.0050 lr=9.41e-04 elapsed=16.0min
+  e012 it0100/110 loss=1.0043 lr=9.37e-04 elapsed=16.4min
+[epoch 012] train=1.0043  val_loss=1.0053  mIoU_fg=0.3475
+  [best] mIoU_fg=0.3475 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e013 it0050/110 loss=1.0037 lr=9.32e-04 elapsed=17.3min
+  e013 it0100/110 loss=1.0036 lr=9.27e-04 elapsed=17.7min
+[epoch 013] train=1.0038  val_loss=1.0047  mIoU_fg=0.3467
+  e014 it0050/110 loss=1.0030 lr=9.22e-04 elapsed=18.5min
+  e014 it0100/110 loss=1.0033 lr=9.17e-04 elapsed=18.9min
+[epoch 014] train=1.0033  val_loss=1.0042  mIoU_fg=0.3504
+  [best] mIoU_fg=0.3504 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e015 it0050/110 loss=1.0026 lr=9.11e-04 elapsed=19.8min
+  e015 it0100/110 loss=1.0025 lr=9.06e-04 elapsed=20.2min
+[epoch 015] train=1.0027  val_loss=1.0041  mIoU_fg=0.3541
+  [best] mIoU_fg=0.3541 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e016 it0050/110 loss=1.0024 lr=8.99e-04 elapsed=21.1min
+  e016 it0100/110 loss=1.0022 lr=8.94e-04 elapsed=21.5min
+[epoch 016] train=1.0023  val_loss=1.0036  mIoU_fg=0.3608
+  [best] mIoU_fg=0.3608 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e017 it0050/110 loss=1.0021 lr=8.87e-04 elapsed=22.4min
+  e017 it0100/110 loss=1.0019 lr=8.81e-04 elapsed=22.8min
+[epoch 017] train=1.0019  val_loss=1.0035  mIoU_fg=0.3656
+  [best] mIoU_fg=0.3656 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e018 it0050/110 loss=1.0016 lr=8.74e-04 elapsed=23.6min
+  e018 it0100/110 loss=1.0016 lr=8.68e-04 elapsed=24.0min
+[epoch 018] train=1.0015  val_loss=1.0033  mIoU_fg=0.3673
+  [best] mIoU_fg=0.3673 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e019 it0050/110 loss=1.0016 lr=8.61e-04 elapsed=24.9min
+  e019 it0100/110 loss=1.0011 lr=8.55e-04 elapsed=25.3min
+[epoch 019] train=1.0008  val_loss=1.0031  mIoU_fg=0.3719
+  [best] mIoU_fg=0.3719 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e020 it0050/110 loss=1.0005 lr=8.47e-04 elapsed=26.2min
+  e020 it0100/110 loss=1.0007 lr=8.41e-04 elapsed=26.6min
+[epoch 020] train=1.0008  val_loss=1.0026  mIoU_fg=0.3700
+  e021 it0050/110 loss=1.0004 lr=8.33e-04 elapsed=27.4min
+  e021 it0100/110 loss=1.0004 lr=8.26e-04 elapsed=27.9min
+[epoch 021] train=1.0005  val_loss=1.0026  mIoU_fg=0.3703
+  e022 it0050/110 loss=0.9998 lr=8.18e-04 elapsed=28.7min
+  e022 it0100/110 loss=1.0001 lr=8.11e-04 elapsed=29.1min
+[epoch 022] train=1.0002  val_loss=1.0024  mIoU_fg=0.3695
+  e023 it0050/110 loss=0.9996 lr=8.02e-04 elapsed=30.0min
+  e023 it0100/110 loss=0.9998 lr=7.95e-04 elapsed=30.4min
+[epoch 023] train=1.0000  val_loss=1.0022  mIoU_fg=0.3658
+  e024 it0050/110 loss=0.9992 lr=7.87e-04 elapsed=31.2min
+  e024 it0100/110 loss=0.9997 lr=7.79e-04 elapsed=31.7min
+[epoch 024] train=0.9996  val_loss=1.0019  mIoU_fg=0.3694
+  e025 it0050/110 loss=0.9996 lr=7.70e-04 elapsed=32.5min
+  e025 it0100/110 loss=0.9994 lr=7.63e-04 elapsed=32.9min
+[epoch 025] train=0.9994  val_loss=1.0018  mIoU_fg=0.3678
+  e026 it0050/110 loss=0.9984 lr=7.54e-04 elapsed=33.8min
+  e026 it0100/110 loss=0.9992 lr=7.46e-04 elapsed=34.2min
+[epoch 026] train=0.9992  val_loss=1.0018  mIoU_fg=0.3700
+  e027 it0050/110 loss=0.9986 lr=7.36e-04 elapsed=35.0min
+  e027 it0100/110 loss=0.9992 lr=7.29e-04 elapsed=35.4min
+[epoch 027] train=0.9990  val_loss=1.0014  mIoU_fg=0.3706
+  e028 it0050/110 loss=0.9993 lr=7.19e-04 elapsed=36.3min
+  e028 it0100/110 loss=0.9988 lr=7.11e-04 elapsed=36.7min
+[epoch 028] train=0.9987  val_loss=1.0014  mIoU_fg=0.3695
+  e029 it0050/110 loss=0.9984 lr=7.01e-04 elapsed=37.5min
+  e029 it0100/110 loss=0.9986 lr=6.93e-04 elapsed=38.0min
+[epoch 029] train=0.9986  val_loss=1.0014  mIoU_fg=0.3712
+  e030 it0050/110 loss=0.9986 lr=6.83e-04 elapsed=38.8min
+  e030 it0100/110 loss=0.9982 lr=6.75e-04 elapsed=39.2min
+[epoch 030] train=0.9984  val_loss=1.0012  mIoU_fg=0.3732
+  [best] mIoU_fg=0.3732 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e031 it0050/110 loss=0.9980 lr=6.65e-04 elapsed=40.1min
+  e031 it0100/110 loss=0.9982 lr=6.56e-04 elapsed=40.5min
+[epoch 031] train=0.9992  val_loss=1.0011  mIoU_fg=0.3674
+  e032 it0050/110 loss=0.9979 lr=6.46e-04 elapsed=41.4min
+  e032 it0100/110 loss=0.9983 lr=6.37e-04 elapsed=41.8min
+[epoch 032] train=0.9983  val_loss=1.0010  mIoU_fg=0.3675
+  e033 it0050/110 loss=0.9977 lr=6.27e-04 elapsed=42.6min
+  e033 it0100/110 loss=0.9979 lr=6.18e-04 elapsed=43.0min
+[epoch 033] train=0.9979  val_loss=1.0010  mIoU_fg=0.3701
+  e034 it0050/110 loss=0.9975 lr=6.08e-04 elapsed=43.9min
+  e034 it0100/110 loss=0.9975 lr=5.99e-04 elapsed=44.3min
+[epoch 034] train=0.9977  val_loss=1.0009  mIoU_fg=0.3735
+  [best] mIoU_fg=0.3735 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e035 it0050/110 loss=0.9977 lr=5.89e-04 elapsed=45.2min
+  e035 it0100/110 loss=0.9974 lr=5.80e-04 elapsed=45.6min
+[epoch 035] train=0.9973  val_loss=1.0006  mIoU_fg=0.3744
+  [best] mIoU_fg=0.3744 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e036 it0050/110 loss=0.9972 lr=5.69e-04 elapsed=46.4min
+  e036 it0100/110 loss=0.9974 lr=5.61e-04 elapsed=46.9min
+[epoch 036] train=0.9969  val_loss=1.0007  mIoU_fg=0.3759
+  [best] mIoU_fg=0.3759 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e037 it0050/110 loss=0.9974 lr=5.50e-04 elapsed=47.7min
+  e037 it0100/110 loss=0.9973 lr=5.41e-04 elapsed=48.2min
+[epoch 037] train=0.9974  val_loss=1.0007  mIoU_fg=0.3756
+  e038 it0050/110 loss=0.9971 lr=5.30e-04 elapsed=49.0min
+  e038 it0100/110 loss=0.9972 lr=5.21e-04 elapsed=49.4min
+[epoch 038] train=0.9974  val_loss=1.0006  mIoU_fg=0.3773
+  [best] mIoU_fg=0.3773 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e039 it0050/110 loss=0.9967 lr=5.11e-04 elapsed=50.3min
+  e039 it0100/110 loss=0.9969 lr=5.02e-04 elapsed=50.7min
+[epoch 039] train=0.9971  val_loss=1.0006  mIoU_fg=0.3773
+  e040 it0050/110 loss=0.9972 lr=4.91e-04 elapsed=51.5min
+  e040 it0100/110 loss=0.9970 lr=4.82e-04 elapsed=51.9min
+[epoch 040] train=0.9970  val_loss=1.0006  mIoU_fg=0.3796
+  [best] mIoU_fg=0.3796 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e041 it0050/110 loss=0.9969 lr=4.71e-04 elapsed=52.8min
+  e041 it0100/110 loss=0.9969 lr=4.63e-04 elapsed=53.2min
+[epoch 041] train=0.9969  val_loss=1.0005  mIoU_fg=0.3791
+  e042 it0050/110 loss=0.9968 lr=4.52e-04 elapsed=54.1min
+  e042 it0100/110 loss=0.9968 lr=4.43e-04 elapsed=54.5min
+[epoch 042] train=0.9968  val_loss=1.0004  mIoU_fg=0.3809
+  [best] mIoU_fg=0.3809 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e043 it0050/110 loss=0.9966 lr=4.32e-04 elapsed=55.3min
+  e043 it0100/110 loss=0.9967 lr=4.24e-04 elapsed=55.8min
+[epoch 043] train=0.9967  val_loss=1.0005  mIoU_fg=0.3807
+  e044 it0050/110 loss=0.9963 lr=4.13e-04 elapsed=56.6min
+  e044 it0100/110 loss=0.9966 lr=4.04e-04 elapsed=57.0min
+[epoch 044] train=0.9966  val_loss=1.0004  mIoU_fg=0.3812
+  [best] mIoU_fg=0.3812 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e045 it0050/110 loss=0.9961 lr=3.94e-04 elapsed=57.9min
+  e045 it0100/110 loss=0.9965 lr=3.85e-04 elapsed=58.3min
+[epoch 045] train=0.9965  val_loss=1.0004  mIoU_fg=0.3824
+  [best] mIoU_fg=0.3824 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e046 it0050/110 loss=0.9961 lr=3.75e-04 elapsed=59.2min
+  e046 it0100/110 loss=0.9964 lr=3.66e-04 elapsed=59.6min
+[epoch 046] train=0.9965  val_loss=1.0003  mIoU_fg=0.3832
+  [best] mIoU_fg=0.3832 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e047 it0050/110 loss=0.9960 lr=3.56e-04 elapsed=60.4min
+  e047 it0100/110 loss=0.9964 lr=3.47e-04 elapsed=60.9min
+[epoch 047] train=0.9961  val_loss=1.0002  mIoU_fg=0.3832
+  e048 it0050/110 loss=0.9961 lr=3.37e-04 elapsed=61.7min
+  e048 it0100/110 loss=0.9963 lr=3.29e-04 elapsed=62.1min
+[epoch 048] train=0.9963  val_loss=1.0002  mIoU_fg=0.3833
+  [best] mIoU_fg=0.3833 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e049 it0050/110 loss=0.9967 lr=3.19e-04 elapsed=63.0min
+  e049 it0100/110 loss=0.9963 lr=3.10e-04 elapsed=63.4min
+[epoch 049] train=0.9959  val_loss=1.0003  mIoU_fg=0.3844
+  [best] mIoU_fg=0.3844 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e050 it0050/110 loss=0.9958 lr=3.00e-04 elapsed=64.3min
+  e050 it0100/110 loss=0.9961 lr=2.92e-04 elapsed=64.7min
+[epoch 050] train=0.9962  val_loss=1.0002  mIoU_fg=0.3838
+  e051 it0050/110 loss=0.9961 lr=2.83e-04 elapsed=65.5min
+  e051 it0100/110 loss=0.9962 lr=2.75e-04 elapsed=65.9min
+[epoch 051] train=0.9961  val_loss=1.0001  mIoU_fg=0.3842
+  e052 it0050/110 loss=0.9966 lr=2.65e-04 elapsed=66.8min
+  e052 it0100/110 loss=0.9959 lr=2.57e-04 elapsed=67.2min
+[epoch 052] train=0.9960  val_loss=1.0002  mIoU_fg=0.3856
+  [best] mIoU_fg=0.3856 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e053 it0050/110 loss=0.9959 lr=2.48e-04 elapsed=68.1min
+  e053 it0100/110 loss=0.9958 lr=2.40e-04 elapsed=68.5min
+[epoch 053] train=0.9960  val_loss=1.0001  mIoU_fg=0.3861
+  [best] mIoU_fg=0.3861 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e054 it0050/110 loss=0.9964 lr=2.31e-04 elapsed=69.4min
+  e054 it0100/110 loss=0.9959 lr=2.24e-04 elapsed=69.8min
+[epoch 054] train=0.9960  val_loss=1.0001  mIoU_fg=0.3857
+  e055 it0050/110 loss=0.9957 lr=2.15e-04 elapsed=70.6min
+  e055 it0100/110 loss=0.9960 lr=2.08e-04 elapsed=71.1min
+[epoch 055] train=0.9960  val_loss=1.0001  mIoU_fg=0.3864
+  [best] mIoU_fg=0.3864 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e056 it0050/110 loss=0.9954 lr=1.99e-04 elapsed=71.9min
+  e056 it0100/110 loss=0.9957 lr=1.92e-04 elapsed=72.3min
+[epoch 056] train=0.9959  val_loss=1.0001  mIoU_fg=0.3845
+  e057 it0050/110 loss=0.9952 lr=1.83e-04 elapsed=73.2min
+  e057 it0100/110 loss=0.9958 lr=1.77e-04 elapsed=73.6min
+[epoch 057] train=0.9956  val_loss=1.0000  mIoU_fg=0.3856
+  e058 it0050/110 loss=0.9957 lr=1.69e-04 elapsed=74.5min
+  e058 it0100/110 loss=0.9957 lr=1.62e-04 elapsed=74.9min
+[epoch 058] train=0.9956  val_loss=1.0001  mIoU_fg=0.3866
+  [best] mIoU_fg=0.3866 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e059 it0050/110 loss=0.9960 lr=1.54e-04 elapsed=75.8min
+  e059 it0100/110 loss=0.9957 lr=1.48e-04 elapsed=76.2min
+[epoch 059] train=0.9958  val_loss=1.0001  mIoU_fg=0.3884
+  [best] mIoU_fg=0.3884 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt
+  e060 it0050/110 loss=0.9962 lr=1.40e-04 elapsed=77.0min
+  e060 it0100/110 loss=0.9957 lr=1.34e-04 elapsed=77.5min
+[epoch 060] train=0.9957  val_loss=1.0000  mIoU_fg=0.3875
+  e061 it0050/110 loss=0.9957 lr=1.27e-04 elapsed=78.3min
+  e061 it0100/110 loss=0.9958 lr=1.21e-04 elapsed=78.7min
+[epoch 061] train=0.9964  val_loss=1.0000  mIoU_fg=0.3870
+  e062 it0050/110 loss=0.9955 lr=1.14e-04 elapsed=79.6min
+  e062 it0100/110 loss=0.9957 lr=1.08e-04 elapsed=80.0min
+[epoch 062] train=0.9957  val_loss=1.0000  mIoU_fg=0.3869
+  e063 it0050/110 loss=0.9957 lr=1.02e-04 elapsed=80.8min
+  e063 it0100/110 loss=0.9956 lr=9.65e-05 elapsed=81.2min
+[epoch 063] train=0.9956  val_loss=1.0000  mIoU_fg=0.3871
+  e064 it0050/110 loss=0.9962 lr=9.03e-05 elapsed=82.1min
+  e064 it0100/110 loss=0.9958 lr=8.53e-05 elapsed=82.5min
+[epoch 064] train=0.9956  val_loss=1.0000  mIoU_fg=0.3873
+  e065 it0050/110 loss=0.9952 lr=7.94e-05 elapsed=83.3min
+  e065 it0100/110 loss=0.9955 lr=7.46e-05 elapsed=83.8min
+[epoch 065] train=0.9956  val_loss=1.0000  mIoU_fg=0.3872
+  e066 it0050/110 loss=0.9955 lr=6.91e-05 elapsed=84.6min
+  e066 it0100/110 loss=0.9955 lr=6.46e-05 elapsed=85.0min
+[epoch 066] train=0.9956  val_loss=1.0000  mIoU_fg=0.3872
+  e067 it0050/110 loss=0.9958 lr=5.95e-05 elapsed=85.9min
+  e067 it0100/110 loss=0.9956 lr=5.53e-05 elapsed=86.3min
+[epoch 067] train=0.9956  val_loss=1.0000  mIoU_fg=0.3875
+  e068 it0050/110 loss=0.9955 lr=5.05e-05 elapsed=87.1min
+  e068 it0100/110 loss=0.9956 lr=4.67e-05 elapsed=87.5min
+[epoch 068] train=0.9956  val_loss=0.9999  mIoU_fg=0.3873
+  e069 it0050/110 loss=0.9952 lr=4.23e-05 elapsed=88.4min
+  e069 it0100/110 loss=0.9955 lr=3.87e-05 elapsed=88.8min
+[epoch 069] train=0.9956  val_loss=0.9999  mIoU_fg=0.3876
+  e070 it0050/110 loss=0.9953 lr=3.47e-05 elapsed=89.7min
+  e070 it0100/110 loss=0.9955 lr=3.15e-05 elapsed=90.1min
+[epoch 070] train=0.9949  val_loss=0.9999  mIoU_fg=0.3878
+  e071 it0050/110 loss=0.9957 lr=2.79e-05 elapsed=90.9min
+  e071 it0100/110 loss=0.9957 lr=2.50e-05 elapsed=91.3min
+[epoch 071] train=0.9956  val_loss=0.9999  mIoU_fg=0.3880
+  e072 it0050/110 loss=0.9955 lr=2.18e-05 elapsed=92.2min
+  e072 it0100/110 loss=0.9956 lr=1.93e-05 elapsed=92.6min
+[epoch 072] train=0.9956  val_loss=0.9999  mIoU_fg=0.3879
+  e073 it0050/110 loss=0.9955 lr=1.64e-05 elapsed=93.4min
+  e073 it0100/110 loss=0.9954 lr=1.42e-05 elapsed=93.9min
+[epoch 073] train=0.9956  val_loss=0.9999  mIoU_fg=0.3878
+  e074 it0050/110 loss=0.9954 lr=1.18e-05 elapsed=94.7min
+  e074 it0100/110 loss=0.9955 lr=9.96e-06 elapsed=95.1min
+[epoch 074] train=0.9956  val_loss=0.9999  mIoU_fg=0.3877
+  e075 it0050/110 loss=0.9955 lr=7.94e-06 elapsed=96.0min
+  e075 it0100/110 loss=0.9955 lr=6.44e-06 elapsed=96.4min
+[epoch 075] train=0.9955  val_loss=0.9999  mIoU_fg=0.3878
+  e076 it0050/110 loss=0.9958 lr=4.84e-06 elapsed=97.3min
+  e076 it0100/110 loss=0.9956 lr=3.68e-06 elapsed=97.7min
+[epoch 076] train=0.9956  val_loss=0.9999  mIoU_fg=0.3878
+  e077 it0050/110 loss=0.9954 lr=2.50e-06 elapsed=98.5min
+  e077 it0100/110 loss=0.9955 lr=1.68e-06 elapsed=98.9min
+[epoch 077] train=0.9954  val_loss=0.9999  mIoU_fg=0.3878
+  e078 it0050/110 loss=0.9954 lr=9.21e-07 elapsed=99.8min
+  e078 it0100/110 loss=0.9957 lr=4.59e-07 elapsed=100.2min
+[epoch 078] train=0.9949  val_loss=0.9999  mIoU_fg=0.3878
+  e079 it0050/110 loss=0.9951 lr=1.15e-07 elapsed=101.1min
+  e079 it0100/110 loss=0.9953 lr=3.19e-09 elapsed=101.5min
+[epoch 079] train=0.9955  val_loss=0.9999  mIoU_fg=0.3878
+[done] best_mIoU_fg=0.3884  total_time=101.8min
+[slurm] done=2026-05-28T21:31:12+02:00

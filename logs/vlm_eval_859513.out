@@ -1,0 +1,27 @@
+[slurm] host=node50  job=859513  start=2026-06-22T15:46:18+02:00
+[slurm] model=clip task=classify dataset=dw_paper10 prompt=closed_vocab limit=20 out=vlm_clip_dw_smoke
+NVIDIA L40S, 46068 MiB
+[model] loading clip from /home/ids/diecidue/.cache/huggingface/hub/models--openai--clip-vit-base-patch32/snapshots/3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268 ...
+[model] ready
+[data] dataset=dw_paper10 test=20 classes=10
+[task] classify  prompt_style=closed_vocab  prompt-len=2054 chars
+  [  20/20] nonempty=16 empty=4 elapsed=0.0min
+[saved-raw] /home/ids/diecidue/results/waste_vlm/vlm_clip_dw_smoke/raw_responses.jsonl
+
+=== clip closed_vocab — dw_paper10 (20 imgs) ===
+  micro F1 = 0.0000   macro F1 = 0.0000
+  nonempty preds = 16   empty = 4
+
+per-class F1:
+  Construction and demolition materials     F1=n/a  support=0
+  Metal barrels                             F1=n/a  support=0
+  Plastic packaging                         F1=n/a  support=0
+  Pallets                                   F1=0.000  support=1
+  Scrap                                     F1=n/a  support=0
+  Vehicles                                  F1=n/a  support=0
+  Tyres                                     F1=n/a  support=0
+  Asbestos                                  F1=n/a  support=0
+  Textile                                   F1=n/a  support=0
+  Mixed items                               F1=0.000  support=1
+[saved] /home/ids/diecidue/results/waste_vlm/vlm_clip_dw_smoke/test_eval.json
+[slurm] done=2026-06-22T15:46:29+02:00

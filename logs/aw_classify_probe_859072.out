@@ -1,0 +1,3 @@
+[slurm] host=nodemm03  job=859072  start=2026-06-22T11:21:07+02:00
+[slurm] btype=swint  version=n/a  task=mcml  id=/home/ids/diecidue/results/waste_vlm/weights/swint/checkpoint.pth  multi_block=none  out=aw_probe_swint
+NVIDIA GeForce RTX 3090, 24576 MiB

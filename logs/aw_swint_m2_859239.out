@@ -1,0 +1,17 @@
+[slurm] host=nodemm06  job=859239  start=2026-06-22T13:21:45+02:00
+[slurm] btype=swint  version=m2  task=mcml  id=/home/ids/diecidue/results/waste_vlm/weights/swint/checkpoint.pth  multi_block=none  out=aw_probe_swint
+NVIDIA L40S, 46068 MiB
+[load] backbone_type=swint id=/home/ids/diecidue/results/waste_vlm/weights/swint/checkpoint.pth task=mcml  multi_block=None
+[model] embed_dim=768  image_size=224
+[data] AW m2  train=4304 (-486) test=664 (-26)  classes=5
+
+=== AW m2 — swint (224²) supervised probe ===
+  micro F1 = 0.5762   macro F1 = 0.5471
+per-class F1:
+  Rubble                                      F1=0.460  support=90
+  Bulky items                                 F1=0.693  support=150
+  Plastic                                     F1=0.324  support=57
+  Containers                                  F1=0.608  support=110
+  Unknown material                            F1=0.650  support=143
+[saved] /home/ids/diecidue/results/waste_vlm/aw_probe_swint/aw_m2_probe.json
+[slurm] done=2026-06-22T13:24:45+02:00

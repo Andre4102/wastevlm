@@ -1,0 +1,58 @@
+[slurm] host=node50  job=861979  start=2026-06-24T00:21:42+02:00
+[slurm] model=internvl3 task=classify dataset=aw_m2 prompt=open_cot limit=0 out=vlm_ivl_cot_awm2_v2
+NVIDIA L40S, 46068 MiB
+[model] loading internvl3 from /home/ids/diecidue/results/waste_vlm/weights/InternVL3-8B ...
+FlashAttention2 is not installed.
+[model] ready
+[data] filtered missing-on-disk: -26
+[data] dataset=aw_m2 test=664 classes=5
+[task] classify  prompt_style=open_cot  describe-len=282  classify-len=285 chars
+[task] cot_classify_prompt: Based on what you described above, what types of waste or discarded materials are visible, if any? Name specific materials or objects (e.g., 'rubble', 'bulky waste', 'plastic waste', 'containers', 'unidentified waste'). If there is genuinely no waste of any kind, reply exactly "none".
+  [  20/664] nonempty=12 empty=8 elapsed=1.1min
+  [  40/664] nonempty=23 empty=17 elapsed=2.2min
+  [  60/664] nonempty=30 empty=30 elapsed=3.2min
+  [  80/664] nonempty=44 empty=36 elapsed=4.4min
+  [ 100/664] nonempty=61 empty=39 elapsed=5.6min
+  [ 120/664] nonempty=74 empty=46 elapsed=6.8min
+  [ 140/664] nonempty=89 empty=51 elapsed=8.1min
+  [ 160/664] nonempty=103 empty=57 elapsed=9.2min
+  [ 180/664] nonempty=111 empty=69 elapsed=10.2min
+  [ 200/664] nonempty=123 empty=77 elapsed=11.5min
+  [ 220/664] nonempty=135 empty=85 elapsed=12.6min
+  [ 240/664] nonempty=139 empty=101 elapsed=13.5min
+  [ 260/664] nonempty=142 empty=118 elapsed=14.4min
+  [ 280/664] nonempty=144 empty=136 elapsed=15.3min
+  [ 300/664] nonempty=145 empty=155 elapsed=16.1min
+  [ 320/664] nonempty=148 empty=172 elapsed=17.0min
+  [ 340/664] nonempty=148 empty=192 elapsed=17.8min
+  [ 360/664] nonempty=151 empty=209 elapsed=18.7min
+  [ 380/664] nonempty=155 empty=225 elapsed=19.6min
+  [ 400/664] nonempty=157 empty=243 elapsed=20.4min
+  [ 420/664] nonempty=162 empty=258 elapsed=21.3min
+  [ 440/664] nonempty=164 empty=276 elapsed=22.2min
+  [ 460/664] nonempty=167 empty=293 elapsed=23.1min
+  [ 480/664] nonempty=169 empty=311 elapsed=24.0min
+  [ 500/664] nonempty=171 empty=329 elapsed=24.8min
+  [ 520/664] nonempty=176 empty=344 elapsed=25.7min
+  [ 540/664] nonempty=176 empty=364 elapsed=26.5min
+  [ 560/664] nonempty=177 empty=383 elapsed=27.4min
+  [ 580/664] nonempty=179 empty=401 elapsed=28.2min
+  [ 600/664] nonempty=183 empty=417 elapsed=29.1min
+  [ 620/664] nonempty=191 empty=429 elapsed=30.1min
+  [ 640/664] nonempty=193 empty=447 elapsed=30.9min
+  [ 660/664] nonempty=193 empty=467 elapsed=31.7min
+  [ 664/664] nonempty=193 empty=471 elapsed=31.9min
+[saved-raw] /home/ids/diecidue/results/waste_vlm/vlm_ivl_cot_awm2_v2/raw_responses.jsonl
+
+=== internvl3 open_cot — aw_m2 (664 imgs) ===
+  micro F1 = 0.3955   macro F1 = 0.3789
+  nonempty preds = 193   empty = 471
+
+per-class F1:
+  Rubble                                    F1=0.473  support=90
+  Bulky items                               F1=0.445  support=150
+  Plastic                                   F1=0.262  support=57
+  Containers                                F1=0.343  support=110
+  Unknown material                          F1=0.371  support=143
+[saved] /home/ids/diecidue/results/waste_vlm/vlm_ivl_cot_awm2_v2/test_eval.json
+[slurm] done=2026-06-24T00:54:04+02:00

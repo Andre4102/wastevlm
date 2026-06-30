@@ -1,0 +1,104 @@
+[slurm] host=node51  job=863753  start=2026-06-25T15:00:30+02:00
+[slurm] model=internvl3 task=classify dataset=dw_paper10 prompt=open_cot limit=0 out=vlm_ivl_cot_dw_v2
+NVIDIA L40S, 46068 MiB
+[model] loading internvl3 from /home/ids/diecidue/results/waste_vlm/weights/InternVL3-8B ...
+FlashAttention2 is not installed.
+[model] ready
+[data] dataset=dw_paper10 test=1504 classes=10
+[task] classify  prompt_style=open_cot  describe-len=282  classify-len=380 chars
+[task] cot_classify_prompt: Based on what you described above, what types of waste or discarded materials are visible, if any? Name specific materials or objects (e.g., 'construction debris', 'oil drums', 'plastic waste', 'wooden pallets', 'scrap metal', 'abandoned car', 'discarded tires', 'asbestos sheets', 'textile waste', 'mixed waste'). If there is genuinely no waste of any kind, reply exactly "none".
+  [  20/1504] nonempty=10 empty=10 elapsed=1.1min
+  [  40/1504] nonempty=22 empty=18 elapsed=2.3min
+  [  60/1504] nonempty=29 empty=31 elapsed=3.4min
+  [  80/1504] nonempty=37 empty=43 elapsed=4.4min
+  [ 100/1504] nonempty=45 empty=55 elapsed=5.3min
+  [ 120/1504] nonempty=54 empty=66 elapsed=6.4min
+  [ 140/1504] nonempty=62 empty=78 elapsed=7.3min
+  [ 160/1504] nonempty=69 empty=91 elapsed=8.3min
+  [ 180/1504] nonempty=78 empty=102 elapsed=9.4min
+  [ 200/1504] nonempty=85 empty=115 elapsed=10.4min
+  [ 220/1504] nonempty=92 empty=128 elapsed=11.4min
+  [ 240/1504] nonempty=99 empty=141 elapsed=12.4min
+  [ 260/1504] nonempty=110 empty=150 elapsed=13.4min
+  [ 280/1504] nonempty=123 empty=157 elapsed=14.7min
+  [ 300/1504] nonempty=142 empty=158 elapsed=15.9min
+  [ 320/1504] nonempty=159 empty=161 elapsed=17.1min
+  [ 340/1504] nonempty=175 empty=165 elapsed=18.3min
+  [ 360/1504] nonempty=193 empty=167 elapsed=19.5min
+  [ 380/1504] nonempty=207 empty=173 elapsed=20.8min
+  [ 400/1504] nonempty=226 empty=174 elapsed=22.0min
+  [ 420/1504] nonempty=243 empty=177 elapsed=23.3min
+  [ 440/1504] nonempty=259 empty=181 elapsed=24.6min
+  [ 460/1504] nonempty=274 empty=186 elapsed=25.8min
+  [ 480/1504] nonempty=290 empty=190 elapsed=26.9min
+  [ 500/1504] nonempty=307 empty=193 elapsed=28.1min
+  [ 520/1504] nonempty=322 empty=198 elapsed=29.4min
+  [ 540/1504] nonempty=337 empty=203 elapsed=30.6min
+  [ 560/1504] nonempty=353 empty=207 elapsed=31.9min
+  [ 580/1504] nonempty=369 empty=211 elapsed=33.1min
+  [ 600/1504] nonempty=386 empty=214 elapsed=34.2min
+  [ 620/1504] nonempty=399 empty=221 elapsed=35.5min
+  [ 640/1504] nonempty=410 empty=230 elapsed=36.7min
+  [ 660/1504] nonempty=424 empty=236 elapsed=37.8min
+  [ 680/1504] nonempty=440 empty=240 elapsed=39.1min
+  [ 700/1504] nonempty=453 empty=247 elapsed=40.1min
+  [ 720/1504] nonempty=465 empty=255 elapsed=41.2min
+  [ 740/1504] nonempty=476 empty=264 elapsed=42.2min
+  [ 760/1504] nonempty=482 empty=278 elapsed=43.2min
+  [ 780/1504] nonempty=493 empty=287 elapsed=44.3min
+  [ 800/1504] nonempty=510 empty=290 elapsed=45.5min
+  [ 820/1504] nonempty=522 empty=298 elapsed=46.6min
+  [ 840/1504] nonempty=536 empty=304 elapsed=47.7min
+  [ 860/1504] nonempty=547 empty=313 elapsed=48.8min
+  [ 880/1504] nonempty=556 empty=324 elapsed=49.8min
+  [ 900/1504] nonempty=566 empty=334 elapsed=50.9min
+  [ 920/1504] nonempty=582 empty=338 elapsed=52.0min
+  [ 940/1504] nonempty=600 empty=340 elapsed=53.2min
+  [ 960/1504] nonempty=619 empty=341 elapsed=54.3min
+  [ 980/1504] nonempty=631 empty=349 elapsed=55.4min
+  [1000/1504] nonempty=638 empty=362 elapsed=56.5min
+  [1020/1504] nonempty=643 empty=377 elapsed=57.4min
+  [1040/1504] nonempty=646 empty=394 elapsed=58.3min
+  [1060/1504] nonempty=656 empty=404 elapsed=59.7min
+  [1080/1504] nonempty=663 empty=417 elapsed=60.7min
+  [1100/1504] nonempty=669 empty=431 elapsed=61.8min
+  [1120/1504] nonempty=678 empty=442 elapsed=63.0min
+  [1140/1504] nonempty=682 empty=458 elapsed=63.9min
+  [1160/1504] nonempty=691 empty=469 elapsed=65.2min
+  [1180/1504] nonempty=699 empty=481 elapsed=66.4min
+  [1200/1504] nonempty=707 empty=493 elapsed=67.5min
+  [1220/1504] nonempty=713 empty=507 elapsed=68.5min
+  [1240/1504] nonempty=720 empty=520 elapsed=69.6min
+  [1260/1504] nonempty=728 empty=532 elapsed=70.8min
+  [1280/1504] nonempty=735 empty=545 elapsed=71.8min
+  [1300/1504] nonempty=744 empty=556 elapsed=72.9min
+  [1320/1504] nonempty=750 empty=570 elapsed=73.7min
+  [1340/1504] nonempty=761 empty=579 elapsed=74.8min
+  [1360/1504] nonempty=772 empty=588 elapsed=76.0min
+  [1380/1504] nonempty=781 empty=599 elapsed=77.2min
+  [1400/1504] nonempty=789 empty=611 elapsed=78.3min
+  [1420/1504] nonempty=800 empty=620 elapsed=79.6min
+  [1440/1504] nonempty=814 empty=626 elapsed=80.9min
+  [1460/1504] nonempty=824 empty=636 elapsed=82.1min
+  [1480/1504] nonempty=834 empty=646 elapsed=83.2min
+  [1500/1504] nonempty=843 empty=657 elapsed=84.4min
+  [1504/1504] nonempty=846 empty=658 elapsed=84.6min
+[saved-raw] /home/ids/diecidue/results/waste_vlm/vlm_ivl_cot_dw_v2/raw_responses.jsonl
+
+=== internvl3 open_cot — dw_paper10 (1504 imgs) ===
+  micro F1 = 0.1557   macro F1 = 0.1605
+  nonempty preds = 846   empty = 658
+
+per-class F1:
+  Construction and demolition materials     F1=0.129  support=57
+  Metal barrels                             F1=0.037  support=13
+  Plastic packaging                         F1=0.169  support=56
+  Pallets                                   F1=0.277  support=60
+  Scrap                                     F1=0.220  support=70
+  Vehicles                                  F1=0.273  support=23
+  Tyres                                     F1=0.096  support=18
+  Asbestos                                  F1=0.060  support=47
+  Textile                                   F1=0.100  support=41
+  Mixed items                               F1=0.245  support=92
+[saved] /home/ids/diecidue/results/waste_vlm/vlm_ivl_cot_dw_v2/test_eval.json
+[slurm] done=2026-06-25T16:25:43+02:00

@@ -1,0 +1,57 @@
+[slurm] host=node39  job=859518  start=2026-06-22T15:49:00+02:00
+[slurm] model=clip task=classify dataset=aw_m4 prompt=closed_vocab limit=0 out=vlm_clip_awm4
+NVIDIA L40S, 46068 MiB
+[model] loading clip from /home/ids/diecidue/.cache/huggingface/hub/models--openai--clip-vit-base-patch32/snapshots/3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268 ...
+[model] ready
+[data] filtered missing-on-disk: -26
+[data] dataset=aw_m4 test=664 classes=6
+[task] classify  prompt_style=closed_vocab  prompt-len=1388 chars
+  [  20/664] nonempty=12 empty=8 elapsed=0.0min
+  [  40/664] nonempty=24 empty=16 elapsed=0.0min
+  [  60/664] nonempty=34 empty=26 elapsed=0.1min
+  [  80/664] nonempty=47 empty=33 elapsed=0.1min
+  [ 100/664] nonempty=58 empty=42 elapsed=0.1min
+  [ 120/664] nonempty=65 empty=55 elapsed=0.1min
+  [ 140/664] nonempty=74 empty=66 elapsed=0.1min
+  [ 160/664] nonempty=90 empty=70 elapsed=0.2min
+  [ 180/664] nonempty=102 empty=78 elapsed=0.2min
+  [ 200/664] nonempty=118 empty=82 elapsed=0.2min
+  [ 220/664] nonempty=133 empty=87 elapsed=0.2min
+  [ 240/664] nonempty=140 empty=100 elapsed=0.2min
+  [ 260/664] nonempty=145 empty=115 elapsed=0.3min
+  [ 280/664] nonempty=151 empty=129 elapsed=0.3min
+  [ 300/664] nonempty=157 empty=143 elapsed=0.3min
+  [ 320/664] nonempty=166 empty=154 elapsed=0.3min
+  [ 340/664] nonempty=169 empty=171 elapsed=0.3min
+  [ 360/664] nonempty=177 empty=183 elapsed=0.3min
+  [ 380/664] nonempty=189 empty=191 elapsed=0.4min
+  [ 400/664] nonempty=200 empty=200 elapsed=0.4min
+  [ 420/664] nonempty=213 empty=207 elapsed=0.4min
+  [ 440/664] nonempty=225 empty=215 elapsed=0.4min
+  [ 460/664] nonempty=237 empty=223 elapsed=0.4min
+  [ 480/664] nonempty=248 empty=232 elapsed=0.5min
+  [ 500/664] nonempty=261 empty=239 elapsed=0.5min
+  [ 520/664] nonempty=264 empty=256 elapsed=0.5min
+  [ 540/664] nonempty=269 empty=271 elapsed=0.5min
+  [ 560/664] nonempty=276 empty=284 elapsed=0.5min
+  [ 580/664] nonempty=290 empty=290 elapsed=0.6min
+  [ 600/664] nonempty=299 empty=301 elapsed=0.6min
+  [ 620/664] nonempty=311 empty=309 elapsed=0.6min
+  [ 640/664] nonempty=322 empty=318 elapsed=0.6min
+  [ 660/664] nonempty=334 empty=326 elapsed=0.6min
+  [ 664/664] nonempty=338 empty=326 elapsed=0.6min
+[saved-raw] /home/ids/diecidue/results/waste_vlm/vlm_clip_awm4/raw_responses.jsonl
+
+=== clip closed_vocab — aw_m4 (664 imgs) ===
+  micro F1 = 0.1327   macro F1 = 0.1106
+  nonempty preds = 338   empty = 326
+
+per-class F1:
+  Rubble/excavated earth and rocks          F1=0.297  support=90
+  Scrap                                     F1=0.118  support=9
+  Sludge-Zootechnical waste-Manure          F1=0.064  support=10
+  Wood                                      F1=0.174  support=35
+  Tires                                     F1=0.000  support=25
+  Other waste                               F1=0.011  support=186
+[saved] /home/ids/diecidue/results/waste_vlm/vlm_clip_awm4/test_eval.json
+[slurm] done=2026-06-22T15:49:46+02:00

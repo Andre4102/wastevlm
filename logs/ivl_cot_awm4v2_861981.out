@@ -1,0 +1,59 @@
+[slurm] host=node50  job=861981  start=2026-06-24T00:21:42+02:00
+[slurm] model=internvl3 task=classify dataset=aw_m4 prompt=open_cot limit=0 out=vlm_ivl_cot_awm4_v2
+NVIDIA L40S, 46068 MiB
+[model] loading internvl3 from /home/ids/diecidue/results/waste_vlm/weights/InternVL3-8B ...
+FlashAttention2 is not installed.
+[model] ready
+[data] filtered missing-on-disk: -26
+[data] dataset=aw_m4 test=664 classes=6
+[task] classify  prompt_style=open_cot  describe-len=282  classify-len=290 chars
+[task] cot_classify_prompt: Based on what you described above, what types of waste or discarded materials are visible, if any? Name specific materials or objects (e.g., 'rubble', 'scrap metal', 'manure', 'wood waste', 'discarded tires', 'mixed waste'). If there is genuinely no waste of any kind, reply exactly "none".
+  [  20/664] nonempty=7 empty=13 elapsed=1.1min
+  [  40/664] nonempty=17 empty=23 elapsed=2.2min
+  [  60/664] nonempty=23 empty=37 elapsed=3.2min
+  [  80/664] nonempty=32 empty=48 elapsed=4.3min
+  [ 100/664] nonempty=43 empty=57 elapsed=5.5min
+  [ 120/664] nonempty=53 empty=67 elapsed=6.6min
+  [ 140/664] nonempty=63 empty=77 elapsed=7.8min
+  [ 160/664] nonempty=76 empty=84 elapsed=9.0min
+  [ 180/664] nonempty=80 empty=100 elapsed=10.0min
+  [ 200/664] nonempty=84 empty=116 elapsed=11.1min
+  [ 220/664] nonempty=90 empty=130 elapsed=12.2min
+  [ 240/664] nonempty=92 empty=148 elapsed=13.1min
+  [ 260/664] nonempty=95 empty=165 elapsed=14.0min
+  [ 280/664] nonempty=98 empty=182 elapsed=14.9min
+  [ 300/664] nonempty=99 empty=201 elapsed=15.8min
+  [ 320/664] nonempty=100 empty=220 elapsed=16.6min
+  [ 340/664] nonempty=100 empty=240 elapsed=17.4min
+  [ 360/664] nonempty=102 empty=258 elapsed=18.2min
+  [ 380/664] nonempty=104 empty=276 elapsed=19.1min
+  [ 400/664] nonempty=105 empty=295 elapsed=20.0min
+  [ 420/664] nonempty=109 empty=311 elapsed=20.8min
+  [ 440/664] nonempty=110 empty=330 elapsed=21.9min
+  [ 460/664] nonempty=112 empty=348 elapsed=22.8min
+  [ 480/664] nonempty=113 empty=367 elapsed=23.6min
+  [ 500/664] nonempty=114 empty=386 elapsed=24.4min
+  [ 520/664] nonempty=117 empty=403 elapsed=25.3min
+  [ 540/664] nonempty=118 empty=422 elapsed=26.1min
+  [ 560/664] nonempty=119 empty=441 elapsed=26.9min
+  [ 580/664] nonempty=121 empty=459 elapsed=27.8min
+  [ 600/664] nonempty=124 empty=476 elapsed=28.6min
+  [ 620/664] nonempty=130 empty=490 elapsed=29.6min
+  [ 640/664] nonempty=131 empty=509 elapsed=30.4min
+  [ 660/664] nonempty=131 empty=529 elapsed=31.2min
+  [ 664/664] nonempty=131 empty=533 elapsed=31.4min
+[saved-raw] /home/ids/diecidue/results/waste_vlm/vlm_ivl_cot_awm4_v2/raw_responses.jsonl
+
+=== internvl3 open_cot — aw_m4 (664 imgs) ===
+  micro F1 = 0.2853   macro F1 = 0.2238
+  nonempty preds = 131   empty = 533
+
+per-class F1:
+  Rubble/excavated earth and rocks          F1=0.436  support=90
+  Scrap                                     F1=0.149  support=9
+  Sludge-Zootechnical waste-Manure          F1=0.034  support=10
+  Wood                                      F1=0.220  support=35
+  Tires                                     F1=0.177  support=25
+  Other waste                               F1=0.327  support=186
+[saved] /home/ids/diecidue/results/waste_vlm/vlm_ivl_cot_awm4_v2/test_eval.json
+[slurm] done=2026-06-24T00:53:36+02:00

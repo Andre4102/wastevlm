@@ -1,0 +1,59 @@
+[slurm] host=nodemm02  job=833436  tta=dinoseg_dw_radio_512 grid=2  start=2026-05-26T13:52:34+02:00
+NVIDIA GeForce RTX 3090, 24576 MiB
+[data] split=test n=765 classes=20 tta_grid=2 (effective crop=320px)
+[radio] backbone_dim probed = 1024
+[model] loaded from /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512/best.pt  cfg.image_size=512  head=linear
+  [50/765] dets=157
+  [100/765] dets=372
+  [150/765] dets=1773
+  [200/765] dets=2666
+  [250/765] dets=3352
+  [300/765] dets=4498
+  [350/765] dets=5527
+  [400/765] dets=6375
+  [450/765] dets=7189
+  [500/765] dets=9649
+  [550/765] dets=9835
+  [600/765] dets=10065
+  [650/765] dets=10297
+  [700/765] dets=10518
+  [750/765] dets=10581
+  [765/765] dets=10698
+loading annotations into memory...
+Done (t=0.00s)
+creating index...
+index created!
+Loading and preparing results...
+DONE (t=0.01s)
+creating index...
+index created!
+
+=== DinoSeg TTA (grid=2) — DroneWaste test ===
+mIoU (foreground)  = 0.3767
+mIoU (incl bg)     = 0.4053
+mAP @ [.5:.95]     = 0.090
+AP@0.5             = 0.154
+
+per-class mAP (sorted desc):
+  Asbestos                                  mAP=0.566
+  Rubble                                    mAP=0.203
+  Mixed items                               mAP=0.185
+  Vehicles                                  mAP=0.124
+  Scrap                                     mAP=0.113
+  Pallets                                   mAP=0.077
+  Excavation materials                      mAP=0.071
+  Textile                                   mAP=0.070
+  Construction and demolition materials     mAP=0.067
+  Wood                                      mAP=0.058
+  Plastic packaging                         mAP=0.057
+  Tyres                                     mAP=0.054
+  Furniture                                 mAP=0.048
+  Plastic                                   mAP=0.015
+  Metal barrels                             mAP=0.000
+  Asphalt milling                           mAP=n/a
+  Appliances                                mAP=0.000
+  Electronic equipment                      mAP=0.000
+  Paper                                     mAP=0.000
+  Foundry                                   mAP=0.000
+[saved] /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512/test_eval_tta2.json
+[slurm] done=2026-05-26T13:58:02+02:00

@@ -1,0 +1,17 @@
+[slurm] host=nodemm03  job=859089  start=2026-06-22T11:45:32+02:00
+[slurm] btype=dinov2  version=m2  task=mcml  id=default  multi_block=none  out=aw_probe_dinov2
+NVIDIA GeForce RTX 3090, 24576 MiB
+[load] backbone_type=dinov2 id=facebook/dinov2-base task=mcml  multi_block=None
+[model] embed_dim=768  image_size=518
+[data] AW m2  train=4304 (-486) test=664 (-26)  classes=5
+
+=== AW m2 — dinov2 (518²) supervised probe ===
+  micro F1 = 0.6073   macro F1 = 0.5712
+per-class F1:
+  Rubble                                      F1=0.498  support=90
+  Bulky items                                 F1=0.732  support=150
+  Plastic                                     F1=0.323  support=57
+  Containers                                  F1=0.642  support=110
+  Unknown material                            F1=0.661  support=143
+[saved] /home/ids/diecidue/results/waste_vlm/aw_probe_dinov2/aw_m2_probe.json
+[slurm] done=2026-06-22T11:52:57+02:00

@@ -1,0 +1,263 @@
+[slurm] host=nodemm07  job=831992  start=2026-05-23T09:31:27+00:00
+[slurm] btype=radio size=512 epochs=80 batch=32 lr=1e-3 head=conv out=dinoseg_dw_radio_512_conv
+NVIDIA H100 NVL, 95830 MiB
+[data] train=3489  val=739  fg classes=20
+[model] head=conv  trainable_params=2,364,949
+  e000 it0050/110 loss=1.7235 lr=1.00e-03 elapsed=0.7min
+  e000 it0100/110 loss=1.4780 lr=1.00e-03 elapsed=1.4min
+[epoch 000] train=1.4143  val_loss=0.8544  mIoU_fg=0.3118
+  [best] mIoU_fg=0.3118 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512_conv/best.pt
+  e001 it0050/110 loss=0.6867 lr=9.99e-04 elapsed=2.7min
+  e001 it0100/110 loss=0.6805 lr=9.99e-04 elapsed=3.3min
+[epoch 001] train=0.6640  val_loss=0.5487  mIoU_fg=0.3712
+  [best] mIoU_fg=0.3712 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512_conv/best.pt
+  e002 it0050/110 loss=0.5145 lr=9.98e-04 elapsed=4.6min
+  e002 it0100/110 loss=0.5102 lr=9.97e-04 elapsed=5.3min
+[epoch 002] train=0.5103  val_loss=0.4871  mIoU_fg=0.3705
+  e003 it0050/110 loss=0.4666 lr=9.95e-04 elapsed=6.5min
+  e003 it0100/110 loss=0.4380 lr=9.94e-04 elapsed=7.1min
+[epoch 003] train=0.4367  val_loss=0.4419  mIoU_fg=0.3909
+  [best] mIoU_fg=0.3909 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512_conv/best.pt
+  e004 it0050/110 loss=0.3853 lr=9.92e-04 elapsed=8.4min
+  e004 it0100/110 loss=0.3862 lr=9.91e-04 elapsed=9.0min
+[epoch 004] train=0.3868  val_loss=0.4250  mIoU_fg=0.4029
+  [best] mIoU_fg=0.4029 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512_conv/best.pt
+  e005 it0050/110 loss=0.3631 lr=9.89e-04 elapsed=10.3min
+  e005 it0100/110 loss=0.3595 lr=9.87e-04 elapsed=11.0min
+[epoch 005] train=0.3619  val_loss=0.3884  mIoU_fg=0.4210
+  [best] mIoU_fg=0.4210 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512_conv/best.pt
+  e006 it0050/110 loss=0.3282 lr=9.84e-04 elapsed=12.3min
+  e006 it0100/110 loss=0.3230 lr=9.82e-04 elapsed=12.9min
+[epoch 006] train=0.3206  val_loss=0.4535  mIoU_fg=0.4002
+  e007 it0050/110 loss=0.3004 lr=9.79e-04 elapsed=14.1min
+  e007 it0100/110 loss=0.3045 lr=9.76e-04 elapsed=14.8min
+[epoch 007] train=0.3009  val_loss=0.3846  mIoU_fg=0.4372
+  [best] mIoU_fg=0.4372 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512_conv/best.pt
+  e008 it0050/110 loss=0.2961 lr=9.73e-04 elapsed=16.0min
+  e008 it0100/110 loss=0.3008 lr=9.70e-04 elapsed=16.7min
+[epoch 008] train=0.3021  val_loss=0.4672  mIoU_fg=0.4447
+  [best] mIoU_fg=0.4447 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512_conv/best.pt
+  e009 it0050/110 loss=0.2568 lr=9.66e-04 elapsed=18.0min
+  e009 it0100/110 loss=0.2698 lr=9.63e-04 elapsed=18.6min
+[epoch 009] train=0.2731  val_loss=0.4046  mIoU_fg=0.4258
+  e010 it0050/110 loss=0.2696 lr=9.58e-04 elapsed=19.9min
+  e010 it0100/110 loss=0.2607 lr=9.55e-04 elapsed=20.5min
+[epoch 010] train=0.2661  val_loss=0.4152  mIoU_fg=0.4430
+  e011 it0050/110 loss=0.2338 lr=9.50e-04 elapsed=21.7min
+  e011 it0100/110 loss=0.2356 lr=9.46e-04 elapsed=22.4min
+[epoch 011] train=0.2374  val_loss=0.4420  mIoU_fg=0.4500
+  [best] mIoU_fg=0.4500 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512_conv/best.pt
+  e012 it0050/110 loss=0.2254 lr=9.41e-04 elapsed=23.7min
+  e012 it0100/110 loss=0.2184 lr=9.37e-04 elapsed=24.3min
+[epoch 012] train=0.2136  val_loss=0.4491  mIoU_fg=0.4469
+  e013 it0050/110 loss=0.2104 lr=9.32e-04 elapsed=25.5min
+  e013 it0100/110 loss=0.2036 lr=9.27e-04 elapsed=26.2min
+[epoch 013] train=0.2003  val_loss=0.4126  mIoU_fg=0.4559
+  [best] mIoU_fg=0.4559 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512_conv/best.pt
+  e014 it0050/110 loss=0.1933 lr=9.22e-04 elapsed=27.5min
+  e014 it0100/110 loss=0.1923 lr=9.17e-04 elapsed=28.1min
+[epoch 014] train=0.1868  val_loss=0.5073  mIoU_fg=0.4660
+  [best] mIoU_fg=0.4660 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512_conv/best.pt
+  e015 it0050/110 loss=0.1862 lr=9.11e-04 elapsed=29.4min
+  e015 it0100/110 loss=0.1773 lr=9.06e-04 elapsed=30.0min
+[epoch 015] train=0.1851  val_loss=0.4637  mIoU_fg=0.4594
+  e016 it0050/110 loss=0.1776 lr=8.99e-04 elapsed=31.3min
+  e016 it0100/110 loss=0.1826 lr=8.94e-04 elapsed=31.9min
+[epoch 016] train=0.1810  val_loss=0.3971  mIoU_fg=0.4505
+  e017 it0050/110 loss=0.1659 lr=8.87e-04 elapsed=33.1min
+  e017 it0100/110 loss=0.1693 lr=8.81e-04 elapsed=33.8min
+[epoch 017] train=0.1694  val_loss=0.3979  mIoU_fg=0.4595
+  e018 it0050/110 loss=0.1584 lr=8.74e-04 elapsed=35.0min
+  e018 it0100/110 loss=0.1568 lr=8.68e-04 elapsed=35.7min
+[epoch 018] train=0.1623  val_loss=0.5354  mIoU_fg=0.4449
+  e019 it0050/110 loss=0.1673 lr=8.61e-04 elapsed=36.9min
+  e019 it0100/110 loss=0.1651 lr=8.55e-04 elapsed=37.5min
+[epoch 019] train=0.1642  val_loss=0.4823  mIoU_fg=0.4705
+  [best] mIoU_fg=0.4705 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512_conv/best.pt
+  e020 it0050/110 loss=0.1439 lr=8.47e-04 elapsed=38.8min
+  e020 it0100/110 loss=0.1463 lr=8.41e-04 elapsed=39.5min
+[epoch 020] train=0.1445  val_loss=0.5051  mIoU_fg=0.4472
+  e021 it0050/110 loss=0.1366 lr=8.33e-04 elapsed=40.7min
+  e021 it0100/110 loss=0.1434 lr=8.26e-04 elapsed=41.3min
+[epoch 021] train=0.1403  val_loss=0.5157  mIoU_fg=0.4511
+  e022 it0050/110 loss=0.1266 lr=8.18e-04 elapsed=42.6min
+  e022 it0100/110 loss=0.1283 lr=8.11e-04 elapsed=43.2min
+[epoch 022] train=0.1277  val_loss=0.4490  mIoU_fg=0.4645
+  e023 it0050/110 loss=0.1271 lr=8.02e-04 elapsed=44.4min
+  e023 it0100/110 loss=0.1302 lr=7.95e-04 elapsed=45.1min
+[epoch 023] train=0.1315  val_loss=0.4791  mIoU_fg=0.4650
+  e024 it0050/110 loss=0.1299 lr=7.87e-04 elapsed=46.3min
+  e024 it0100/110 loss=0.1280 lr=7.79e-04 elapsed=46.9min
+[epoch 024] train=0.1286  val_loss=0.5559  mIoU_fg=0.4652
+  e025 it0050/110 loss=0.1166 lr=7.70e-04 elapsed=48.2min
+  e025 it0100/110 loss=0.1191 lr=7.63e-04 elapsed=48.8min
+[epoch 025] train=0.1196  val_loss=0.4828  mIoU_fg=0.4725
+  [best] mIoU_fg=0.4725 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512_conv/best.pt
+  e026 it0050/110 loss=0.1190 lr=7.54e-04 elapsed=50.1min
+  e026 it0100/110 loss=0.1154 lr=7.46e-04 elapsed=50.8min
+[epoch 026] train=0.1126  val_loss=0.5043  mIoU_fg=0.4680
+  e027 it0050/110 loss=0.1155 lr=7.36e-04 elapsed=52.0min
+  e027 it0100/110 loss=0.1218 lr=7.29e-04 elapsed=52.6min
+[epoch 027] train=0.1253  val_loss=0.5063  mIoU_fg=0.4795
+  [best] mIoU_fg=0.4795 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512_conv/best.pt
+  e028 it0050/110 loss=0.1396 lr=7.19e-04 elapsed=53.9min
+  e028 it0100/110 loss=0.1273 lr=7.11e-04 elapsed=54.6min
+[epoch 028] train=0.1259  val_loss=0.5552  mIoU_fg=0.4760
+  e029 it0050/110 loss=0.1027 lr=7.01e-04 elapsed=55.8min
+  e029 it0100/110 loss=0.1040 lr=6.93e-04 elapsed=56.5min
+[epoch 029] train=0.1040  val_loss=0.5679  mIoU_fg=0.4703
+  e030 it0050/110 loss=0.1048 lr=6.83e-04 elapsed=57.7min
+  e030 it0100/110 loss=0.0960 lr=6.75e-04 elapsed=58.3min
+[epoch 030] train=0.0998  val_loss=0.6360  mIoU_fg=0.4678
+  e031 it0050/110 loss=0.0897 lr=6.65e-04 elapsed=59.6min
+  e031 it0100/110 loss=0.0939 lr=6.56e-04 elapsed=60.2min
+[epoch 031] train=0.0932  val_loss=0.6234  mIoU_fg=0.4753
+  e032 it0050/110 loss=0.0928 lr=6.46e-04 elapsed=61.4min
+  e032 it0100/110 loss=0.0911 lr=6.37e-04 elapsed=62.1min
+[epoch 032] train=0.0902  val_loss=0.5673  mIoU_fg=0.4764
+  e033 it0050/110 loss=0.0865 lr=6.27e-04 elapsed=63.3min
+  e033 it0100/110 loss=0.0912 lr=6.18e-04 elapsed=63.9min
+[epoch 033] train=0.0908  val_loss=0.6796  mIoU_fg=0.4751
+  e034 it0050/110 loss=0.0861 lr=6.08e-04 elapsed=65.2min
+  e034 it0100/110 loss=0.0845 lr=5.99e-04 elapsed=65.8min
+[epoch 034] train=0.0854  val_loss=0.5798  mIoU_fg=0.4744
+  e035 it0050/110 loss=0.0779 lr=5.89e-04 elapsed=67.0min
+  e035 it0100/110 loss=0.0802 lr=5.80e-04 elapsed=67.7min
+[epoch 035] train=0.0820  val_loss=0.7609  mIoU_fg=0.4801
+  [best] mIoU_fg=0.4801 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512_conv/best.pt
+  e036 it0050/110 loss=0.0811 lr=5.69e-04 elapsed=69.0min
+  e036 it0100/110 loss=0.0803 lr=5.61e-04 elapsed=69.6min
+[epoch 036] train=0.0793  val_loss=0.7368  mIoU_fg=0.4741
+  e037 it0050/110 loss=0.0793 lr=5.50e-04 elapsed=70.8min
+  e037 it0100/110 loss=0.0769 lr=5.41e-04 elapsed=71.5min
+[epoch 037] train=0.0770  val_loss=0.7177  mIoU_fg=0.4818
+  [best] mIoU_fg=0.4818 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512_conv/best.pt
+  e038 it0050/110 loss=0.0744 lr=5.30e-04 elapsed=72.8min
+  e038 it0100/110 loss=0.0736 lr=5.21e-04 elapsed=73.4min
+[epoch 038] train=0.0751  val_loss=0.7665  mIoU_fg=0.4606
+  e039 it0050/110 loss=0.0781 lr=5.11e-04 elapsed=74.6min
+  e039 it0100/110 loss=0.0746 lr=5.02e-04 elapsed=75.3min
+[epoch 039] train=0.0798  val_loss=0.8202  mIoU_fg=0.4735
+  e040 it0050/110 loss=0.0947 lr=4.91e-04 elapsed=76.5min
+  e040 it0100/110 loss=0.0848 lr=4.82e-04 elapsed=77.1min
+[epoch 040] train=0.0831  val_loss=0.8366  mIoU_fg=0.4623
+  e041 it0050/110 loss=0.0730 lr=4.71e-04 elapsed=78.3min
+  e041 it0100/110 loss=0.0705 lr=4.63e-04 elapsed=79.0min
+[epoch 041] train=0.0699  val_loss=0.8317  mIoU_fg=0.4836
+  [best] mIoU_fg=0.4836 saved -> /home/ids/diecidue/results/waste_vlm/dinoseg_dw_radio_512_conv/best.pt
+  e042 it0050/110 loss=0.0689 lr=4.52e-04 elapsed=80.3min
+  e042 it0100/110 loss=0.0691 lr=4.43e-04 elapsed=80.9min
+[epoch 042] train=0.0684  val_loss=0.8938  mIoU_fg=0.4755
+  e043 it0050/110 loss=0.0642 lr=4.32e-04 elapsed=82.2min
+  e043 it0100/110 loss=0.0659 lr=4.24e-04 elapsed=82.8min
+[epoch 043] train=0.0657  val_loss=0.7706  mIoU_fg=0.4764
+  e044 it0050/110 loss=0.0625 lr=4.13e-04 elapsed=84.0min
+  e044 it0100/110 loss=0.0639 lr=4.04e-04 elapsed=84.7min
+[epoch 044] train=0.0648  val_loss=0.8553  mIoU_fg=0.4817
+  e045 it0050/110 loss=0.0625 lr=3.94e-04 elapsed=85.9min
+  e045 it0100/110 loss=0.0617 lr=3.85e-04 elapsed=86.5min
+[epoch 045] train=0.0622  val_loss=0.8222  mIoU_fg=0.4764
+  e046 it0050/110 loss=0.0596 lr=3.75e-04 elapsed=87.8min
+  e046 it0100/110 loss=0.0602 lr=3.66e-04 elapsed=88.4min
+[epoch 046] train=0.0632  val_loss=0.8714  mIoU_fg=0.4759
+  e047 it0050/110 loss=0.0627 lr=3.56e-04 elapsed=89.6min
+  e047 it0100/110 loss=0.0593 lr=3.47e-04 elapsed=90.3min
+[epoch 047] train=0.0595  val_loss=0.8887  mIoU_fg=0.4799
+  e048 it0050/110 loss=0.0582 lr=3.37e-04 elapsed=91.5min
+  e048 it0100/110 loss=0.0589 lr=3.29e-04 elapsed=92.1min
+[epoch 048] train=0.0583  val_loss=0.9081  mIoU_fg=0.4770
+  e049 it0050/110 loss=0.0578 lr=3.19e-04 elapsed=93.4min
+  e049 it0100/110 loss=0.0561 lr=3.10e-04 elapsed=94.0min
+[epoch 049] train=0.0580  val_loss=0.9200  mIoU_fg=0.4793
+  e050 it0050/110 loss=0.0580 lr=3.00e-04 elapsed=95.2min
+  e050 it0100/110 loss=0.0571 lr=2.92e-04 elapsed=95.9min
+[epoch 050] train=0.0562  val_loss=0.9257  mIoU_fg=0.4703
+  e051 it0050/110 loss=0.0535 lr=2.83e-04 elapsed=97.1min
+  e051 it0100/110 loss=0.0557 lr=2.75e-04 elapsed=97.8min
+[epoch 051] train=0.0548  val_loss=0.9075  mIoU_fg=0.4800
+  e052 it0050/110 loss=0.0533 lr=2.65e-04 elapsed=99.0min
+  e052 it0100/110 loss=0.0548 lr=2.57e-04 elapsed=99.6min
+[epoch 052] train=0.0546  val_loss=0.9405  mIoU_fg=0.4728
+  e053 it0050/110 loss=0.0540 lr=2.48e-04 elapsed=100.9min
+  e053 it0100/110 loss=0.0531 lr=2.40e-04 elapsed=101.5min
+[epoch 053] train=0.0528  val_loss=0.9273  mIoU_fg=0.4706
+  e054 it0050/110 loss=0.0515 lr=2.31e-04 elapsed=102.7min
+  e054 it0100/110 loss=0.0526 lr=2.24e-04 elapsed=103.4min
+[epoch 054] train=0.0518  val_loss=0.9777  mIoU_fg=0.4703
+  e055 it0050/110 loss=0.0543 lr=2.15e-04 elapsed=104.6min
+  e055 it0100/110 loss=0.0516 lr=2.08e-04 elapsed=105.2min
+[epoch 055] train=0.0516  val_loss=0.9315  mIoU_fg=0.4730
+  e056 it0050/110 loss=0.0487 lr=1.99e-04 elapsed=106.5min
+  e056 it0100/110 loss=0.0513 lr=1.92e-04 elapsed=107.1min
+[epoch 056] train=0.0507  val_loss=0.9703  mIoU_fg=0.4631
+  e057 it0050/110 loss=0.0545 lr=1.83e-04 elapsed=108.3min
+  e057 it0100/110 loss=0.0507 lr=1.77e-04 elapsed=109.0min
+[epoch 057] train=0.0500  val_loss=0.9929  mIoU_fg=0.4687
+  e058 it0050/110 loss=0.0495 lr=1.69e-04 elapsed=110.2min
+  e058 it0100/110 loss=0.0503 lr=1.62e-04 elapsed=110.9min
+[epoch 058] train=0.0493  val_loss=0.9969  mIoU_fg=0.4692
+  e059 it0050/110 loss=0.0482 lr=1.54e-04 elapsed=112.1min
+  e059 it0100/110 loss=0.0498 lr=1.48e-04 elapsed=112.7min
+[epoch 059] train=0.0485  val_loss=0.9774  mIoU_fg=0.4669
+  e060 it0050/110 loss=0.0507 lr=1.40e-04 elapsed=114.0min
+  e060 it0100/110 loss=0.0483 lr=1.34e-04 elapsed=114.6min
+[epoch 060] train=0.0479  val_loss=0.9882  mIoU_fg=0.4663
+  e061 it0050/110 loss=0.0505 lr=1.27e-04 elapsed=115.8min
+  e061 it0100/110 loss=0.0484 lr=1.21e-04 elapsed=116.5min
+[epoch 061] train=0.0477  val_loss=0.9696  mIoU_fg=0.4688
+  e062 it0050/110 loss=0.0457 lr=1.14e-04 elapsed=117.7min
+  e062 it0100/110 loss=0.0469 lr=1.08e-04 elapsed=118.4min
+[epoch 062] train=0.0475  val_loss=0.9817  mIoU_fg=0.4684
+  e063 it0050/110 loss=0.0483 lr=1.02e-04 elapsed=119.6min
+  e063 it0100/110 loss=0.0468 lr=9.65e-05 elapsed=120.2min
+[epoch 063] train=0.0471  val_loss=0.9736  mIoU_fg=0.4638
+  e064 it0050/110 loss=0.0485 lr=9.03e-05 elapsed=121.5min
+  e064 it0100/110 loss=0.0470 lr=8.53e-05 elapsed=122.1min
+[epoch 064] train=0.0469  val_loss=0.9876  mIoU_fg=0.4665
+  e065 it0050/110 loss=0.0457 lr=7.94e-05 elapsed=123.3min
+  e065 it0100/110 loss=0.0460 lr=7.46e-05 elapsed=124.0min
+[epoch 065] train=0.0467  val_loss=0.9855  mIoU_fg=0.4677
+  e066 it0050/110 loss=0.0457 lr=6.91e-05 elapsed=125.2min
+  e066 it0100/110 loss=0.0462 lr=6.46e-05 elapsed=125.8min
+[epoch 066] train=0.0460  val_loss=0.9673  mIoU_fg=0.4653
+  e067 it0050/110 loss=0.0451 lr=5.95e-05 elapsed=127.1min
+  e067 it0100/110 loss=0.0461 lr=5.53e-05 elapsed=127.7min
+[epoch 067] train=0.0457  val_loss=0.9951  mIoU_fg=0.4675
+  e068 it0050/110 loss=0.0461 lr=5.05e-05 elapsed=128.9min
+  e068 it0100/110 loss=0.0459 lr=4.67e-05 elapsed=129.6min
+[epoch 068] train=0.0454  val_loss=1.0089  mIoU_fg=0.4645
+  e069 it0050/110 loss=0.0479 lr=4.23e-05 elapsed=130.8min
+  e069 it0100/110 loss=0.0460 lr=3.87e-05 elapsed=131.5min
+[epoch 069] train=0.0450  val_loss=0.9805  mIoU_fg=0.4667
+  e070 it0050/110 loss=0.0486 lr=3.47e-05 elapsed=132.7min
+  e070 it0100/110 loss=0.0468 lr=3.15e-05 elapsed=133.3min
+[epoch 070] train=0.0452  val_loss=1.0106  mIoU_fg=0.4665
+  e071 it0050/110 loss=0.0414 lr=2.79e-05 elapsed=134.6min
+  e071 it0100/110 loss=0.0443 lr=2.50e-05 elapsed=135.2min
+[epoch 071] train=0.0447  val_loss=1.0152  mIoU_fg=0.4661
+  e072 it0050/110 loss=0.0445 lr=2.18e-05 elapsed=136.4min
+  e072 it0100/110 loss=0.0443 lr=1.93e-05 elapsed=137.1min
+[epoch 072] train=0.0445  val_loss=1.0063  mIoU_fg=0.4670
+  e073 it0050/110 loss=0.0425 lr=1.64e-05 elapsed=138.3min
+  e073 it0100/110 loss=0.0446 lr=1.42e-05 elapsed=138.9min
+[epoch 073] train=0.0452  val_loss=1.0069  mIoU_fg=0.4665
+  e074 it0050/110 loss=0.0449 lr=1.18e-05 elapsed=140.2min
+  e074 it0100/110 loss=0.0451 lr=9.96e-06 elapsed=140.8min
+[epoch 074] train=0.0477  val_loss=1.0071  mIoU_fg=0.4668
+  e075 it0050/110 loss=0.0432 lr=7.94e-06 elapsed=142.0min
+  e075 it0100/110 loss=0.0453 lr=6.44e-06 elapsed=142.7min
+[epoch 075] train=0.0448  val_loss=1.0113  mIoU_fg=0.4664
+  e076 it0050/110 loss=0.0447 lr=4.84e-06 elapsed=143.9min
+  e076 it0100/110 loss=0.0444 lr=3.68e-06 elapsed=144.5min
+[epoch 076] train=0.0478  val_loss=1.0114  mIoU_fg=0.4655
+  e077 it0050/110 loss=0.0426 lr=2.50e-06 elapsed=145.8min
+  e077 it0100/110 loss=0.0444 lr=1.68e-06 elapsed=146.4min
+[epoch 077] train=0.0449  val_loss=1.0128  mIoU_fg=0.4657
+  e078 it0050/110 loss=0.0454 lr=9.21e-07 elapsed=147.6min
+  e078 it0100/110 loss=0.0446 lr=4.59e-07 elapsed=148.3min
+[epoch 078] train=0.0442  val_loss=1.0134  mIoU_fg=0.4657
+  e079 it0050/110 loss=0.0423 lr=1.15e-07 elapsed=149.5min
+  e079 it0100/110 loss=0.0451 lr=3.19e-09 elapsed=150.2min
+[epoch 079] train=0.0444  val_loss=1.0132  mIoU_fg=0.4657
+[done] best_mIoU_fg=0.4836  total_time=150.8min
+[slurm] done=2026-05-23T12:02:20+00:00

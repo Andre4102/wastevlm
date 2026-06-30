@@ -1,0 +1,18 @@
+[slurm] host=nodemm03  job=857192  start=2026-06-19T16:57:21+02:00
+[slurm] btype=dinov3  version=m4  task=mcml  id=default  multi_block=5  out=aw_probe_dinov3b_l5
+NVIDIA GeForce RTX 3090, 24576 MiB
+[load] backbone_type=dinov3 id=local task=mcml  multi_block=[5]
+[model] embed_dim=768  image_size=512
+[data] AW m4  train=4304 (-486) test=664 (-26)  classes=6
+
+=== AW m4 — dinov3 (512²) supervised probe ===
+  micro F1 = 0.4267   macro F1 = 0.2888
+per-class F1:
+  Rubble/excavated earth and rocks            F1=0.409  support=90
+  Scrap                                       F1=0.054  support=9
+  Sludge-Zootechnical waste-Manure            F1=0.105  support=10
+  Wood                                        F1=0.267  support=35
+  Tires                                       F1=0.211  support=25
+  Other waste                                 F1=0.687  support=186
+[saved] /home/ids/diecidue/results/waste_vlm/aw_probe_dinov3b_l5/aw_m4_probe.json
+[slurm] done=2026-06-19T17:04:17+02:00

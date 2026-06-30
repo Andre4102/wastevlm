@@ -1,0 +1,18 @@
+[slurm] host=nodemm03  job=859240  start=2026-06-22T13:21:45+02:00
+[slurm] btype=swint  version=m4  task=mcml  id=/home/ids/diecidue/results/waste_vlm/weights/swint/checkpoint.pth  multi_block=none  out=aw_probe_swint
+NVIDIA GeForce RTX 3090, 24576 MiB
+[load] backbone_type=swint id=/home/ids/diecidue/results/waste_vlm/weights/swint/checkpoint.pth task=mcml  multi_block=None
+[model] embed_dim=768  image_size=224
+[data] AW m4  train=4304 (-486) test=664 (-26)  classes=6
+
+=== AW m4 — swint (224²) supervised probe ===
+  micro F1 = 0.5429   macro F1 = 0.3177
+per-class F1:
+  Rubble/excavated earth and rocks            F1=0.460  support=90
+  Scrap                                       F1=0.000  support=9
+  Sludge-Zootechnical waste-Manure            F1=0.138  support=10
+  Wood                                        F1=0.299  support=35
+  Tires                                       F1=0.240  support=25
+  Other waste                                 F1=0.768  support=186
+[saved] /home/ids/diecidue/results/waste_vlm/aw_probe_swint/aw_m4_probe.json
+[slurm] done=2026-06-22T13:26:37+02:00

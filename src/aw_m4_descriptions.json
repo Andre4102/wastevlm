@@ -1,0 +1,48 @@
+{
+  "_provenance": {
+    "source": "AerialWaste MCML m4 split (6 classes), AW v2.0 dataset",
+    "note": "Cues hand-written for aerial-view identification. m4 is a finer-grained alternative to m2: rubble bundles in 'excavated earth'; 'Scrap' splits out from m2's 'Bulky/Containers'; 'Sludge-Zootechnical' is the wet-biological class largely absent from DW paper-10; 'Wood' and 'Tires' map cleanly to DW Pallets/Tyres but include a wider object set; 'Other waste' is the catch-all."
+  },
+
+  "Rubble/excavated earth and rocks": {
+    "ewc_codes": ["17 01 (concrete, bricks, tiles, ceramics)", "17 05 04 (soil and stones)", "17 09 04 (mixed C&D wastes)"],
+    "ewc_description": "Construction & demolition rubble plus excavated earth/rocks.",
+    "aerial_cue": "piles of broken concrete, bricks or stones AND brown/grey soil/excavated earth heaps — irregular, dusty; sometimes mounds of soil mixed with rubble",
+    "clip_tags": ["rubble", "excavated soil", "construction rubble", "broken concrete", "dirt and rubble", "soil dump"]
+  },
+
+  "Scrap": {
+    "ewc_codes": ["17 04 (metals from C&D)", "19 12 02 (ferrous metals, mechanical treatment)", "16 01 17 (ferrous metals from ELV)"],
+    "ewc_description": "Ferrous, non-ferrous and mixed-alloy scrap metal.",
+    "aerial_cue": "tangled metal fragments — twisted, rusty-orange or shiny — in heterogeneous piles; no regular geometry, mix of small cm-scale pieces and larger metal objects",
+    "clip_tags": ["scrap metal", "metal scrap", "junk metal", "rusty metal", "scrap iron", "metal junk"]
+  },
+
+  "Sludge-Zootechnical waste-Manure": {
+    "ewc_codes": ["02 01 (agriculture / animal husbandry wastes)", "02 02 (animal-tissue / dairy wastes)", "19 06 (anaerobic digestion residues)"],
+    "ewc_description": "Wet biological / agricultural waste: sludge, manure, zootechnical residues.",
+    "aerial_cue": "wet brown or dark-black sludge / manure pools — smooth, sometimes liquid surface, often near barns or open ponds; can look almost mirror-like when freshly poured",
+    "clip_tags": ["manure", "animal manure", "sludge", "farm waste", "agricultural waste", "liquid manure"]
+  },
+
+  "Wood": {
+    "ewc_codes": ["15 01 03 (wooden packaging)", "17 02 01 (wood from C&D)", "20 01 38 (wood, municipal)"],
+    "ewc_description": "Wooden waste: pallets, planks, branches, demolished timber.",
+    "aerial_cue": "wooden boards, pallets, lumber stacks, tree branches — brown / light-yellow wood texture, often rectangular planks or slatted pallet patterns, sometimes piled chaotically",
+    "clip_tags": ["wood waste", "wooden pallets", "timber waste", "discarded wood", "lumber waste", "wooden planks"]
+  },
+
+  "Tires": {
+    "ewc_codes": ["16 01 03 (end-of-life tyres)"],
+    "ewc_description": "End-of-life tyres.",
+    "aerial_cue": "dark black circular rubber discs ~60 cm wide — donut/ring shape from above, single, in dense stacks, or half-buried",
+    "clip_tags": ["discarded tires", "used tires", "rubber tires", "tire pile", "scrap tires", "old tyres"]
+  },
+
+  "Other waste": {
+    "ewc_codes": ["20 03 01 (mixed municipal waste)", "20 03 99 (municipal waste, unspecified)", "17 09 04 (mixed C&D)"],
+    "ewc_description": "Heterogeneous mixed waste not falling into the other 5 categories.",
+    "aerial_cue": "heterogeneous heap mixing textile, plastic, paper, packaging, food waste — multicoloured, mound-shaped, no single dominant material type",
+    "clip_tags": ["mixed waste", "trash heap", "garbage pile", "refuse heap", "miscellaneous waste", "assorted waste"]
+  }
+}

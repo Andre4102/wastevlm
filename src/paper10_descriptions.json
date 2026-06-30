@@ -1,0 +1,99 @@
+{
+  "_provenance": {
+    "wikipedia_fetched": "2026-05-26",
+    "ewc_source": "European List of Waste, Commission Decision 2014/955/EU (2014-12-18)",
+    "ewc_url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32014D0955",
+    "note": "Each entry combines (a) Wikipedia material identity, (b) EU LoW canonical category, and (c) an aerial_cue manually layered on top describing how the class appears from a ~50 m drone altitude. Aerial cues are the field that flows into the VLM prompt; wikipedia/ewc fields are documentation."
+  },
+
+  "Construction and demolition materials": {
+    "wikipedia_url": "https://en.wikipedia.org/wiki/Construction_waste",
+    "wikipedia_summary": "Materials such as bricks, concrete and wood damaged or unused during construction. Appears as rubble in piles along with wood fragments, plasterboard sheets, pipes, wires, and steel reinforcement bars. Commonly found at demolition sites, construction zones, and landfills.",
+    "ewc_chapter": "17",
+    "ewc_codes": ["17 01 01 (concrete)", "17 01 02 (bricks)", "17 01 03 (tiles and ceramics)", "17 09 04 (mixed C&D wastes)"],
+    "ewc_description": "Construction and demolition wastes (including excavated soil from contaminated sites).",
+    "aerial_cue": "irregular dusty piles of broken concrete, bricks, plaster and rubble — grey/beige, often with protruding rebar or wood fragments",
+    "clip_tags": ["construction debris", "demolition rubble", "concrete rubble", "building waste", "broken concrete", "brick rubble"]
+  },
+
+  "Metal barrels": {
+    "wikipedia_url": "https://en.wikipedia.org/wiki/Drum_(container)",
+    "wikipedia_summary": "Cylindrical steel containers ~584 mm diameter × 876 mm tall, with reinforcing rolling-hoop rings, often painted bright red/yellow/blue. When discarded they accumulate in piles of uniform cylindrical forms.",
+    "ewc_codes": ["15 01 04 (metallic packaging)"],
+    "ewc_description": "Metallic packaging (drums, cans, tins).",
+    "aerial_cue": "small uniform cylinders ~60 cm wide; from above look like dark discs or rings, often clustered or in rows, rusty-brown or bright primary colours",
+    "clip_tags": ["oil drums", "steel drums", "metal drums", "metallic barrels", "oil barrels", "industrial drums"]
+  },
+
+  "Plastic packaging": {
+    "wikipedia_url": "https://en.wikipedia.org/wiki/Plastic_packaging",
+    "wikipedia_summary": "Single-use items: plastic bottles, bags, cups, foam food containers, clamshells, films. Comprises ~46% of annual plastic waste and a large share of aquatic litter. Ranges from rigid containers to flexible films.",
+    "ewc_codes": ["15 01 02 (plastic packaging)"],
+    "ewc_description": "Plastic packaging.",
+    "aerial_cue": "scattered bright spots against soil — multicoloured (white, blue, red, green) bottles, films, bags and foam fragments; loose, no rigid shape, often wind-blown",
+    "clip_tags": ["plastic waste", "plastic bags", "plastic bottles", "plastic litter", "plastic debris", "plastic film"]
+  },
+
+  "Pallets": {
+    "wikipedia_url": "https://en.wikipedia.org/wiki/Pallet",
+    "wikipedia_summary": "Flat rectangular wooden platforms (~1.2 × 1.0 m, GMA standard ~48 × 40 in). Parallel stringers support perpendicular deck boards forming a slatted grid. Light-to-dark brown; stacked into tall rectangular columns or scattered flat.",
+    "ewc_codes": ["15 01 03 (wooden packaging)"],
+    "ewc_description": "Wooden packaging.",
+    "aerial_cue": "rectangular wooden grids ~1.2 × 1.0 m with characteristic parallel slats; brown-wood texture, often stacked in rows, sometimes broken with splintered ends",
+    "clip_tags": ["wooden pallets", "wood pallets", "shipping pallets", "pallet stacks", "discarded pallets", "wooden platforms"]
+  },
+
+  "Scrap": {
+    "wikipedia_url": "https://en.wikipedia.org/wiki/Scrap",
+    "wikipedia_summary": "Crushed, shredded or fragmented metal pieces in mixed conditions — some rusted, others still metallic. Accumulated in scrapyards in non-uniform shapes.",
+    "ewc_codes": ["17 04 (metals from C&D)", "19 12 02 (ferrous metals, mechanical treatment)", "20 01 40 (metals, municipal fraction)"],
+    "ewc_description": "Ferrous, non-ferrous and mixed-alloy scrap.",
+    "aerial_cue": "irregular tangled metal pieces — twisted, rusty-orange or shiny — in heterogeneous piles; no regular geometry, sizes from cm to several m",
+    "clip_tags": ["scrap metal", "metal scrap", "junk metal", "rusty metal", "scrap iron", "metal junk"]
+  },
+
+  "Vehicles": {
+    "wikipedia_url": "https://en.wikipedia.org/wiki/Vehicle_recycling",
+    "wikipedia_summary": "End-of-life vehicles arrive at facilities intact (for parts), wrecked, or already crushed. Often dumped at scrapyards or in fields; intact car silhouette is the giveaway from above.",
+    "ewc_codes": ["16 01 04* (end-of-life vehicles, hazardous)", "16 01 06 (ELVs containing no fluids/dangerous components)"],
+    "ewc_description": "End-of-life vehicles.",
+    "aerial_cue": "clear rectangular vehicle silhouette ~4 × 2 m (car) or larger (truck/van); often dusty, sometimes missing wheels or doors, parked off-road in fields or wasteland",
+    "clip_tags": ["abandoned car", "junk car", "wrecked vehicle", "scrap vehicle", "end-of-life car", "abandoned vehicle"]
+  },
+
+  "Tyres": {
+    "wikipedia_url": "https://en.wikipedia.org/wiki/Tire",
+    "wikipedia_summary": "Ring-shaped rubber structures, dark black from carbon black. When discarded they form large piles; their substantial void space consumes landfill capacity quickly.",
+    "ewc_codes": ["16 01 03 (end-of-life tyres)"],
+    "ewc_description": "End-of-life tyres.",
+    "aerial_cue": "dark black circular rings ~60 cm diameter; from above look like donuts or solid discs, single or in dense stacks, occasionally half-buried",
+    "clip_tags": ["discarded tires", "used tires", "rubber tires", "tyre pile", "scrap tires", "old tyres"]
+  },
+
+  "Asbestos": {
+    "wikipedia_url": "https://en.wikipedia.org/wiki/Asbestos",
+    "wikipedia_summary": "Asbestos-cement roofing sheets with characteristic corrugated surface, grey to off-white. When broken into rectangular panels they release fibres; the panels themselves are visible as corrugated grey rectangles.",
+    "ewc_codes": ["17 06 05* (construction materials containing asbestos, hazardous)"],
+    "ewc_description": "Construction materials containing asbestos.",
+    "aerial_cue": "rectangular grey/off-white sheets with parallel corrugation lines (regular ripple pattern); often broken into ~1 × 2 m panels; matte, weathered surface",
+    "clip_tags": ["asbestos sheets", "corrugated asbestos", "asbestos roofing", "asbestos panels", "cement asbestos", "asbestos slabs"]
+  },
+
+  "Textile": {
+    "wikipedia_url": "https://en.wikipedia.org/wiki/Textile_recycling",
+    "wikipedia_summary": "Post-consumer garments and household fabric articles discarded because damaged, worn, or outdated. Collected via donation bins and municipal programs; piles outdoors are mixed colours and shapes.",
+    "ewc_codes": ["20 01 11 (textiles, separately-collected municipal fraction)", "15 01 09 (textile packaging)"],
+    "ewc_description": "Textile waste from clothing and household articles.",
+    "aerial_cue": "soft heterogeneous piles of cloth and clothing — varied colours (blue, white, red, brown), no rigid shape, ragged edges; sometimes baled into compact rectangles",
+    "clip_tags": ["textile waste", "clothing waste", "discarded clothes", "fabric waste", "rags", "clothing dump"]
+  },
+
+  "Mixed items": {
+    "wikipedia_url": "https://en.wikipedia.org/wiki/Municipal_solid_waste",
+    "wikipedia_summary": "Mixed municipal waste — food waste, packaging, plastic containers, yard waste — composition varies by region. Accumulates in mounds at landfill sites.",
+    "ewc_codes": ["20 03 01 (mixed municipal waste)", "20 03 07 (bulky waste)"],
+    "ewc_description": "Mixed municipal waste.",
+    "aerial_cue": "heterogeneous heap with no single dominant class — multicoloured mix of plastics, paper, cloth and food packaging; mound-shaped, no geometric regularity",
+    "clip_tags": ["mixed waste", "trash heap", "garbage pile", "refuse heap", "mixed garbage", "junk pile"]
+  }
+}

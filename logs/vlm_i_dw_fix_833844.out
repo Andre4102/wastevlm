@@ -1,0 +1,28 @@
+[slurm] host=nodemm02  job=833844  start=2026-05-26T20:25:22+02:00
+[slurm] model=internvl3 task=classify dataset=dw_paper10 prompt=closed_vocab limit=10 out=vlm_internvl3_closed_smoke_fix
+NVIDIA GeForce RTX 3090, 24576 MiB
+[model] loading internvl3 from /home/ids/diecidue/results/waste_vlm/weights/InternVL3-8B ...
+FlashAttention2 is not installed.
+[model] ready
+[data] dataset=dw_paper10 test=10 classes=10
+[task] classify  prompt_style=closed_vocab  prompt-len=2054 chars
+  [  10/10] nonempty=2 empty=8 elapsed=0.1min
+[saved-raw] /home/ids/diecidue/results/waste_vlm/vlm_internvl3_closed_smoke_fix/raw_responses.jsonl
+
+=== internvl3 closed_vocab — dw_paper10 (10 imgs) ===
+  micro F1 = 0.0000   macro F1 = 0.0000
+  nonempty preds = 2   empty = 8
+
+per-class F1:
+  Construction and demolition materials     F1=n/a  support=0
+  Metal barrels                             F1=n/a  support=0
+  Plastic packaging                         F1=n/a  support=0
+  Pallets                                   F1=n/a  support=0
+  Scrap                                     F1=n/a  support=0
+  Vehicles                                  F1=n/a  support=0
+  Tyres                                     F1=n/a  support=0
+  Asbestos                                  F1=n/a  support=0
+  Textile                                   F1=n/a  support=0
+  Mixed items                               F1=n/a  support=0
+[saved] /home/ids/diecidue/results/waste_vlm/vlm_internvl3_closed_smoke_fix/test_eval.json
+[slurm] done=2026-05-26T20:25:48+02:00

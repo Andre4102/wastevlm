@@ -1,0 +1,11 @@
+[slurm] host=nodemm03  job=859073  start=2026-06-22T11:21:07+02:00
+[slurm] btype=swint  version=n/a  task=binary  id=/home/ids/diecidue/results/waste_vlm/weights/swint/checkpoint.pth  multi_block=none  out=aw_probe_swint_binary
+NVIDIA GeForce RTX 3090, 24576 MiB
+[load] backbone_type=swint id=/home/ids/diecidue/results/waste_vlm/weights/swint/checkpoint.pth task=binary  multi_block=None
+[model] embed_dim=768  image_size=224
+[data] AW binary  train=9096  test=2607
+
+=== AW binary — swint (224²) ===
+  F1=0.8455  precision=0.7894  recall=0.9102
+[saved] /home/ids/diecidue/results/waste_vlm/aw_probe_swint_binary/aw_binary_probe.json
+[slurm] done=2026-06-22T11:31:49+02:00

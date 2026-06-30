@@ -1,0 +1,57 @@
+[slurm] host=node50  job=859646  start=2026-06-22T16:49:13+02:00
+[slurm] model=internvl3 task=classify dataset=aw_m2 prompt=open_cot limit=0 out=vlm_ivl_cot_awm2
+NVIDIA L40S, 46068 MiB
+[model] loading internvl3 from /home/ids/diecidue/results/waste_vlm/weights/InternVL3-8B ...
+FlashAttention2 is not installed.
+[model] ready
+[data] filtered missing-on-disk: -26
+[data] dataset=aw_m2 test=664 classes=5
+[task] classify  prompt_style=open_cot  describe-len=282  classify-len=279 chars
+  [  20/664] nonempty=11 empty=9 elapsed=1.1min
+  [  40/664] nonempty=21 empty=19 elapsed=2.2min
+  [  60/664] nonempty=27 empty=33 elapsed=3.2min
+  [  80/664] nonempty=41 empty=39 elapsed=4.4min
+  [ 100/664] nonempty=57 empty=43 elapsed=5.7min
+  [ 120/664] nonempty=69 empty=51 elapsed=6.8min
+  [ 140/664] nonempty=84 empty=56 elapsed=8.0min
+  [ 160/664] nonempty=97 empty=63 elapsed=9.2min
+  [ 180/664] nonempty=105 empty=75 elapsed=10.2min
+  [ 200/664] nonempty=115 empty=85 elapsed=11.3min
+  [ 220/664] nonempty=126 empty=94 elapsed=12.4min
+  [ 240/664] nonempty=130 empty=110 elapsed=13.3min
+  [ 260/664] nonempty=133 empty=127 elapsed=14.2min
+  [ 280/664] nonempty=136 empty=144 elapsed=15.2min
+  [ 300/664] nonempty=136 empty=164 elapsed=16.0min
+  [ 320/664] nonempty=137 empty=183 elapsed=16.8min
+  [ 340/664] nonempty=138 empty=202 elapsed=17.6min
+  [ 360/664] nonempty=142 empty=218 elapsed=18.6min
+  [ 380/664] nonempty=144 empty=236 elapsed=19.5min
+  [ 400/664] nonempty=144 empty=256 elapsed=20.3min
+  [ 420/664] nonempty=148 empty=272 elapsed=21.2min
+  [ 440/664] nonempty=150 empty=290 elapsed=22.1min
+  [ 460/664] nonempty=153 empty=307 elapsed=23.1min
+  [ 480/664] nonempty=155 empty=325 elapsed=23.9min
+  [ 500/664] nonempty=156 empty=344 elapsed=24.7min
+  [ 520/664] nonempty=160 empty=360 elapsed=25.6min
+  [ 540/664] nonempty=161 empty=379 elapsed=26.5min
+  [ 560/664] nonempty=162 empty=398 elapsed=27.3min
+  [ 580/664] nonempty=162 empty=418 elapsed=28.0min
+  [ 600/664] nonempty=165 empty=435 elapsed=28.9min
+  [ 620/664] nonempty=172 empty=448 elapsed=29.9min
+  [ 640/664] nonempty=173 empty=467 elapsed=30.8min
+  [ 660/664] nonempty=173 empty=487 elapsed=31.6min
+  [ 664/664] nonempty=173 empty=491 elapsed=31.7min
+[saved-raw] /home/ids/diecidue/results/waste_vlm/vlm_ivl_cot_awm2/raw_responses.jsonl
+
+=== internvl3 open_cot — aw_m2 (664 imgs) ===
+  micro F1 = 0.2104   macro F1 = 0.1648
+  nonempty preds = 173   empty = 491
+
+per-class F1:
+  Rubble                                    F1=0.481  support=90
+  Bulky items                               F1=0.000  support=150
+  Plastic                                   F1=0.248  support=57
+  Containers                                F1=0.068  support=110
+  Unknown material                          F1=0.028  support=143
+[saved] /home/ids/diecidue/results/waste_vlm/vlm_ivl_cot_awm2/test_eval.json
+[slurm] done=2026-06-22T17:21:03+02:00

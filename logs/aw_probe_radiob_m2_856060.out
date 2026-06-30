@@ -1,0 +1,17 @@
+[slurm] host=nodemm02  job=856060  start=2026-06-19T04:19:51+02:00
+[slurm] btype=radio  version=m2  id=/home/ids/diecidue/results/waste_vlm/weights/RADIO-B  multi_block=none  out=aw_probe_radiob
+NVIDIA GeForce RTX 3090, 24576 MiB
+[load] backbone_type=radio id=/home/ids/diecidue/results/waste_vlm/weights/RADIO-B task=mcml  multi_block=None
+[model] embed_dim=2304  image_size=512
+[data] AW m2  train=4304 (-486) test=664 (-26)  classes=5
+
+=== AW m2 — radio (512²) supervised probe ===
+  micro F1 = 0.6149   macro F1 = 0.5840
+per-class F1:
+  Rubble                                      F1=0.473  support=90
+  Bulky items                                 F1=0.747  support=150
+  Plastic                                     F1=0.364  support=57
+  Containers                                  F1=0.635  support=110
+  Unknown material                            F1=0.701  support=143
+[saved] /home/ids/diecidue/results/waste_vlm/aw_probe_radiob/aw_m2_probe.json
+[slurm] done=2026-06-19T04:26:07+02:00

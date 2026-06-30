@@ -1,0 +1,41 @@
+[slurm] host=nodemm02  job=833342  start=2026-05-26T11:03:54+02:00
+[slurm] model=internvl3 limit=10 out=vlm_internvl3_smoke2
+NVIDIA GeForce RTX 3090, 24576 MiB
+[data] split=test n=765 fg-categories=20
+[model] loading internvl3 from /home/ids/diecidue/results/waste_vlm/weights/InternVL3-8B ...
+FlashAttention2 is not installed.
+[model] ready
+[warn] inference failed on site3_692.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_709.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_132.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_135.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_42.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_5.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_151.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_595.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_198.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_772.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[saved-raw] /home/ids/diecidue/results/waste_vlm/vlm_internvl3_smoke2/raw_responses.jsonl
+
+=== internvl3 — DroneWaste test (paper-10) ===
+  imgs processed   = 10
+  empty-parse imgs = 0
+  total detections = 0
+  mAP @ [.5:.95]   = 0.000
+  AP@0.5           = 0.000
+  AP@0.75          = 0.000
+  paper-10 mean AP = 0.000
+
+per-class AP (sorted desc):
+  Construction and demolition materials     0.000
+  Metal barrels                             0.000
+  Plastic packaging                         0.000
+  Pallets                                   0.000
+  Scrap                                     0.000
+  Vehicles                                  0.000
+  Tyres                                     0.000
+  Asbestos                                  0.000
+  Textile                                   0.000
+  Mixed items                               0.000
+[saved] /home/ids/diecidue/results/waste_vlm/vlm_internvl3_smoke2/test_eval.json
+[slurm] done=2026-05-26T11:04:40+02:00

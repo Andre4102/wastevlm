@@ -1,0 +1,11 @@
+[slurm] host=nodemm02  job=856088  start=2026-06-19T06:01:08+02:00
+[slurm] btype=radio  version=n/a  task=binary  id=/home/ids/diecidue/results/waste_vlm/weights/RADIO-L  multi_block=none  out=aw_probe_radio_l
+NVIDIA GeForce RTX 3090, 24576 MiB
+[load] backbone_type=radio id=/home/ids/diecidue/results/waste_vlm/weights/RADIO-L task=binary  multi_block=None
+[model] embed_dim=3072  image_size=512
+[data] AW binary  train=9096  test=2607
+
+=== AW binary — radio (512²) ===
+  F1=0.8876  precision=0.8369  recall=0.9448
+[saved] /home/ids/diecidue/results/waste_vlm/aw_probe_radio_l/aw_binary_probe.json
+[slurm] done=2026-06-19T06:22:37+02:00

@@ -1,0 +1,54 @@
+[data] split=test n=765 classes=20 mode=multilabel
+[model] /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/best.pt  head=linear backbone=dinov3
+loading annotations into memory...
+Done (t=0.00s)
+creating index...
+index created!
+Loading and preparing results...
+DONE (t=0.01s)
+creating index...
+index created!
+loading annotations into memory...
+Done (t=0.00s)
+creating index...
+index created!
+Loading and preparing results...
+DONE (t=0.01s)
+creating index...
+index created!
+loading annotations into memory...
+Done (t=0.00s)
+creating index...
+index created!
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+loading annotations into memory...
+Done (t=0.00s)
+creating index...
+index created!
+Loading and preparing results...
+DONE (t=0.01s)
+creating index...
+index created!
+
+config                  n_dets     mAP    AP50    AP75  paper10
+--------------------------------------------------------------
+cc_max t=0.15             8315   0.110   0.185   0.107   13.81%
+cc_max t=0.3              5406   0.123   0.200   0.114   14.95%
+cc_max t=0.5              3715   0.118   0.199   0.110   15.70%
+watershed t=0.5 d=11      5835   0.038   0.081   0.030    4.94%
+
+per-class paper-10 mAP: baseline (cc_max t=0.15) vs best (cc_max t=0.5)
+  Construction and demolition materials     11.18% ->  13.83%
+  Metal barrels                              0.12% ->   0.10%
+  Plastic packaging                         11.59% ->  14.28%
+  Pallets                                    6.67% ->   8.18%
+  Scrap                                      8.72% ->  15.15%
+  Vehicles                                  16.60% ->  12.69%
+  Tyres                                      4.46% ->   5.70%
+  Asbestos                                  49.55% ->  54.13%
+  Textile                                    6.91% ->   7.33%
+  Mixed items                               22.34% ->  25.60%
+[saved] /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512_ml/decode_sweep.json

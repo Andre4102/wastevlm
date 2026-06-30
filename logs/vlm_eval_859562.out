@@ -1,0 +1,102 @@
+[slurm] host=node50  job=859562  start=2026-06-22T16:11:41+02:00
+[slurm] model=clip task=classify dataset=dw_paper10 prompt=closed_vocab limit=0 out=vlm_clip_dw_v2
+NVIDIA L40S, 46068 MiB
+[model] loading clip from /home/ids/diecidue/.cache/huggingface/hub/models--openai--clip-vit-base-patch32/snapshots/3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268 ...
+[model] ready
+[data] dataset=dw_paper10 test=1504 classes=10
+[task] classify  prompt_style=closed_vocab  prompt-len=2054 chars
+  [  20/1504] nonempty=9 empty=11 elapsed=0.0min
+  [  40/1504] nonempty=22 empty=18 elapsed=0.0min
+  [  60/1504] nonempty=33 empty=27 elapsed=0.1min
+  [  80/1504] nonempty=43 empty=37 elapsed=0.1min
+  [ 100/1504] nonempty=54 empty=46 elapsed=0.1min
+  [ 120/1504] nonempty=60 empty=60 elapsed=0.1min
+  [ 140/1504] nonempty=69 empty=71 elapsed=0.2min
+  [ 160/1504] nonempty=77 empty=83 elapsed=0.2min
+  [ 180/1504] nonempty=88 empty=92 elapsed=0.2min
+  [ 200/1504] nonempty=98 empty=102 elapsed=0.2min
+  [ 220/1504] nonempty=106 empty=114 elapsed=0.2min
+  [ 240/1504] nonempty=118 empty=122 elapsed=0.3min
+  [ 260/1504] nonempty=131 empty=129 elapsed=0.3min
+  [ 280/1504] nonempty=149 empty=131 elapsed=0.3min
+  [ 300/1504] nonempty=169 empty=131 elapsed=0.3min
+  [ 320/1504] nonempty=188 empty=132 elapsed=0.4min
+  [ 340/1504] nonempty=208 empty=132 elapsed=0.4min
+  [ 360/1504] nonempty=224 empty=136 elapsed=0.4min
+  [ 380/1504] nonempty=242 empty=138 elapsed=0.4min
+  [ 400/1504] nonempty=260 empty=140 elapsed=0.4min
+  [ 420/1504] nonempty=278 empty=142 elapsed=0.5min
+  [ 440/1504] nonempty=295 empty=145 elapsed=0.5min
+  [ 460/1504] nonempty=314 empty=146 elapsed=0.5min
+  [ 480/1504] nonempty=334 empty=146 elapsed=0.5min
+  [ 500/1504] nonempty=350 empty=150 elapsed=0.6min
+  [ 520/1504] nonempty=367 empty=153 elapsed=0.6min
+  [ 540/1504] nonempty=385 empty=155 elapsed=0.6min
+  [ 560/1504] nonempty=405 empty=155 elapsed=0.6min
+  [ 580/1504] nonempty=424 empty=156 elapsed=0.6min
+  [ 600/1504] nonempty=442 empty=158 elapsed=0.7min
+  [ 620/1504] nonempty=462 empty=158 elapsed=0.7min
+  [ 640/1504] nonempty=482 empty=158 elapsed=0.7min
+  [ 660/1504] nonempty=501 empty=159 elapsed=0.7min
+  [ 680/1504] nonempty=521 empty=159 elapsed=0.8min
+  [ 700/1504] nonempty=539 empty=161 elapsed=0.8min
+  [ 720/1504] nonempty=549 empty=171 elapsed=0.8min
+  [ 740/1504] nonempty=567 empty=173 elapsed=0.8min
+  [ 760/1504] nonempty=583 empty=177 elapsed=0.8min
+  [ 780/1504] nonempty=598 empty=182 elapsed=0.9min
+  [ 800/1504] nonempty=618 empty=182 elapsed=0.9min
+  [ 820/1504] nonempty=637 empty=183 elapsed=0.9min
+  [ 840/1504] nonempty=657 empty=183 elapsed=0.9min
+  [ 860/1504] nonempty=670 empty=190 elapsed=1.0min
+  [ 880/1504] nonempty=676 empty=204 elapsed=1.0min
+  [ 900/1504] nonempty=687 empty=213 elapsed=1.0min
+  [ 920/1504] nonempty=699 empty=221 elapsed=1.0min
+  [ 940/1504] nonempty=717 empty=223 elapsed=1.0min
+  [ 960/1504] nonempty=737 empty=223 elapsed=1.1min
+  [ 980/1504] nonempty=746 empty=234 elapsed=1.1min
+  [1000/1504] nonempty=756 empty=244 elapsed=1.1min
+  [1020/1504] nonempty=760 empty=260 elapsed=1.1min
+  [1040/1504] nonempty=765 empty=275 elapsed=1.1min
+  [1060/1504] nonempty=770 empty=290 elapsed=1.2min
+  [1080/1504] nonempty=778 empty=302 elapsed=1.2min
+  [1100/1504] nonempty=787 empty=313 elapsed=1.2min
+  [1120/1504] nonempty=792 empty=328 elapsed=1.2min
+  [1140/1504] nonempty=798 empty=342 elapsed=1.3min
+  [1160/1504] nonempty=807 empty=353 elapsed=1.3min
+  [1180/1504] nonempty=818 empty=362 elapsed=1.3min
+  [1200/1504] nonempty=825 empty=375 elapsed=1.3min
+  [1220/1504] nonempty=833 empty=387 elapsed=1.3min
+  [1240/1504] nonempty=840 empty=400 elapsed=1.4min
+  [1260/1504] nonempty=853 empty=407 elapsed=1.4min
+  [1280/1504] nonempty=866 empty=414 elapsed=1.4min
+  [1300/1504] nonempty=879 empty=421 elapsed=1.4min
+  [1320/1504] nonempty=894 empty=426 elapsed=1.4min
+  [1340/1504] nonempty=909 empty=431 elapsed=1.5min
+  [1360/1504] nonempty=924 empty=436 elapsed=1.5min
+  [1380/1504] nonempty=937 empty=443 elapsed=1.5min
+  [1400/1504] nonempty=948 empty=452 elapsed=1.5min
+  [1420/1504] nonempty=960 empty=460 elapsed=1.6min
+  [1440/1504] nonempty=975 empty=465 elapsed=1.6min
+  [1460/1504] nonempty=984 empty=476 elapsed=1.6min
+  [1480/1504] nonempty=1000 empty=480 elapsed=1.6min
+  [1500/1504] nonempty=1014 empty=486 elapsed=1.6min
+  [1504/1504] nonempty=1018 empty=486 elapsed=1.6min
+[saved-raw] /home/ids/diecidue/results/waste_vlm/vlm_clip_dw_v2/raw_responses.jsonl
+
+=== clip closed_vocab — dw_paper10 (1504 imgs) ===
+  micro F1 = 0.1417   macro F1 = 0.1328
+  nonempty preds = 1018   empty = 486
+
+per-class F1:
+  Construction and demolition materials     F1=0.133  support=57
+  Metal barrels                             F1=0.058  support=13
+  Plastic packaging                         F1=0.134  support=56
+  Pallets                                   F1=0.151  support=60
+  Scrap                                     F1=0.219  support=70
+  Vehicles                                  F1=0.072  support=23
+  Tyres                                     F1=0.013  support=18
+  Asbestos                                  F1=0.103  support=47
+  Textile                                   F1=0.161  support=41
+  Mixed items                               F1=0.283  support=92
+[saved] /home/ids/diecidue/results/waste_vlm/vlm_clip_dw_v2/test_eval.json
+[slurm] done=2026-06-22T16:13:25+02:00

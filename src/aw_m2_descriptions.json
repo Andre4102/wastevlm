@@ -1,0 +1,41 @@
+{
+  "_provenance": {
+    "source": "AerialWaste MCML m2 split (5 classes), AW v2.0 dataset",
+    "note": "Cues hand-written for aerial-view identification. Categories are broader than the DroneWaste paper-10 set: 'Bulky items' subsumes furniture/appliances; 'Containers' includes anything drum/tank/IBC-like; 'Unknown material' is the explicit catch-all when the material type cannot be identified from above."
+  },
+
+  "Rubble": {
+    "ewc_codes": ["17 01 (concrete, bricks, tiles, ceramics)", "17 09 04 (mixed C&D wastes)"],
+    "ewc_description": "Construction and demolition rubble.",
+    "aerial_cue": "irregular piles of broken concrete, bricks, plaster, stones or masonry — grey/beige, dusty, irregular heaps",
+    "clip_tags": ["rubble", "demolition rubble", "broken concrete", "construction debris", "brick rubble", "masonry debris"]
+  },
+
+  "Bulky items": {
+    "ewc_codes": ["20 03 07 (bulky waste)", "20 01 38 (wood), 20 01 36 (large electrical / electronics)"],
+    "ewc_description": "Bulky household waste (furniture, appliances, mattresses, white goods).",
+    "aerial_cue": "large household objects — mattresses, sofas, fridges, washing machines, cabinets — recognisable furniture/appliance silhouettes too big for normal bins",
+    "clip_tags": ["bulky waste", "old furniture", "discarded furniture", "mattress dump", "household junk", "discarded appliances"]
+  },
+
+  "Plastic": {
+    "ewc_codes": ["15 01 02 (plastic packaging)", "17 02 03 (plastic from C&D)", "20 01 39 (plastics, municipal)"],
+    "ewc_description": "Plastic waste in all forms (sheets, films, packaging, bulk objects).",
+    "aerial_cue": "plastic sheets, films, bags, tarps, bulk plastic objects — bright colours (white, blue, green), smooth/glossy surfaces, often wind-blown or in piles",
+    "clip_tags": ["plastic waste", "plastic bags", "plastic film", "plastic tarp", "plastic debris", "plastic litter"]
+  },
+
+  "Containers": {
+    "ewc_codes": ["15 01 04 (metallic packaging)", "15 01 10* (contaminated packaging)", "16 06 (batteries / acids in cans)"],
+    "ewc_description": "Containers: drums, IBC totes, oil tanks, large bins, packaging.",
+    "aerial_cue": "regular-shape containers — cylindrical drums (~60 cm), rectangular IBC totes (~1 m³), tanks, big bins; rusty-brown, painted bright colours, often clustered or in rows",
+    "clip_tags": ["containers", "oil drums", "storage tanks", "metal drums", "large bins", "industrial containers"]
+  },
+
+  "Unknown material": {
+    "ewc_codes": ["20 03 99 (municipal waste not otherwise specified)"],
+    "ewc_description": "Waste whose material type cannot be unambiguously identified.",
+    "aerial_cue": "indistinguishable refuse heap — material type unclear from above, neither obviously rubble nor plastic nor metal nor bulky",
+    "clip_tags": ["unidentified waste", "unknown garbage", "indeterminate waste", "mystery refuse", "unclassified waste", "unidentifiable dump"]
+  }
+}

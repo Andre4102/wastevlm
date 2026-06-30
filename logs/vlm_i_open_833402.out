@@ -1,0 +1,47 @@
+[slurm] host=nodemm02  job=833402  start=2026-05-26T13:48:52+02:00
+[slurm] model=internvl3 task=classify prompt=open_caption limit=20 out=vlm_internvl3_open_smoke
+NVIDIA GeForce RTX 3090, 24576 MiB
+[model] loading internvl3 from /home/ids/diecidue/results/waste_vlm/weights/InternVL3-8B ...
+FlashAttention2 is not installed.
+[model] ready
+[data] dataset=dw_paper10 test=20 classes=10
+[task] classify  prompt_style=open_caption  prompt-len=633 chars
+[warn] inference failed on site3_37.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_216.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_12.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_796.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_773.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_357.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_726.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_407.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_363.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_553.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_134.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_541.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_554.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_639.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_302.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_518.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_263.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_648.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_80.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[warn] inference failed on site3_432.png: shape mismatch: value tensor of shape [1024, 3584] cannot be broadcast to indexing result of shape [256, 3584]
+[saved-raw] /home/ids/diecidue/results/waste_vlm/vlm_internvl3_open_smoke/raw_responses.jsonl
+
+=== internvl3 open_caption — dw_paper10 (20 imgs) ===
+  micro F1 = 0.0000   macro F1 = 0.0000
+  nonempty preds = 0   empty = 0
+
+per-class F1:
+  Construction and demolition materials     F1=n/a  support=0
+  Metal barrels                             F1=n/a  support=0
+  Plastic packaging                         F1=n/a  support=0
+  Pallets                                   F1=n/a  support=0
+  Scrap                                     F1=n/a  support=0
+  Vehicles                                  F1=n/a  support=0
+  Tyres                                     F1=n/a  support=0
+  Asbestos                                  F1=n/a  support=0
+  Textile                                   F1=n/a  support=0
+  Mixed items                               F1=n/a  support=0
+[saved] /home/ids/diecidue/results/waste_vlm/vlm_internvl3_open_smoke/test_eval.json
+[slurm] done=2026-05-26T13:49:09+02:00

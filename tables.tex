@@ -1,0 +1,177 @@
+% =============================================================
+%  tables.tex  –  Waste-VLM results tables (copy into paper)
+%  Requires: booktabs, amsmath
+%  Missing values shown as ---
+% =============================================================
+
+
+% ------------------------------------------------------------------
+%  Table 1.  DroneWaste – backbone × head ablation (frozen probes)
+% ------------------------------------------------------------------
+\begin{table}[t]
+\centering
+\caption{%
+  DroneWaste frozen-backbone probe ablation on the test split
+  (site-stratified 70/15/15, seed\,=\,0). All backbones are fully frozen;
+  only the head is trained.
+  val~mIoU / test~mIoU: foreground mIoU over all 20 classes;
+  val used for early-stopping / checkpoint selection.
+  mIoU$_{10}$: foreground mIoU restricted to the 10 paper categories
+  (same subset as mAP$_{10}$) on the test split; substantially higher than
+  test~mIoU because the 10 omitted classes are rare or visually ambiguous.
+  mAP$_{10}$: paper-10 mean AP (COCO 50:95 protocol).
+  AP50: COCO AP50 across all 20 classes.
+  Bold: best within each block.
+  SAT/LVD: DINOv3-L pretrained on satellite imagery (SAT-493M) vs.\ natural
+  images (LVD-1689M); LVD substantially outperforms SAT and its linear probe
+  matches FPN-add models on mAP$_{10}$ (row~7 vs.\ rows~18,~21).
+  Fully-trained detector numbers (bottom block) reproduced from Mora et al.;
+  mIoU columns are not applicable (n/a) for detection-only methods.
+}
+\label{tab:dw-ablation}
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{clccr rrrrr}
+\toprule
+   & Backbone               & Res.\        & Head   & Params
+   & val mIoU & test mIoU & mIoU$_{10}$ & mAP$_{10}$\,(\%) & AP50\,(\%) \\
+\midrule
+ 1 & DINOv2-B               & $518^2$      & linear  & 16\,k        & 0.409 & 0.372 & 0.545 & 13.3 & 16.2 \\
+ 2 & DINOv2-L               & $518^2$      & linear  & 22\,k        & ---   & 0.384 & 0.555 & 13.3 & 17.7 \\
+ 3 & DINOv2-B (HR)          & $1036^2$     & linear  & 16\,k        & ---   & 0.390 & 0.545 & 13.6 & 16.8 \\
+\midrule
+ 4 & DINOv3-B               & $512^2$      & linear  & 16\,k        & 0.457 & 0.419 & 0.587 & 14.7 & 17.1 \\
+ 5 & DINOv3-B (HR)          & $1024^2$     & linear  & 16\,k        & 0.449 & 0.410 & 0.574 & 15.4 & 16.9 \\
+ 6 & DINOv3-L (SAT)         & $512^2$      & linear  & 22\,k        & 0.406 & 0.385 & 0.550 & 13.9 & 16.8 \\
+ 7 & DINOv3-L (LVD)         & $512^2$      & linear  & 22\,k        & 0.450 & \textbf{0.437} & 0.597 & \textbf{16.5} & \textbf{21.5} \\
+ 8 & DINOv2-B               & $518^2$      & conv    & 1.8\,M       & 0.466 & 0.416 & 0.616 & 15.5 & 18.6 \\
+ 9 & DINOv3-B               & $512^2$      & conv    & 1.8\,M       & \textbf{0.486} & 0.408 & 0.602 & 14.1 & 17.0 \\
+10 & DINOv3-L (LVD)         & $512^2$      & conv    & 2.4\,M       & \textbf{0.486} & 0.422 & \textbf{0.637} & 15.2 & 17.8 \\
+\midrule
+11 & RADIOv2.5-L            & $512^2$      & linear  & 22\,k        & 0.457 & 0.416 & 0.597 & \textbf{16.1} & \textbf{19.5} \\
+12 & RADIOv2.5-L            & $512^2$      & conv    & 1.8\,M       & \textbf{0.484} & \textbf{0.427} & \textbf{0.642} & 15.4 & 19.1 \\
+13 & RADIOv2.5-L (HR)       & $1024^2$     & linear  & 22\,k        & 0.438 & 0.417 & 0.585 & 15.8 & 18.7 \\
+14 & RADIOv2.5-B            & $512^2$      & linear  & 16\,k        & ---   & 0.397 & 0.564 & 14.9 & 17.0 \\
+\midrule
+15 & DINOv3-B, mb\{3,7,11\} & $512^2$      & linear  & $\sim$50\,k  & ---   & 0.429 & 0.598 & \textbf{15.3} & 18.6 \\
+16 & DINOv3-B, mb\{2,5,8,11\} & $512^2$    & mb-conv & $\sim$7.1\,M & \textbf{0.513} & \textbf{0.454} & \textbf{0.627} & \textbf{15.3} & \textbf{21.8} \\
+\midrule
+17 & Faster R-CNN (frozen P4) & $512^2$    & linear  & $\sim$5\,k   & 0.113 & 0.103 & 0.186 &  1.8 &  2.4 \\
+18 & DINOv3-B               & $512^2$      & FPN     & $\sim$2.5\,M & \textbf{0.495} & 0.449 & 0.610 & 16.5 & \textbf{22.4} \\
+19 & DINOv3-L (LVD)         & $512^2$      & FPN     & $\sim$2.8\,M & 0.456 & 0.423 & 0.608 & 13.7 & 17.3 \\
+20 & DINOv3-L (LVD)         & $512^2$      & FPN-cat & $\sim$4.5\,M & 0.475 & \textbf{0.450} & \textbf{0.642} & \textbf{16.9} & 20.1 \\
+21 & RADIOv2.5-L            & $512^2$      & FPN     & $\sim$2.8\,M & 0.459 & \textbf{0.450} & 0.636 & 16.5 & 21.4 \\
+22 & RADIOv2.5-L            & $512^2$      & FPN-cat & $\sim$4.5\,M & 0.455 & 0.428 & 0.597 & 15.5 & 20.4 \\
+23 & RADIOv2.5-B            & $512^2$      & FPN     & $\sim$2.5\,M & 0.465 & 0.449 & 0.626 & 15.8 & 20.2 \\
+\midrule
+\multicolumn{10}{l}{\textit{Fully end-to-end trained detectors (Mora et al.) — upper bound}} \\[2pt]
+  & YOLOv8               & $640^2$  & e2e    & $\geq$25\,M  & n/a   & n/a & n/a & 38.2 & --- \\
+  & YOLOv12              & $640^2$  & e2e    & $\geq$25\,M  & n/a   & n/a & n/a & 38.5 & --- \\
+  & Faster R-CNN         & $800^2$  & e2e    & $\geq$25\,M  & n/a   & n/a & n/a & 36.6 & --- \\
+  & DinoDETR (DINOv2-B + 6-layer DETR) & $800^2$ & DETR & 6.7\,M & n/a & n/a & n/a & 2.1 & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+
+% ------------------------------------------------------------------
+%  Table 2.  AerialWaste – supervised classification probes
+% ------------------------------------------------------------------
+\begin{table}[t]
+\centering
+\caption{%
+  AerialWaste multi-class multi-label (MCML) and binary classification.
+  All backbones frozen; evaluation via per-class logistic regression on
+  L2-normalised embeddings, threshold tuned on training scores.
+  m2\,/\,m4: published AW MCML splits (664 test images each);
+  metric: micro\,F1.
+  Binary: AW \texttt{is\_candidate\_location} split (2{,}607 test images);
+  metric: F1.
+  Bold: best in each group per column.
+  The two DINOv3-L rows show the same architecture pretrained on satellite
+  imagery (SAT, \texttt{vitl16}) and on a large natural-image corpus
+  (LVD, \texttt{vitl\_lvd}); the small and mixed gap between them ($+$1.1\,pp
+  on m2, $-$0.3\,pp on m4, $+$2.1\,pp on binary) indicates that pretraining
+  domain does not explain the DINOv3-B$>$DINOv3-L performance reversal,
+  which is therefore attributed to architectural or capacity differences.
+  $\dagger$~End-to-end fine-tuned on AW (6-class head, 210\,m GSD).
+  $\ddagger$~End-to-end fine-tuned on AW (5-class head, 100\,m GSD).
+}
+\label{tab:aw-classification}
+\begin{tabular}{llccc}
+\toprule
+Backbone & Method & AW\,m2 micro\,F1 & AW\,m4 micro\,F1 & AW binary F1 \\
+\midrule
+Swin-T$^\dagger$    & Supervised   & 57.6\% & \textbf{54.3\%} & \textbf{84.6\%} \\
+ResNet50$^\ddagger$ & Supervised   & \textbf{58.1\%} & 52.2\% & 82.4\% \\
+\midrule
+DINOv2-B      & Linear probe & 60.7\% & 56.9\% & ---             \\
+DINOv3-B      & Linear probe & \textbf{64.0\%} & 60.0\% & 86.4\% \\
+DINOv3-L (SAT) & Linear probe & 60.5\% & 58.0\% & 83.7\%          \\
+DINOv3-L (LVD) & Linear probe & 61.6\% & 57.7\% & 85.8\%          \\
+RADIOv2.5-B   & Linear probe & 61.5\% & 58.2\% & 87.5\%          \\
+RADIOv2.5-L   & Linear probe & 63.5\% & \textbf{61.0\%} & \textbf{88.8\%} \\
+\midrule
+DINOv3-B      & Multiblock   & 57.8\% & 54.4\% & ---             \\
+DINOv3-L      & Multiblock   & 54.2\% & 51.8\% & ---             \\
+RADIOv2.5-B   & Multiblock   & 62.5\% & 58.0\% & ---             \\
+RADIOv2.5-L   & Multiblock   & \textbf{63.4\%} & \textbf{59.2\%} & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+% ------------------------------------------------------------------
+%  Table 3.  Open chain-of-thought VLM zero-shot classification
+% ------------------------------------------------------------------
+\begin{table}[t]
+\centering
+\caption{%
+  Zero-shot multi-label classification with open chain-of-thought (CoT)
+  prompting on DroneWaste paper-10 (DW, 1504 test images) and
+  AerialWaste m2/m4 (664 test images each).
+  Micro\,F1 reported; macro\,F1 in parentheses.
+  \textit{kw-bag}: keyword-bag parser on Turn-2 output.
+  \textit{v1}: Turn-2 examples hardcoded to DW vocabulary (biased).
+  \textit{v2}: Turn-2 examples drawn from each dataset's synonym list;
+  AW\,m4 ``Other waste'' bag also expanded with hedging phrases.
+  \textit{Judge T1/T2}: LLM judge (Claude Haiku\,4.5) applied to the
+  free visual description (Turn\,1) or to the classification output
+  (Turn\,2).  Bold: best result per column.
+  CLIP zero-shot included as reference.
+  On AW\,m2, CLIP retains the best score because its tag embeddings were
+  designed for the dominant categories (Bulky items, Containers) and
+  because embedding-based retrieval is robust to the coarser 100\,m GSD
+  of this split, whereas VLMs often produce vague shape descriptions at
+  that resolution.
+  On AW\,m2 the kw-bag v2 parser matches or outperforms the LLM judge:
+  the v2 Turn-2 prompt anchors the VLM to dataset-specific vocabulary,
+  so the output already names the category explicitly and substring
+  matching is sufficient.
+  On DW the pattern reverses — 44\,\% of Turn-2 responses are ``none''
+  and the remaining outputs are hedged or paraphrased, so the LLM judge
+  extracts substantially more signal than the keyword bag.
+}
+\label{tab:vlm-cot}
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{llccc}
+\toprule
+Model & Parsing & DW micro\,F1 & AW\,m2 micro\,F1 & AW\,m4 micro\,F1 \\
+\midrule
+\multicolumn{5}{l}{\textit{Zero-shot retrieval baseline}} \\[2pt]
+CLIP ViT-B/32          & tag embeddings & 0.142\,(0.133) & \textbf{0.416}\,(0.373) & 0.202\,(0.190) \\
+\midrule
+\multicolumn{5}{l}{\textit{Qwen2.5-VL-7B — open\_cot}} \\[2pt]
+                       & kw-bag v1 (biased examples) & 0.143\,(0.166) & 0.183\,(0.146) & 0.233\,(0.150) \\
+                       & kw-bag v2 (dataset examples) & 0.152\,(0.152) & 0.366\,(0.354) & 0.335\,(0.248) \\
+                       & LLM judge, Turn\,1           & 0.233\,(0.227) & 0.238\,(0.195) & 0.263\,(0.143) \\
+                       & LLM judge, Turn\,2           & \textbf{0.316}\,(0.296) & 0.314\,(0.285) & 0.103\,(0.089) \\
+\midrule
+\multicolumn{5}{l}{\textit{InternVL3-8B — open\_cot}} \\[2pt]
+                       & kw-bag v1 (biased examples) & 0.157\,(0.207) & 0.210\,(0.165) & 0.261\,(0.178) \\
+                       & kw-bag v2 (dataset examples) & 0.156\,(0.161) & 0.396\,(0.379) & \textbf{0.385}\,(0.266) \\
+                       & LLM judge, Turn\,1           & 0.243\,(0.246) & 0.268\,(0.240) & 0.317\,(0.213) \\
+                       & LLM judge, Turn\,2           & 0.267\,(0.309) & 0.331\,(0.300) & 0.286\,(0.205) \\
+\bottomrule
+\end{tabular}
+\end{table}

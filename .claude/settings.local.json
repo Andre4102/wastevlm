@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:en.wikipedia.org)",
+      "Bash(ls -la /home/ids/diecidue/data/captions/full_chunks/chunk_003.json /home/ids/diecidue/data/captions/full_chunks/chunk_003.jsonl 2>&1)",
+      "Read(//home/ids/diecidue/data/captions/full_chunks/**)",
+      "Bash(ls -la /home/ids/diecidue/data/captions/full_chunks/chunk_004.json /home/ids/diecidue/data/captions/full_chunks/chunk_004.jsonl 2>&1)",
+      "Bash(ls -la /home/ids/diecidue/data/captions/full_chunks/chunk_005.json /home/ids/diecidue/data/captions/full_chunks/chunk_005.jsonl 2>&1)",
+      "Bash(ls -la /home/ids/diecidue/data/captions/full_chunks/chunk_006.json /home/ids/diecidue/data/captions/full_chunks/chunk_006.jsonl 2>&1)",
+      "Bash(ls -la /home/ids/diecidue/data/captions/full_chunks/chunk_007.json /home/ids/diecidue/data/captions/full_chunks/chunk_007.jsonl 2>&1)",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('/home/ids/diecidue/data/captions/full_chunks/chunk_000.json'\\)\\); print\\(len\\(d\\)\\); print\\(json.dumps\\(d[0], indent=2\\)\\); print\\(json.dumps\\(d[-1], indent=2\\)\\)\")"
+    ]
+  }
+}

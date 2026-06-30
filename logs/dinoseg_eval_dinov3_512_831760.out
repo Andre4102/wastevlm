@@ -1,0 +1,67 @@
+[slurm] host=nodemm07  job=831760  eval=dinoseg_dw_dinov3_512 bs=16  start=2026-05-22T19:13:24+00:00
+NVIDIA H100 NVL, 95830 MiB
+[data] split=test  n=765  classes=20
+[model] loaded from /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512/best.pt
+[inference] 2497 CC-derived detections
+loading annotations into memory...
+Done (t=0.00s)
+creating index...
+index created!
+Loading and preparing results...
+DONE (t=0.00s)
+creating index...
+index created!
+
+=== DinoSeg (linear) — DroneWaste test ===
+mIoU (foreground)  = 0.4191
+mIoU (incl bg)     = 0.4458
+bg IoU             = 0.9801
+mAP @ [.5:.95]     = 0.113
+AP@0.5             = 0.171
+AP@0.75            = 0.110
+
+per-class IoU (sorted desc):
+  Asbestos                                  IoU=0.844
+  Pallets                                   IoU=0.843
+  Textile                                   IoU=0.811
+  Tyres                                     IoU=0.715
+  Furniture                                 IoU=0.655
+  Scrap                                     IoU=0.572
+  Rubble                                    IoU=0.555
+  Mixed items                               IoU=0.540
+  Construction and demolition materials     IoU=0.509
+  Excavation materials                      IoU=0.500
+  Metal barrels                             IoU=0.446
+  Plastic packaging                         IoU=0.429
+  Plastic                                   IoU=0.391
+  Wood                                      IoU=0.211
+  Vehicles                                  IoU=0.165
+  Paper                                     IoU=0.104
+  Appliances                                IoU=0.092
+  Asphalt milling                           IoU=0.000
+  Electronic equipment                      IoU=0.000
+  Foundry                                   IoU=0.000
+
+per-class mAP (sorted desc):
+  Asbestos                                  mAP=0.530
+  Excavation materials                      mAP=0.250
+  Rubble                                    mAP=0.228
+  Mixed items                               mAP=0.209
+  Scrap                                     mAP=0.148
+  Plastic packaging                         mAP=0.143
+  Construction and demolition materials     mAP=0.132
+  Vehicles                                  mAP=0.123
+  Furniture                                 mAP=0.095
+  Plastic                                   mAP=0.090
+  Pallets                                   mAP=0.074
+  Textile                                   mAP=0.065
+  Tyres                                     mAP=0.042
+  Wood                                      mAP=0.020
+  Metal barrels                             mAP=0.000
+  Asphalt milling                           mAP=n/a
+  Appliances                                mAP=0.000
+  Electronic equipment                      mAP=0.000
+  Paper                                     mAP=0.000
+  Foundry                                   mAP=0.000
+[saved] /home/ids/diecidue/results/waste_vlm/dinoseg_dw_dinov3_512/test_eval.json
+[slurm] done=2026-05-22T19:14:02+00:00

@@ -1,0 +1,5 @@
+/home/ids/diecidue/miniconda3/envs/waste_vlm/lib/python3.10/site-packages/timm/models/registry.py:4: FutureWarning: Importing from timm.models.registry is deprecated, please import via timm.models
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.models", FutureWarning)
+/home/ids/diecidue/miniconda3/envs/waste_vlm/lib/python3.10/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+slurmstepd: error: *** JOB 856775 ON nodemm03 CANCELLED AT 2026-06-19T14:30:03 ***
