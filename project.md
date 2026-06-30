@@ -135,6 +135,24 @@ CPT is resurrectable in one `sbatch` if we ever want it.
 | Results | `RESULTS_SNAPSHOT.md` |
 | Compute | SLURM partition `mm`, `nodemm07` (2× H100, use 1); env `/home/ids/diecidue/miniconda3/envs/waste_vlm` |
 
+## Future task (not started) — generic modular VLM, CLIP→DINO/RADIO swap
+
+Idea from 2026-06-30: build a standard modular VLM (LLaVA-style: vision
+encoder + projector + LLM) but swap the vision encoder from CLIP to
+DINOv3/RADIO, and run alignment (projector pretraining) + instruction tuning
+on **standard public datasets** — not the AerialWaste/DroneWaste VQA set under
+construction. Purpose: an architecture-only ablation (does DINO/RADIO beat
+CLIP as the vision tower in a generic VLM pipeline?), decoupled from the
+in-progress domain-specific VQA dataset and its GT-provenance constraints.
+
+Not scoped yet — no dataset choice, no alignment-stage corpus, no
+instruction-tuning recipe decided. Likely needs its own conda env (LLaVA /
+Qwen-VL training stacks have heavy, easily conflicting pins) — do **not**
+reuse the `waste_vlm` env for this. `requirements.txt` (repo root) lists only
+the frozen-probe / seg-training deps for the current waste_vlm work; this new
+track will need its own requirements file once a training framework
+(LLaVA, Open-LLaVA, etc.) is picked.
+
 ## Parked
 
 - **AerialWaste multiblock-conv probe** — multiblock concatenation (K blocks → K*D

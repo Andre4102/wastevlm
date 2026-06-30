@@ -1,0 +1,19 @@
+# Core dependencies for src/ and the root-level pipeline scripts.
+# Pinned to the versions installed in the `waste_vlm` conda env.
+# Vendored repos (vendored/GeoChat, vendored/GeoLLaVA-8K) have their own
+# requirements.txt / pyproject.toml and are not duplicated here.
+
+torch==2.3.1
+torchvision==0.18.1
+transformers==4.55.4
+tokenizers==0.21.4
+safetensors==0.7.0
+accelerate==1.2.1
+
+numpy==2.2.6
+scipy==1.15.3
+scikit-learn==1.7.2
+scikit-image==0.25.2
+pillow==12.2.0
+pycocotools==2.0.11
+tqdm==4.67.3
