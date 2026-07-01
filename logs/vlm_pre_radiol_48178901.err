@@ -1,99 +1,0 @@
-/leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/timm/models/registry.py:4: FutureWarning: Importing from timm.models.registry is deprecated, please import via timm.models
-  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.models", FutureWarning)
-/leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/timm/models/registry.py:4: FutureWarning: Importing from timm.models.registry is deprecated, please import via timm.models
-  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.models", FutureWarning)
-/leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/timm/models/registry.py:4: FutureWarning: Importing from timm.models.registry is deprecated, please import via timm.models
-  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.models", FutureWarning)
-/leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/timm/models/registry.py:4: FutureWarning: Importing from timm.models.registry is deprecated, please import via timm.models
-  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.models", FutureWarning)
-/leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
-  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
-/leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
-  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
-/leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
-  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
-/leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
-  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
-Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
-Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
-Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
-Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:04,  1.46s/it]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:04,  1.46s/it]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:04,  1.46s/it]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:04,  1.46s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:02<00:02,  1.15s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:02<00:02,  1.15s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:02<00:02,  1.15s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:02<00:02,  1.15s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:02<00:00,  1.42it/s]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:02<00:00,  1.42it/s]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:02<00:00,  1.42it/s]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:02<00:00,  1.42it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:03<00:00,  1.12it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:03<00:00,  1.07it/s]
-Loading checkpoint shards: 100%|██████████| 4/4 [00:03<00:00,  1.12it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:03<00:00,  1.07it/s]
-Loading checkpoint shards: 100%|██████████| 4/4 [00:03<00:00,  1.12it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:03<00:00,  1.07it/s]
-Loading checkpoint shards: 100%|██████████| 4/4 [00:03<00:00,  1.12it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:03<00:00,  1.07it/s]
-[rank0]:[E701 10:52:32.844119678 ProcessGroupNCCL.cpp:616] [Rank 0] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=80, OpType=ALLREDUCE, NumelIn=1, NumelOut=1, Timeout(ms)=600000) ran for 600059 milliseconds before timing out.
-[rank0]:[E701 10:52:32.847308665 ProcessGroupNCCL.cpp:1785] [PG ID 0 PG GUID 0(default_pg) Rank 0] Exception (either an error or timeout) detected by watchdog at work: 80, last enqueued NCCL work: 80, last completed NCCL work: 79.
-[rank1]:[E701 10:52:32.900569183 ProcessGroupNCCL.cpp:616] [Rank 1] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=80, OpType=BROADCAST, NumelIn=64, NumelOut=64, Timeout(ms)=600000) ran for 600052 milliseconds before timing out.
-[rank1]:[E701 10:52:32.900739637 ProcessGroupNCCL.cpp:1785] [PG ID 0 PG GUID 0(default_pg) Rank 1] Exception (either an error or timeout) detected by watchdog at work: 80, last enqueued NCCL work: 80, last completed NCCL work: 79.
-[rank0]:[E701 10:52:32.912111618 ProcessGroupNCCL.cpp:1834] [PG ID 0 PG GUID 0(default_pg) Rank 0] Timeout at NCCL work: 80, last enqueued NCCL work: 80, last completed NCCL work: 79.
-[rank0]:[E701 10:52:32.912140231 ProcessGroupNCCL.cpp:630] [Rank 0] Some NCCL operations have failed or timed out. Due to the asynchronous nature of CUDA kernels, subsequent GPU operations might run on corrupted/incomplete data.
-[rank0]:[E701 10:52:32.912149426 ProcessGroupNCCL.cpp:636] [Rank 0] To avoid data inconsistency, we are taking the entire process down.
-[rank0]:[E701 10:52:32.914565235 ProcessGroupNCCL.cpp:1595] [PG ID 0 PG GUID 0(default_pg) Rank 0] Process group watchdog thread terminated with exception: [Rank 0] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=80, OpType=ALLREDUCE, NumelIn=1, NumelOut=1, Timeout(ms)=600000) ran for 600059 milliseconds before timing out.
-Exception raised from checkTimeout at ../torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:618 (most recent call first):
-frame #0: c10::Error::Error(c10::SourceLocation, std::string) + 0x96 (0x14e82af58446 in /leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/lib/libc10.so)
-frame #1: c10d::ProcessGroupNCCL::WorkNCCL::checkTimeout(std::optional<std::chrono::duration<long, std::ratio<1l, 1000l> > >) + 0x282 (0x14e82c29fa92 in /leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
-frame #2: c10d::ProcessGroupNCCL::watchdogHandler() + 0x233 (0x14e82c2a6ed3 in /leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
-frame #3: c10d::ProcessGroupNCCL::ncclCommWatchdog() + 0x14d (0x14e82c2a893d in /leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
-frame #4: <unknown function> + 0x145c0 (0x14e8752905c0 in /leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/lib/libtorch.so)
-frame #5: <unknown function> + 0x81ca (0x14e884ed91ca in /lib64/libpthread.so.0)
-frame #6: clone + 0x43 (0x14e8843bbe73 in /lib64/libc.so.6)
-
-terminate called after throwing an instance of 'c10::DistBackendError'
-  what():  [PG ID 0 PG GUID 0(default_pg) Rank 0] Process group watchdog thread terminated with exception: [Rank 0] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=80, OpType=ALLREDUCE, NumelIn=1, NumelOut=1, Timeout(ms)=600000) ran for 600059 milliseconds before timing out.
-Exception raised from checkTimeout at ../torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:618 (most recent call first):
-frame #0: c10::Error::Error(c10::SourceLocation, std::string) + 0x96 (0x14e82af58446 in /leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/lib/libc10.so)
-frame #1: c10d::ProcessGroupNCCL::WorkNCCL::checkTimeout(std::optional<std::chrono::duration<long, std::ratio<1l, 1000l> > >) + 0x282 (0x14e82c29fa92 in /leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
-frame #2: c10d::ProcessGroupNCCL::watchdogHandler() + 0x233 (0x14e82c2a6ed3 in /leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
-frame #3: c10d::ProcessGroupNCCL::ncclCommWatchdog() + 0x14d (0x14e82c2a893d in /leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
-frame #4: <unknown function> + 0x145c0 (0x14e8752905c0 in /leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/lib/libtorch.so)
-frame #5: <unknown function> + 0x81ca (0x14e884ed91ca in /lib64/libpthread.so.0)
-frame #6: clone + 0x43 (0x14e8843bbe73 in /lib64/libc.so.6)
-
-Exception raised from ncclCommWatchdog at ../torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:1601 (most recent call first):
-frame #0: c10::Error::Error(c10::SourceLocation, std::string) + 0x96 (0x14e82af58446 in /leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/lib/libc10.so)
-frame #1: <unknown function> + 0xe7eb1b (0x14e82bf1db1b in /leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/lib/libtorch_cuda.so)
-frame #2: <unknown function> + 0x145c0 (0x14e8752905c0 in /leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/lib/libtorch.so)
-frame #3: <unknown function> + 0x81ca (0x14e884ed91ca in /lib64/libpthread.so.0)
-frame #4: clone + 0x43 (0x14e8843bbe73 in /lib64/libc.so.6)
-
-[rank3]:[E701 10:52:32.922805656 ProcessGroupNCCL.cpp:616] [Rank 3] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=80, OpType=BROADCAST, NumelIn=64, NumelOut=64, Timeout(ms)=600000) ran for 600042 milliseconds before timing out.
-[rank3]:[E701 10:52:32.922974552 ProcessGroupNCCL.cpp:1785] [PG ID 0 PG GUID 0(default_pg) Rank 3] Exception (either an error or timeout) detected by watchdog at work: 80, last enqueued NCCL work: 80, last completed NCCL work: 79.
-[rank2]:[E701 10:52:32.989768074 ProcessGroupNCCL.cpp:616] [Rank 2] Watchdog caught collective operation timeout: WorkNCCL(SeqNum=80, OpType=BROADCAST, NumelIn=64, NumelOut=64, Timeout(ms)=600000) ran for 600045 milliseconds before timing out.
-[rank2]:[E701 10:52:32.989955066 ProcessGroupNCCL.cpp:1785] [PG ID 0 PG GUID 0(default_pg) Rank 2] Exception (either an error or timeout) detected by watchdog at work: 80, last enqueued NCCL work: 80, last completed NCCL work: 79.
-W0701 10:52:33.071000 2546915 site-packages/torch/distributed/elastic/multiprocessing/api.py:897] Sending process 2546926 closing signal SIGTERM
-W0701 10:52:33.072000 2546915 site-packages/torch/distributed/elastic/multiprocessing/api.py:897] Sending process 2546927 closing signal SIGTERM
-W0701 10:52:33.073000 2546915 site-packages/torch/distributed/elastic/multiprocessing/api.py:897] Sending process 2546928 closing signal SIGTERM
-E0701 10:52:33.550000 2546915 site-packages/torch/distributed/elastic/multiprocessing/api.py:869] failed (exitcode: -6) local_rank: 0 (pid: 2546925) of binary: /leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/bin/python
-Traceback (most recent call last):
-  File "/leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/bin/torchrun", line 6, in <module>
-    sys.exit(main())
-             ^^^^^^
-  File "/leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
-    return f(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^
-  File "/leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/distributed/run.py", line 919, in main
-    run(args)
-  File "/leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/distributed/run.py", line 910, in run
-    elastic_launch(
-  File "/leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 138, in __call__
-    return launch_agent(self._config, self._entrypoint, list(args))
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/lib/python3.11/site-packages/torch/distributed/launcher/api.py", line 269, in launch_agent
-    raise ChildFailedError(
-torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
-========================================================
-src.vlm_train FAILED
---------------------------------------------------------
-Failures:
-  <NO_OTHER_FAILURES>
---------------------------------------------------------
-Root Cause (first observed failure):
-[0]:
-  time      : 2026-07-01_10:52:33
-  host      : lrdn2302.leonardo.local
-  rank      : 0 (local_rank: 0)
-  exitcode  : -6 (pid: 2546925)
-  error_file: <N/A>
-  traceback : Signal 6 (SIGABRT) received by PID 2546925
-========================================================

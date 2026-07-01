@@ -1,9 +1,0 @@
-[slurm] host=lrdn1292.leonardo.local job=48155663 start=2026-06-30T23:53:35+02:00
-[slurm] mode=smoke encoder=radio-l ngpu=4
-NVIDIA A100-SXM-64GB, 65536 MiB
-NVIDIA A100-SXM-64GB, 65536 MiB
-NVIDIA A100-SXM-64GB, 65536 MiB
-NVIDIA A100-SXM-64GB, 65536 MiB
-{'train_runtime': 28.9657, 'train_samples_per_second': 17.676, 'train_steps_per_second': 0.138, 'train_loss': 19.72006607055664, 'epoch': 4.0}
-[train] saved LoRA adapter + projector to /leonardo_scratch/large/userexternal/adiecidu/waste_vlm/results/vlm/radio-l_smoke
-[slurm] done=2026-06-30T23:57:20+02:00

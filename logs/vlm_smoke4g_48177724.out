@@ -1,9 +1,0 @@
-[slurm] host=lrdn2106.leonardo.local job=48177724 start=2026-07-01T09:59:27+02:00
-[slurm] mode=smoke encoder=radio-l ngpu=4
-NVIDIA A100-SXM-64GB, 65536 MiB
-NVIDIA A100-SXM-64GB, 65536 MiB
-NVIDIA A100-SXM-64GB, 65536 MiB
-NVIDIA A100-SXM-64GB, 65536 MiB
-[train] stage=finetune encoder=radio-l world_size=4 trainable=56.89M total_steps=4 warmup=0
-[train] saved merged LLM (LoRA folded in) + projector to /leonardo_scratch/large/userexternal/adiecidu/waste_vlm/results/vlm/radio-l_smoke (step 1)
-[slurm] done=2026-07-01T10:02:44+02:00

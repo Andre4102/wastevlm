@@ -1,17 +1,0 @@
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 2/4 [00:00<00:00, 13.49it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00, 14.88it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00, 14.64it/s]
-Traceback (most recent call last):
-  File "/home/ids/diecidue/miniconda3/envs/waste_vlm/lib/python3.10/runpy.py", line 196, in _run_module_as_main
-    return _run_code(code, main_globals, None,
-  File "/home/ids/diecidue/miniconda3/envs/waste_vlm/lib/python3.10/runpy.py", line 86, in _run_code
-    exec(code, run_globals)
-  File "/home/ids/diecidue/scripts/waste_vlm/src/lora_cpt_llm.py", line 88, in <module>
-    raise SystemExit(main())
-  File "/home/ids/diecidue/scripts/waste_vlm/src/lora_cpt_llm.py", line 78, in main
-    data_collator=default_data_collator).train()
-  File "/home/ids/diecidue/miniconda3/envs/waste_vlm/lib/python3.10/site-packages/transformers/trainer.py", line 2238, in train
-    return inner_training_loop(
-  File "/home/ids/diecidue/miniconda3/envs/waste_vlm/lib/python3.10/site-packages/transformers/trainer.py", line 2362, in _inner_training_loop
-    model = self._wrap_model(self.model_wrapped)
-  File "/home/ids/diecidue/miniconda3/envs/waste_vlm/lib/python3.10/site-packages/transformers/trainer.py", line 1986, in _wrap_model
-    if self.accelerator.unwrap_model(model, keep_torch_compile=False) is not model:
-TypeError: Accelerator.unwrap_model() got an unexpected keyword argument 'keep_torch_compile'

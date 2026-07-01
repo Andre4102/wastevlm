@@ -1,6 +1,0 @@
-usage: aw_classify_probe.py [-h] --backbone-type {dinov2,dinov3,radio,swint}
-                            [--backbone-id BACKBONE_ID] [--version {m2,m4}]
-                            [--task {mcml,binary}] [--image-size IMAGE_SIZE]
-                            [--batch-size BATCH_SIZE]
-                            [--multi-block MULTI_BLOCK] --out-json OUT_JSON
-aw_classify_probe.py: error: --version is required when --task mcml

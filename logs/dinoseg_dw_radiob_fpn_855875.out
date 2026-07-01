@@ -1,3 +1,0 @@
-[slurm] host=nodemm02  job=855875  start=2026-06-19T03:46:44+02:00
-[slurm] btype=radio id=/home/ids/diecidue/results/waste_vlm/weights/RADIO-B size=512 epochs=80 batch=16 lr=1e-3 head=fpn multi_block=none multilabel=0 fpn_blocks=default fpn_dim=2,5,8,11 out=dinoseg_dw_radiob_fpn
-NVIDIA GeForce RTX 3090, 24576 MiB
