@@ -1,0 +1,8 @@
+[slurm] host=lrdn0168.leonardo.local job=48192747 start=2026-07-01T13:29:04+02:00
+[train] token cache: 558128 records, max_len=2048 tokenizer=Qwen2.5-7B-Instruct
+[train] stage=pretrain encoder=radio-l world_size=4 trainable=16.52M total_steps=21 warmup=0
+[train] step 2/21 loss=8.6701 lr=9.78e-04
+[train] step 4/21 loss=9.7531 lr=9.13e-04
+[train] step 6/21 loss=9.3801 lr=8.12e-04
+[train] step 8/21 loss=8.7458 lr=6.83e-04
+[train] step 10/21 loss=7.6863 lr=5.37e-04

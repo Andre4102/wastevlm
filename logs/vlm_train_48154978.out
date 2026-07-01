@@ -1,0 +1,3 @@
+[slurm] host=lrdn2677.leonardo.local job=48154978 start=2026-06-30T23:41:54+02:00
+[slurm] mode=pretrain encoder=radio-l
+NVIDIA A100-SXM-64GB, 65536 MiB

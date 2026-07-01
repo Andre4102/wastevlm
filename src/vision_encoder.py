@@ -20,6 +20,7 @@ Quick smoke-test
 from __future__ import annotations
 
 import argparse
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Union
@@ -29,19 +30,47 @@ import torch.nn.functional as F
 from PIL import Image
 from torchvision import transforms
 
-WEIGHTS_ROOT = Path("/home/ids/diecidue/results/waste_vlm/weights")
+# Weights live on Leonardo scratch (big files; home has a 50 GB quota).
+# Override with WASTE_VLM_WEIGHTS to relocate.
+WEIGHTS_ROOT = Path(
+    os.environ.get(
+        "WASTE_VLM_WEIGHTS",
+        "/leonardo_scratch/large/userexternal/adiecidu/waste_vlm/weights",
+    )
+)
 
 _IN_MEAN = (0.485, 0.456, 0.406)
 _IN_STD = (0.229, 0.224, 0.225)
+
+
+def _sync_remote_code_cache(repo_dirname: str, snapshot_dir: str) -> None:
+    """Copy every .py from a local trust_remote_code snapshot into the transformers
+    dynamic-modules cache, so an incomplete auto-copy can't break `from_pretrained`."""
+    import shutil
+
+    hf_home = Path(os.environ.get("HF_HOME") or (Path.home() / ".cache/huggingface"))
+    mods = hf_home / "modules" / "transformers_modules" / repo_dirname
+    if not mods.exists():
+        return  # nothing copied yet; the retry's fresh copy will populate it
+    for py in Path(snapshot_dir).glob("*.py"):
+        dst = mods / py.name
+        if not dst.exists():
+            shutil.copy2(py, dst)
 
 # encoder_id → (family, hf_id_or_local_dir, patch_size, default_image_size)
 _CONFIGS: dict[str, dict] = {
     "dinov2-b": {"family": "dinov2", "hf_id": "facebook/dinov2-base",  "patch": 14, "size": 518},
     "dinov2-l": {"family": "dinov2", "hf_id": "facebook/dinov2-large", "patch": 14, "size": 518},
-    "dinov3-b": {"family": "dinov3", "local": "dinov3-vitb16-pretrain-lvd1689m", "patch": 16, "size": 512},
+    "dinov3-b": {"family": "dinov3", "variant": "vitb16", "local": "dinov3-vitb16-pretrain-lvd1689m", "patch": 16, "size": 512},
+    "dinov3-l": {"family": "dinov3", "variant": "vitl16-lvd", "local": "dinov3-vitl16-pretrain-lvd1689m", "patch": 16, "size": 512},
     "radio-b":  {"family": "radio",  "local": "RADIO-B",               "patch": 16, "size": 512},
     "radio-l":  {"family": "radio",  "local": "RADIO-L",               "patch": 16, "size": 512},
     "radio-h":  {"family": "radio",  "local": "RADIO-H",               "patch": 16, "size": 512},
+    # C-RADIOv4: agglomerative model distilled from SigLIP2 + DINOv3 + SAM3 teachers.
+    # Same HF trust_remote_code interface as RADIO (summary, features); patch_dim
+    # is auto-detected so the projector self-sizes. Gated (NVIDIA Open Model License).
+    "cradiov4-h":  {"family": "radio", "local": "C-RADIOv4-H",      "patch": 16, "size": 512},
+    "cradiov4-so": {"family": "radio", "local": "C-RADIOv4-SO400M", "patch": 16, "size": 512},
 }
 
 
@@ -135,6 +164,22 @@ class VisionEncoder:
         return EncoderOutput(cls=cls.float(), patches=patches.float())
 
     @property
+    def transform(self) -> transforms.Compose:
+        """The exact preprocessing pipeline (PIL -> CPU tensor) this encoder
+        expects. Exposed so dataloaders can preprocess images identically."""
+        return self._transform
+
+    @property
+    def patch_dim(self) -> int:
+        """Patch-token feature dimension (may differ from the CLS/summary dim,
+        e.g. RADIO summary=3072 but patches=1024). This is the dim a LLaVA-style
+        projector must consume."""
+        with torch.no_grad():
+            dummy = torch.zeros(1, 3, self.image_size, self.image_size, device=self.device)
+            out = self.encode_tensor(dummy)
+        return int(out.patches.shape[-1])
+
+    @property
     def feature_dim(self) -> int:
         """Backbone feature dimension D."""
         with torch.no_grad():
@@ -158,12 +203,29 @@ class VisionEncoder:
             from transformers import AutoModel
             return AutoModel.from_pretrained(cfg["hf_id"], torch_dtype=torch.float32).to(self.device)
         if family == "dinov3":
-            from src.dinov3_backbone import load_dinov3_vitb16
-            return load_dinov3_vitb16(device=self.device)
+            from src.dinov3_backbone import (
+                load_dinov3_vitb16,
+                load_dinov3_vitl16,
+                load_dinov3_vitl16_lvd,
+            )
+            loaders = {
+                "vitb16": load_dinov3_vitb16,
+                "vitl16-sat": load_dinov3_vitl16,       # SAT493M
+                "vitl16-lvd": load_dinov3_vitl16_lvd,   # LVD1689M
+            }
+            return loaders[cfg["variant"]](device=self.device)
         if family == "radio":
             from transformers import AutoModel
             local_path = str(WEIGHTS_ROOT / cfg["local"])
-            model = AutoModel.from_pretrained(local_path, trust_remote_code=True)
+            try:
+                model = AutoModel.from_pretrained(local_path, trust_remote_code=True)
+            except FileNotFoundError:
+                # transformers' trust_remote_code copier can miss some modeling
+                # files (e.g. C-RADIOv4's utils.py / dual_hybrid_vit.py) when it
+                # scans relative imports. Mirror all .py into the modules cache
+                # and retry so a cleared cache can't silently break loading.
+                _sync_remote_code_cache(cfg["local"], local_path)
+                model = AutoModel.from_pretrained(local_path, trust_remote_code=True)
             return model.to(self.device)
         raise ValueError(family)
 

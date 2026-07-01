@@ -1,0 +1,19 @@
+===== STAGE=pretrain =====
+{'train_runtime': 10.8117, 'train_samples_per_second': 11.839, 'train_steps_per_second': 0.37, 'train_loss': 10.677777290344238, 'epoch': 4.0}
+[train] saved projector (connector stage) to /leonardo_scratch/large/userexternal/adiecidu/waste_vlm/results/vlm/smoke_pre
+===== STAGE=finetune =====
+{'train_runtime': 14.6927, 'train_samples_per_second': 8.712, 'train_steps_per_second': 0.272, 'train_loss': 9.635971069335938, 'epoch': 4.0}
+[train] saved LoRA adapter + projector to /leonardo_scratch/large/userexternal/adiecidu/waste_vlm/results/vlm/smoke_ft
+===== saved artifacts =====
+/leonardo_scratch/large/userexternal/adiecidu/waste_vlm/results/vlm/smoke_ft:
+lora_adapter
+projector.pt
+
+/leonardo_scratch/large/userexternal/adiecidu/waste_vlm/results/vlm/smoke_ft/lora_adapter:
+adapter_config.json
+adapter_model.safetensors
+README.md
+
+/leonardo_scratch/large/userexternal/adiecidu/waste_vlm/results/vlm/smoke_pre:
+projector.pt
+ALL_SMOKES_DONE

@@ -1,0 +1,8 @@
+[slurm] host=lrdn2292.leonardo.local job=48178918 start=2026-07-01T10:15:56+02:00
+[slurm] mode=pretrain encoder=dinov3-b ngpu=4
+NVIDIA A100-SXM-64GB, 65536 MiB
+NVIDIA A100-SXM-64GB, 65536 MiB
+NVIDIA A100-SXM-64GB, 65536 MiB
+NVIDIA A100-SXM-64GB, 65536 MiB
+[train] stage=pretrain encoder=dinov3-b world_size=4 trainable=15.60M total_steps=2180 warmup=65
+[train] step 10/2180 loss=2.2821 lr=1.54e-04

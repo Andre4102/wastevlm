@@ -1,0 +1,8 @@
+[slurm] host=lrdn2302.leonardo.local job=48178901 start=2026-07-01T10:15:56+02:00
+[slurm] mode=pretrain encoder=radio-l ngpu=4
+NVIDIA A100-SXM-64GB, 65536 MiB
+NVIDIA A100-SXM-64GB, 65536 MiB
+NVIDIA A100-SXM-64GB, 65536 MiB
+NVIDIA A100-SXM-64GB, 65536 MiB
+[train] stage=pretrain encoder=radio-l world_size=4 trainable=16.52M total_steps=2180 warmup=65
+[train] step 10/2180 loss=2.1675 lr=1.54e-04

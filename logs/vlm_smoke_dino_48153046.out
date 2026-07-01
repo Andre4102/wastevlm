@@ -1,0 +1,6 @@
+[slurm] host=lrdn1215.leonardo.local job=48153046 start=2026-06-30T22:57:29+02:00
+[slurm] mode=smoke encoder=dinov3-b out=vlm_dinov3-b
+NVIDIA A100-SXM-64GB, 65536 MiB
+{'train_runtime': 29.9874, 'train_samples_per_second': 4.268, 'train_steps_per_second': 0.133, 'train_loss': 11.861331939697266, 'epoch': 4.0}
+[train] saved LoRA adapter + projector to /leonardo_scratch/large/userexternal/adiecidu/waste_vlm/results/vlm/vlm_dinov3-b_smoke
+[slurm] done=2026-06-30T22:58:52+02:00

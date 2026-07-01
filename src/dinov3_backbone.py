@@ -21,27 +21,34 @@ we load strict=False and keep the model's initialised values.
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
 import torch
 
-DINOV3_REPO = "/home/ids/diecidue/.cache/torch/hub/facebookresearch_dinov3_main"
+# Leonardo paths (override with env vars to relocate). The hub repo is the
+# cloned facebookresearch/dinov3 source tree; the weights are the gated HF
+# snapshots downloaded under WASTE_VLM_WEIGHTS.
+_WROOT = Path(
+    os.environ.get(
+        "WASTE_VLM_WEIGHTS",
+        "/leonardo_scratch/large/userexternal/adiecidu/waste_vlm/weights",
+    )
+)
+DINOV3_REPO = os.environ.get(
+    "DINOV3_REPO",
+    "/leonardo_scratch/large/userexternal/adiecidu/waste_vlm/dinov3_repo",
+)
 HF_REPO = "facebook/dinov3-vitb16-pretrain-lvd1689m"
 # Full local snapshots of the gated HF repos — no HF round-trip on load.
-LOCAL_REPO_DIR = Path(
-    "/home/ids/diecidue/results/waste_vlm/weights/dinov3-vitb16-pretrain-lvd1689m"
-)
+LOCAL_REPO_DIR = _WROOT / "dinov3-vitb16-pretrain-lvd1689m"
 LOCAL_WEIGHTS = LOCAL_REPO_DIR / "model.safetensors"
 
-LOCAL_REPO_DIR_L = Path(
-    "/home/ids/diecidue/results/waste_vlm/weights/dinov3-vitl16-pretrain-sat493m"
-)
+LOCAL_REPO_DIR_L = _WROOT / "dinov3-vitl16-pretrain-sat493m"
 LOCAL_WEIGHTS_L = LOCAL_REPO_DIR_L / "model.safetensors"
 
-LOCAL_REPO_DIR_L_LVD = Path(
-    "/home/ids/diecidue/results/waste_vlm/weights/dinov3-vitl16-pretrain-lvd1689m"
-)
+LOCAL_REPO_DIR_L_LVD = _WROOT / "dinov3-vitl16-pretrain-lvd1689m"
 LOCAL_WEIGHTS_L_LVD = LOCAL_REPO_DIR_L_LVD / "model.safetensors"
 
 

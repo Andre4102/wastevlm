@@ -1,0 +1,6 @@
+[slurm] host=lrdn2485.leonardo.local job=48152975 start=2026-06-30T22:54:55+02:00
+[slurm] mode=smoke encoder=radio-l out=vlm_radio-l
+NVIDIA A100-SXM-64GB, 65536 MiB
+{'train_runtime': 49.8948, 'train_samples_per_second': 2.565, 'train_steps_per_second': 0.08, 'train_loss': 11.049751281738281, 'epoch': 4.0}
+[train] saved LoRA adapter + projector to /leonardo_scratch/large/userexternal/adiecidu/waste_vlm/results/vlm/vlm_radio-l_smoke
+[slurm] done=2026-06-30T22:56:41+02:00
