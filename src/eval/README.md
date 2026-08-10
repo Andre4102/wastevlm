@@ -62,7 +62,7 @@ Build (no model; `base` env, any node):
 python -m src.eval.build_low_qa --max-per-type 400
 ```
 
-Score / compare (needs torch+transformers — `gausdino` env; a GPU node for 8B):
+Score / compare (needs torch+transformers — `myenv`; a GPU node for 8B):
 
 ```bash
 BENCH=/leonardo_scratch/large/userexternal/adiecidu/waste_vlm/data/waste_eval/low_qa.jsonl

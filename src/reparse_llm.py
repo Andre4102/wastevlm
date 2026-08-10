@@ -57,17 +57,47 @@ def find_claude_bin() -> str:
     return "claude"  # fall back to PATH
 
 
-def build_batch_prompt(classes: dict[str, dict], texts: list[str]) -> str:
+def build_batch_prompt(classes: dict[str, dict], texts: list[str],
+                       require_confident: bool = False) -> str:
     lines = [
         "A drone captured aerial images of illegal waste dump sites.",
         "Several vision models described the images; their texts are listed below.",
         "",
-        "For EACH numbered description, decide which waste categories are",
-        "mentioned or described (even indirectly — by paraphrase, visual",
-        "description, or synonym).",
-        "",
-        "Waste categories (aerial appearance + synonyms):",
     ]
+    if require_confident:
+        # Default mode counts any mention, however hedged — which is *more*
+        # permissive than the keyword-bag parser it replaces. This mode instead
+        # separates what the model claims to SEE from what it merely speculates
+        # about, so the resulting F1 reflects confident predictions only.
+        lines += [
+            "For EACH numbered description, decide which waste categories the",
+            "description ASSERTS are actually visible in that image.",
+            "",
+            "Mark a category true ONLY if the text states it as something",
+            "observed. Mark it false when the mention is:",
+            "  - hedged or hypothetical ('could include', 'might be',",
+            "    'possibly', 'appears to be'),",
+            "  - offered as an example or as what is typical of such a place",
+            "    ('such as', 'commonly found at construction sites',",
+            "    'materials often seen in these areas'),",
+            "  - a guess at classifying something else the model did see",
+            "    ('piles of dirt and rocks, which could be construction debris'",
+            "    -> construction debris is NOT asserted),",
+            "  - mentioned only to say it is absent.",
+            "",
+            "Judge each category independently: a description may assert one",
+            "category and merely speculate about another in the same sentence.",
+            "",
+            "Waste categories (aerial appearance + synonyms):",
+        ]
+    else:
+        lines += [
+            "For EACH numbered description, decide which waste categories are",
+            "mentioned or described (even indirectly — by paraphrase, visual",
+            "description, or synonym).",
+            "",
+            "Waste categories (aerial appearance + synonyms):",
+        ]
     for name, info in classes.items():
         cue  = info.get("aerial_cue", "")
         tags = ", ".join(info.get("clip_tags", []))
@@ -115,10 +145,11 @@ def call_judge_batch(
     classes: dict[str, dict],
     cats: list[str],
     texts: list[str],
+    require_confident: bool = False,
 ) -> list[dict[str, bool]]:
     """Run one batch; returns a list of {class: bool} dicts, one per text."""
     fallback = [{c: False for c in cats}] * len(texts)
-    prompt = build_batch_prompt(classes, texts)
+    prompt = build_batch_prompt(classes, texts, require_confident=require_confident)
     raw_out = _call_claude(bin_path, model, prompt)
 
     # strip accidental markdown fences
@@ -162,6 +193,11 @@ def main() -> int:
                    help="Records per claude CLI call (default: 8)")
     p.add_argument("--workers", type=int, default=2,
                    help="Parallel subprocess workers (default: 2)")
+    p.add_argument("--require-confident", action="store_true",
+                   help="only count categories the text ASSERTS are visible; "
+                        "hedged / example / speculative mentions score false. "
+                        "Without this, any mention counts (more permissive than "
+                        "the keyword-bag parser).")
     args = p.parse_args()
 
     bin_path = find_claude_bin()
@@ -172,6 +208,7 @@ def main() -> int:
     cats = list(classes_dict.keys())
     n_cats = len(cats)
     print(f"[judge] dataset={args.dataset}  classes={n_cats}  model={args.model}")
+    print(f"[judge] mode={'asserted-only' if args.require_confident else 'any-mention'}")
 
     records = [json.loads(l) for l in
                args.raw_jsonl.read_text(encoding="utf-8").splitlines() if l.strip()]
@@ -213,7 +250,8 @@ def main() -> int:
     def run_batch(batch: list[tuple[int, str]]) -> tuple[list[int], list[dict[str, bool]]]:
         idxs  = [x[0] for x in batch]
         texts = [x[1] for x in batch]
-        preds = call_judge_batch(bin_path, args.model, classes_dict, cats, texts)
+        preds = call_judge_batch(bin_path, args.model, classes_dict, cats, texts,
+                                 require_confident=args.require_confident)
         return idxs, preds
 
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
@@ -238,7 +276,22 @@ def main() -> int:
     rep["n_empty_raw"]   = n_empty
     rep["n_judged"]      = len(to_judge)
     rep["raw_jsonl"]     = str(args.raw_jsonl)
+    rep["require_confident"] = bool(args.require_confident)
+    # How much the judge kept vs. what the keyword-bag parser had claimed. The
+    # gap between these two is the whole point of --require-confident: it is the
+    # volume of speculative/hedged mentions the substring parser scored as
+    # confident predictions.
+    rep["n_pred_labels"] = int(Y_pred.sum())
+    rep["n_pred_images"] = int((Y_pred.sum(axis=1) > 0).sum())
+    rep["n_gt_labels"]   = int(Y_true.sum())
+    rep["n_gt_images"]   = int((Y_true.sum(axis=1) > 0).sum())
+    kw = sum(len(r.get("parsed", [])) for r in records)
+    rep["n_keyword_labels"] = kw
 
+    print(f"\n[judge] labels: keyword-bag={kw}  judge={rep['n_pred_labels']}  "
+          f"gt={rep['n_gt_labels']}")
+    print(f"[judge] images w/ preds: judge={rep['n_pred_images']}/{len(records)}  "
+          f"gt={rep['n_gt_images']}/{len(records)}")
     print(f"\n[judge] micro F1 = {rep['micro']['f1']:.4f}  macro F1 = {rep['macro']['f1']:.4f}")
     for name, pc in rep["per_class"].items():
         f1 = pc["f1"]

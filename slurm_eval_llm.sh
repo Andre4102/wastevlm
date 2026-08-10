@@ -27,10 +27,12 @@ set -euo pipefail
 if [ "$#" -lt 1 ]; then echo "usage: sbatch slurm_eval_llm.sh <model> [<model> ...]"; exit 2; fi
 
 source ~/miniconda3/etc/profile.d/conda.sh
-conda activate gausdino
+conda activate myenv   # same env as prune/CPT: registers custom-llama3 + matching tokenizers
 
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
+# Pruning repo whose import registers the materialized-pruned `custom-llama3` arch
+export PRUNING_REPO=/leonardo/home/userexternal/adiecidu/scripts/pruning
 
 WASTEVLM=/leonardo/home/userexternal/adiecidu/scripts/wastevlm
 DATA=/leonardo_scratch/large/userexternal/adiecidu/waste_vlm/data

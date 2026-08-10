@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import time
@@ -45,10 +46,18 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.datasets import DRONEWASTE_PAPER_10  # noqa: E402
-from src.det_eval import cocoeval  # noqa: E402
-from src.seg_dataset import DroneWasteSegmentation  # noqa: E402
+# NOTE: det_eval (pycocotools) and seg_dataset are imported lazily inside the
+# detect path only — the classify eval must not require pycocotools.
 
-WEIGHTS_DIR = Path("/home/ids/diecidue/results/waste_vlm/weights")
+# Benchmark data root (DroneWaste / AerialWaste). Cluster-agnostic via env.
+WASTE_DATA_ROOT = Path(os.environ.get(
+    "WASTE_DATA_ROOT",
+    "/leonardo_scratch/large/userexternal/adiecidu/waste_vlm/data",
+))
+
+WEIGHTS_DIR = Path(os.environ.get(
+    "WASTE_VLM_WEIGHTS",
+    "/leonardo_scratch/large/userexternal/adiecidu/waste_vlm/weights"))
 QWEN_PATH = WEIGHTS_DIR / "Qwen2.5-VL-7B-Instruct"
 INTERNVL3_PATH = WEIGHTS_DIR / "InternVL3-8B"
 # CLIP ViT-B/32 lives in the HF disk cache (two snapshot hashes exist; use the
@@ -261,10 +270,11 @@ PROMPT_CLASSIFY_OPEN = DATASETS["dw_paper10"]["prompt_classify"]["open_caption"]
 PROMPTS_CLASSIFY = DATASETS["dw_paper10"]["prompt_classify"]
 PROMPT = PROMPT_DETECT
 
-# CoT prompts for the open_cot prompt style.
+# CoT prompts for the open_cot prompt styles.
 # Turn 1: ask for a free-form visual description (no label menu).
 # Turn 2: ask the model to name waste from its own description.
 # Parsed with keyword bags — same as open_caption but grounded by the CoT.
+COT_STYLES = ("open_cot", "open_cot_confident")
 PROMPT_DESCRIBE = (
     "This is an aerial drone photograph of an outdoor area "
     "(rural land, roadside, construction site, etc.). "
@@ -272,19 +282,41 @@ PROMPT_DESCRIBE = (
     "objects, piles, or accumulations. Include colors, textures, and any signs "
     "of discarded or dumped materials."
 )
-def make_cot_classify_prompt(clip_tags: dict[str, list[str]]) -> str:
+def make_cot_classify_prompt(clip_tags: dict[str, list[str]],
+                             confident: bool = False) -> str:
     """Build Turn-2 CoT prompt with examples drawn from this dataset's clip_tags.
 
     Using dataset-specific synonyms avoids anchoring the model on the hardcoded
     DroneWaste examples ('broken concrete', 'old tyres', …) which bias responses
     away from classes like 'Bulky items' or 'Containers'.
+
+    ``confident=True`` (prompt style ``open_cot_confident``) demands the model
+    commit only to what it actually sees. The plain prompt is a *leading*
+    question — it asks what waste is visible "if any" while listing nearly every
+    class as an example, and the keyword-bag parser then scores any echo of those
+    examples as a prediction. In practice the model hedges ("these piles could
+    include wooden pallets, scrap metal") and the parser reads the hedge as three
+    confident claims. Demanding commitment is the prompt-side half of that fix;
+    the judge-side half is `src.reparse_llm --require-confident`.
     """
     examples = [tags[0] for tags in clip_tags.values() if tags]
     ex_str = ", ".join(f"'{e}'" for e in examples)
-    return (
+    base = (
         "Based on what you described above, what types of waste or discarded "
         "materials are visible, if any? Name specific materials or objects "
         f"(e.g., {ex_str}). "
+    )
+    if confident:
+        return base + (
+            "Only name a material if you are confident you can actually SEE it "
+            "in this image. Do not guess, do not speculate, and do not list "
+            "materials that are merely typical of such a place. If you can see "
+            "that something has been dumped but cannot confidently identify the "
+            "material, say only what you are sure of. It is better to name "
+            "nothing than to name something you are not sure about. "
+            "If there is genuinely no waste of any kind, reply exactly \"none\"."
+        )
+    return base + (
         "If there is genuinely no waste of any kind, reply exactly \"none\"."
     )
 
@@ -515,6 +547,116 @@ class QwenAdapter(VLMAdapter):
             if label and box:
                 out.append({"label": label, "box": box})
         return out
+
+
+class PrunedQwenAdapter(QwenAdapter):
+    """Qwen2.5-VL with a STRUCTURALLY-PRUNED decoder: stock base + merged LoRA +
+    in-memory materialize from a prune run's `mask_logits.pt`. Reuses
+    QwenAdapter.generate/detect/_parse unchanged (same processor + model API)."""
+    name = "qwen2_5vl_pruned"
+
+    def __init__(self, ckpt: Path, base: Path = QWEN_PATH, max_new_tokens: int = 512):
+        super().__init__(path=base, max_new_tokens=max_new_tokens)
+        self.ckpt = Path(ckpt)
+
+    def load(self, device: str = "cuda") -> None:
+        import sys as _sys
+        from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
+        from peft import PeftModel
+        _sys.path.insert(0, "/leonardo/home/userexternal/adiecidu/scripts/pruning")
+        from custom_attentions.qwen2_5_vl_attention import materialize_qwen2_5_vl_decoder
+
+        self.processor = AutoProcessor.from_pretrained(str(self.path))
+        model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+            str(self.path), torch_dtype=torch.bfloat16, device_map=device,
+            attn_implementation="eager")
+        lora_dir = self.ckpt / "lora_adapter"
+        if lora_dir.exists():
+            model = PeftModel.from_pretrained(model, str(lora_dir))
+            model = model.merge_and_unload()
+            print(f"[pruned-qwenvl] merged LoRA from {lora_dir}", flush=True)
+        logits = torch.load(str(self.ckpt / "mask_logits.pt"), map_location=device)
+        kept, orig = materialize_qwen2_5_vl_decoder(model, logits)
+        print(f"[pruned-qwenvl] materialized decoder — param reduction "
+              f"{1 - kept / orig:.3f}", flush=True)
+        self.model = model.eval()
+        try:
+            from qwen_vl_utils import smart_resize  # noqa: F401
+            self._smart_resize = smart_resize
+        except Exception:
+            self._smart_resize = None
+
+
+class MaskedQwenAdapter(QwenAdapter):
+    """Qwen2.5-VL evaluated WITH SOFT/STE MASKS in place (no materialize). Mirrors
+    the training build order (wrap decoder masks -> load trained LoRA -> load trained
+    mask logits -> set each layer's tau to its trained final value), so this is the
+    exact hard-masked model the prune run optimized. Bypasses the lossy materialize
+    export — use to validate the METHOD independently of the slicing step."""
+    name = "qwen2_5vl_masked"
+
+    def __init__(self, ckpt: Path, base: Path = QWEN_PATH, max_new_tokens: int = 512,
+                 tau: float | None = None):
+        super().__init__(path=base, max_new_tokens=max_new_tokens)
+        self.ckpt = Path(ckpt)
+        self.tau_override = tau            # None -> use each layer's saved tau
+
+    def load(self, device: str = "cuda") -> None:
+        import sys as _sys
+        from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
+        from peft import PeftModel
+        _sys.path.insert(0, "/leonardo/home/userexternal/adiecidu/scripts/pruning")
+        _sys.path.insert(0, "/leonardo/home/userexternal/adiecidu/scripts/wastevlm")
+        from mask_wrapper import wrap_model_with_masks, MaskedTransformerLayer
+        from custom_attentions.qwen2_5_vl_attention import Qwen2_5_VLMaskAdapter
+
+        self.processor = AutoProcessor.from_pretrained(str(self.path))
+        vl = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+            str(self.path), torch_dtype=torch.bfloat16, attn_implementation="eager")
+        for p in vl.parameters():
+            p.requires_grad_(False)
+
+        # 1) wrap decoder with masks (same adapter/order as QwenVLPrune)
+        adapter = Qwen2_5_VLMaskAdapter()
+        wrap_model_with_masks(vl, adapter, tau_init=1.0, logit_init=2.0,
+                              gate_type="sigmoid", enable_layer_drop=False,
+                              prune_blocks="both")
+        vl = vl.to(device=device, dtype=torch.bfloat16)
+
+        # 2) load trained LoRA onto the wrapped model (target paths match)
+        lora_dir = self.ckpt / "lora_adapter"
+        if lora_dir.exists():
+            vl = PeftModel.from_pretrained(vl, str(lora_dir))
+            print(f"[masked-qwenvl] loaded LoRA (unmerged) from {lora_dir}", flush=True)
+
+        # 3) load trained mask logits + tau into each MaskedTransformerLayer (in order)
+        logits = torch.load(str(self.ckpt / "mask_logits.pt"), map_location=device)
+        mlayers = [m for m in vl.modules() if isinstance(m, MaskedTransformerLayer)]
+        assert len(mlayers) == len(logits), \
+            f"layer count mismatch: {len(mlayers)} masked layers vs {len(logits)} logit sets"
+        for i, m in enumerate(mlayers):
+            d = logits[i]
+            with torch.no_grad():
+                m.m_head.copy_(d["m_head"].to(device))
+                m.m_qk.copy_(d["m_qk"].to(device))
+                m.m_vo.copy_(d["m_vo"].to(device))
+                m.m_mlp.copy_(d["m_mlp"].to(device))
+                if d.get("m_qhead") is not None and getattr(m, "m_qhead", None) is not None:
+                    m.m_qhead.copy_(d["m_qhead"].to(device))
+            tau = self.tau_override if self.tau_override is not None else float(d["tau"])
+            if hasattr(m, "tau"):
+                m.tau.fill_(tau) if torch.is_tensor(m.tau) else setattr(m, "tau", tau)
+        frac = sum((d["m_head"] >= 0).float().mean().item() for d in logits.values()) / len(logits)
+        print(f"[masked-qwenvl] loaded {len(mlayers)} mask sets; mean KV-head keep={frac:.3f}; "
+              f"tau={'saved' if self.tau_override is None else self.tau_override}", flush=True)
+
+        vl.config.use_cache = True
+        self.model = vl.eval()
+        try:
+            from qwen_vl_utils import smart_resize  # noqa: F401
+            self._smart_resize = smart_resize
+        except Exception:
+            self._smart_resize = None
 
 
 class InternVL3Adapter(VLMAdapter):
@@ -756,10 +898,60 @@ class CLIPAdapter(VLMAdapter):
         )
 
 
+class WasteVLMAdapter(VLMAdapter):
+    """Our trained VLM: frozen encoder -> projector.pt -> merged Qwen2.5 (LoRA folded).
+
+    Loads a finetune output dir with `llm_merged/` + `projector.pt`; the frozen
+    vision encoder is rebuilt from `--encoder`. Classify-only (open_cot uses the
+    base-class two-turn generate_cot). Not for the `detect` task.
+    """
+    name = "waste_vlm"
+
+    def __init__(self, ckpt: Path, encoder: str = "radio-l",
+                 image_size: int = 512, pixel_shuffle: int = 1,
+                 max_new_tokens: int = 256):
+        self.ckpt = Path(ckpt)
+        self.path = self.ckpt  # for the main() load banner
+        self.encoder = encoder
+        self.image_size = image_size
+        self.pixel_shuffle = pixel_shuffle
+        self.max_new_tokens = max_new_tokens
+
+    def load(self, device: str = "cuda") -> None:
+        from src.vlm_model import WasteVLM
+        # A prune run saves the decoder under decoder_pruned/ (materialized
+        # custom-qwen2); a normal finetune saves it under llm_merged/. Prefer the
+        # pruned one when present. WasteVLM auto-detects custom-qwen2 and loads it
+        # through the pruning toolkit.
+        for sub in ("decoder_pruned", "llm_merged"):
+            if (self.ckpt / sub).exists():
+                llm_path = str(self.ckpt / sub)
+                break
+        else:
+            llm_path = str(self.ckpt)
+        print(f"[waste_vlm] decoder = {llm_path}", flush=True)
+        self.model = WasteVLM(
+            llm_path=llm_path, encoder_id=self.encoder,
+            image_size=self.image_size, pixel_shuffle=self.pixel_shuffle,
+            device=device,
+        )
+        sd = torch.load(str(self.ckpt / "projector.pt"), map_location=device)
+        self.model.projector.load_state_dict(sd)
+        self.model.eval()
+        self._transform = self.model.encoder.transform
+
+    def generate(self, image: Image.Image, prompt: str) -> str:
+        px = self._transform(image.convert("RGB")).unsqueeze(0)
+        return self.model.generate(px, "<image>\n" + prompt, self.max_new_tokens)
+
+
 ADAPTERS = {
     "clip": CLIPAdapter,
     "qwen2_5vl": QwenAdapter,
+    "qwen2_5vl_pruned": PrunedQwenAdapter,
+    "qwen2_5vl_masked": MaskedQwenAdapter,
     "internvl3": InternVL3Adapter,
+    "waste_vlm": WasteVLMAdapter,
 }
 
 
@@ -768,7 +960,7 @@ ADAPTERS = {
 def build_paper10_gt(ds: DroneWasteSegmentation) -> tuple[dict, set[int]]:
     """COCO-format GT restricted to DRONEWASTE_PAPER_10 categories."""
     cat_by_id: dict[int, dict] = {}
-    with (Path("/home/ids/diecidue/data/dronewaste") / "dronewaste_v1.0.json").open() as f:
+    with (WASTE_DATA_ROOT / "dronewaste" / "dronewaste_v1.0.json").open() as f:
         full = json.load(f)
     for c in full["categories"]:
         cat_by_id[c["id"]] = c
@@ -805,6 +997,8 @@ def build_paper10_gt(ds: DroneWasteSegmentation) -> tuple[dict, set[int]]:
 
 def run_detect(adapter: VLMAdapter, args) -> dict:
     """Legacy grounded-detection path; scored via pycocotools paper-10 mAP."""
+    from src.det_eval import cocoeval  # noqa: E402  (pycocotools: detect-only)
+    from src.seg_dataset import DroneWasteSegmentation  # noqa: E402
     ds = DroneWasteSegmentation(split=args.split)
     print(f"[data] split={args.split} n={len(ds)} fg-categories={len(ds.categories)}")
     name_to_cat_id = {ds.categories[i]: cid for cid, i in ds.cat_id_to_idx.items()}
@@ -893,7 +1087,7 @@ def _load_classification_samples(dataset: str, dataset_spec: dict, limit: int):
     if dataset == "dw_paper10":
         from src.datasets import load_dronewaste_multilabel  # noqa: E402
         cats, samples_all = load_dronewaste_multilabel(
-            "/home/ids/diecidue/data/dronewaste",
+            str(WASTE_DATA_ROOT / "dronewaste"),
             categories_filter=dataset_spec["cats"],
         )
         site_to_idx: dict[str, list[int]] = defaultdict(list)
@@ -910,7 +1104,7 @@ def _load_classification_samples(dataset: str, dataset_spec: dict, limit: int):
         from src.datasets import load_aerialwaste_mcml  # noqa: E402
         version = "m2" if dataset == "aw_m2" else "m4"
         cats, test_samples = load_aerialwaste_mcml(
-            "/home/ids/diecidue/data/aerialwaste",
+            str(WASTE_DATA_ROOT / "aerialwaste"),
             split="test", version=version,
         )
         # Filter to images actually on disk (PNEO subset isn't shipped).
@@ -948,11 +1142,14 @@ def run_classify(adapter: VLMAdapter, args) -> dict:
     n_cats = len(cats)
     print(f"[data] dataset={args.dataset} test={len(test_samples)} classes={n_cats}")
 
-    # open_cot uses two shared CoT prompts; other styles pull from the dataset registry.
-    if args.prompt_style == "open_cot":
+    # open_cot* use two shared CoT prompts; other styles pull from the dataset registry.
+    if args.prompt_style in COT_STYLES:
         prompt = None
-        cot_classify_prompt = make_cot_classify_prompt(dataset_spec["clip_tags"])
-        print(f"[task] classify  prompt_style=open_cot  "
+        cot_classify_prompt = make_cot_classify_prompt(
+            dataset_spec["clip_tags"],
+            confident=(args.prompt_style == "open_cot_confident"),
+        )
+        print(f"[task] classify  prompt_style={args.prompt_style}  "
               f"describe-len={len(PROMPT_DESCRIBE)}  classify-len={len(cot_classify_prompt)} chars")
         print(f"[task] cot_classify_prompt: {cot_classify_prompt}")
     else:
@@ -977,7 +1174,7 @@ def run_classify(adapter: VLMAdapter, args) -> dict:
                     clip_tags=dataset_spec.get("clip_tags"),
                 )
                 raw = json.dumps({"clip_preds": sorted(pred_labels)})
-            elif args.prompt_style == "open_cot":
+            elif args.prompt_style in COT_STYLES:
                 # Chain-of-thought: describe → classify (free vocab, keyword-bag parse)
                 raw_turn1, raw = adapter.generate_cot(img, PROMPT_DESCRIBE, cot_classify_prompt)
                 pred_labels = parse_keywords(raw, dataset_spec["keywords"])
@@ -1000,7 +1197,7 @@ def run_classify(adapter: VLMAdapter, args) -> dict:
         if args.save_raw is not None:
             rec = {"image_id": s.image_id, "file": s.image_path.name,
                    "raw": raw, "parsed": sorted(pred_labels), "gt": sorted(gt_labels)}
-            if args.prompt_style == "open_cot":
+            if args.prompt_style in COT_STYLES:
                 rec["raw_turn1"] = raw_turn1
             raw_dump.append(rec)
 
@@ -1058,21 +1255,48 @@ def main() -> int:
                    default="dw_paper10",
                    help="only used when --task classify")
     p.add_argument("--prompt-style",
-                   choices=sorted(PROMPTS_CLASSIFY.keys()) + ["open_cot"],
+                   choices=sorted(PROMPTS_CLASSIFY.keys()) + sorted(COT_STYLES),
                    default="closed_vocab",
                    help="only used when --task classify. open_cot: two-turn CoT "
                         "(describe then classify, free vocab, keyword-bag parse); "
-                        "ignored for clip model")
+                        "open_cot_confident: same, but turn 2 demands the model "
+                        "only name what it can actually see; ignored for clip model")
     p.add_argument("--split", choices=["train", "val", "test"], default="test")
     p.add_argument("--limit", type=int, default=0,
                    help="if >0, only process the first N test images (smoke test)")
     p.add_argument("--save-raw", type=Path, default=None,
                    help="optional path to dump per-image raw responses (jsonl)")
     p.add_argument("--out-json", type=Path, default=None)
+    # our trained VLM (--model waste_vlm)
+    p.add_argument("--ckpt", type=Path, default=None,
+                   help="waste_vlm only: finetune dir with llm_merged/ + projector.pt")
+    p.add_argument("--encoder", default="radio-l",
+                   help="waste_vlm only: frozen vision encoder id (radio-l | dinov3-b | ...)")
+    p.add_argument("--image-size", type=int, default=512,
+                   help="waste_vlm only: encoder input size (must match training)")
+    p.add_argument("--pixel-shuffle", type=int, default=1,
+                   help="waste_vlm only: projector pixel-shuffle factor (must match "
+                        "training; 1 = off)")
     args = p.parse_args()
 
-    adapter_cls = ADAPTERS[args.model]
-    adapter = adapter_cls()
+    if args.model == "waste_vlm":
+        if args.ckpt is None:
+            p.error("--ckpt is required when --model waste_vlm")
+        adapter = WasteVLMAdapter(ckpt=args.ckpt, encoder=args.encoder,
+                                  image_size=args.image_size,
+                                  pixel_shuffle=args.pixel_shuffle)
+    elif args.model == "qwen2_5vl_pruned":
+        if args.ckpt is None:
+            p.error("--ckpt (prune dir with lora_adapter/ + mask_logits.pt) is "
+                    "required when --model qwen2_5vl_pruned")
+        adapter = PrunedQwenAdapter(ckpt=args.ckpt)
+    elif args.model == "qwen2_5vl_masked":
+        if args.ckpt is None:
+            p.error("--ckpt (prune dir with lora_adapter/ + mask_logits.pt) is "
+                    "required when --model qwen2_5vl_masked")
+        adapter = MaskedQwenAdapter(ckpt=args.ckpt)
+    else:
+        adapter = ADAPTERS[args.model]()
     print(f"[model] loading {args.model} from {adapter.path} ...")
     adapter.load("cuda")
     print("[model] ready", flush=True)

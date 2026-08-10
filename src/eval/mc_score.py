@@ -8,7 +8,7 @@ the highest score. Two metrics are reported per the pruning harness:
     acc_norm = argmax over Σ log p(continuation) / n_bytes    (PRIMARY)
 
 Pass several ``--models`` to compare (dense base vs CPT vs pruned) in one run.
-Needs torch + transformers (e.g. the ``gausdino`` env or the pruning env)::
+Needs torch + transformers (``myenv`` — same env as prune/CPT)::
 
     python -m src.eval.mc_score \\
         --bench /leonardo_scratch/.../waste_vlm/data/waste_eval/low_qa.jsonl \\
@@ -28,6 +28,8 @@ from ..corpus.common import read_jsonl
 def _load(model_path: str, dtype: str, device: str):
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
+    from ._arch import register_pruning_arch
+    register_pruning_arch()  # lets materialized-pruned (custom-llama3) checkpoints load
     tok = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
     torch_dtype = {"bf16": torch.bfloat16, "fp16": torch.float16,
                    "fp32": torch.float32}[dtype]

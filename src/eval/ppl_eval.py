@@ -8,7 +8,7 @@ retained it.
 
 Model-free, deterministic, no agent. Non-overlapping `--seq-len` windows,
 EOS-joined docs; PPL = exp(Σ NLL / Σ tokens). Compare dense/CPT/pruned in one run.
-Needs torch + transformers (`gausdino` env; GPU for 8B)::
+Needs torch + transformers (`myenv`; GPU for 8B)::
 
     python -m src.eval.ppl_eval \\
       --eval /leonardo_scratch/.../waste_vlm/data/waste_corpus_web/corpus_eval.jsonl \\
@@ -26,6 +26,8 @@ from ..corpus.common import read_jsonl
 def _load(model_path: str, dtype: str, device: str):
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
+    from ._arch import register_pruning_arch
+    register_pruning_arch()  # lets materialized-pruned (custom-llama3) checkpoints load
     tok = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
     torch_dtype = {"bf16": torch.bfloat16, "fp16": torch.float16,
                    "fp32": torch.float32}[dtype]

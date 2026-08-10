@@ -38,6 +38,50 @@ WEIGHTS_ROOT = Path(
 )
 DEFAULT_LLM_PATH = str(WEIGHTS_ROOT / "Qwen2.5-7B-Instruct")
 
+# The learned-mask structural-pruning toolkit (custom Qwen2/Llama3 arch + mask
+# wrapper) lives in a sibling repo. Only imported when building a *pruned*
+# decoder (joint prune+finetune); a no-op otherwise.
+PRUNING_REPO = os.environ.get(
+    "PRUNING_REPO", "/leonardo/home/userexternal/adiecidu/scripts/pruning"
+)
+
+
+def _import_pruning():
+    """Add the pruning repo to sys.path and return its mask/model primitives.
+
+    Kept lazy so the ordinary (stock-decoder) VLM path never imports the
+    pruning stack. Returns a namespace-like dict of the names the masked-decoder
+    build + training loop need."""
+    import sys
+    if PRUNING_REPO not in sys.path:
+        sys.path.insert(0, PRUNING_REPO)
+    from language_utils import create_qwen2_and_tokenizer  # registers custom-qwen2
+    from custom_attentions.qwen2_attention import Qwen2MaskAdapter
+    from mask_wrapper import wrap_model_with_masks, MaskedTransformerLayer
+    return {
+        "create_qwen2_and_tokenizer": create_qwen2_and_tokenizer,
+        "Qwen2MaskAdapter": Qwen2MaskAdapter,
+        "wrap_model_with_masks": wrap_model_with_masks,
+        "MaskedTransformerLayer": MaskedTransformerLayer,
+    }
+
+
+def _is_custom_qwen2(llm_path: str) -> bool:
+    """True if `llm_path` holds a materialized pruned decoder (model_type
+    custom-qwen2). Such a checkpoint has per-layer flexible GQA/MLP dims that
+    stock AutoModel can't rebuild — it must go through the pruning toolkit's
+    custom Qwen2ForCausalLM. Cheap config.json peek, no model load."""
+    import json, os
+    cfg = os.path.join(llm_path, "config.json")
+    if not os.path.exists(cfg):
+        return False
+    try:
+        with open(cfg) as f:
+            return json.load(f).get("model_type") == "custom-qwen2"
+    except Exception:
+        return False
+
+
 DEFAULT_SYSTEM_PROMPT = (
     "You are a remote-sensing assistant that analyzes aerial and drone imagery "
     "to detect and describe illegal waste, dumping sites, and related land cover."
@@ -46,15 +90,39 @@ DEFAULT_SYSTEM_PROMPT = (
 
 class Projector(nn.Module):
     """2-layer MLP from the encoder patch dim to the LLM hidden dim (LLaVA-1.5
-    style: Linear -> GELU -> Linear, output width = LLM hidden)."""
+    style: Linear -> GELU -> Linear, output width = LLM hidden).
 
-    def __init__(self, in_dim: int, out_dim: int) -> None:
+    With ``pixel_shuffle > 1`` an s x s neighbourhood of patch tokens is folded
+    into the channel dim before the MLP (LLaVA-NeXT / InternVL style): the square
+    patch grid [B, (h*w), D] becomes [B, (h/s * w/s), D*s^2], cutting the token
+    count fed to the LLM by s^2 while keeping the high-res signal. ``pixel_shuffle
+    == 1`` (default) is the original 2-layer MLP, so old checkpoints load 1:1.
+    """
+
+    def __init__(self, in_dim: int, out_dim: int, pixel_shuffle: int = 1) -> None:
         super().__init__()
-        self.fc1 = nn.Linear(in_dim, out_dim)
+        self.pixel_shuffle = pixel_shuffle
+        eff_in = in_dim * (pixel_shuffle ** 2)
+        self.fc1 = nn.Linear(eff_in, out_dim)
         self.act = nn.GELU()
         self.fc2 = nn.Linear(out_dim, out_dim)
 
+    def _shuffle(self, x: torch.Tensor) -> torch.Tensor:
+        # x: [B, N, D] with N a perfect square (h == w == sqrt(N)).
+        B, N, D = x.shape
+        s = self.pixel_shuffle
+        h = w = int(round(N ** 0.5))
+        if h * w != N:
+            raise ValueError(f"pixel_shuffle needs a square patch grid, got N={N}")
+        if h % s or w % s:
+            raise ValueError(f"grid {h}x{w} not divisible by pixel_shuffle={s}")
+        x = x.view(B, h // s, s, w // s, s, D)
+        x = x.permute(0, 1, 3, 2, 4, 5).contiguous()
+        return x.view(B, (h // s) * (w // s), D * s * s)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if self.pixel_shuffle > 1:
+            x = self._shuffle(x)
         return self.fc2(self.act(self.fc1(x)))
 
 
@@ -71,10 +139,16 @@ class WasteVLM(nn.Module):
         llm_path: str = DEFAULT_LLM_PATH,
         encoder_id: str = "radio-l",
         image_size: int = 512,
+        pixel_shuffle: int = 1,
         dtype: torch.dtype = torch.bfloat16,
         device: str = "cuda",
         attn_implementation: str = "sdpa",
         system_prompt: str = DEFAULT_SYSTEM_PROMPT,
+        prune: bool = False,
+        prune_tau_start: float = 5.0,
+        prune_logit_init: float = 2.0,
+        prune_enable_layer_drop: bool = False,
+        prune_blocks: str = "both",
     ) -> None:
         super().__init__()
         from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -82,6 +156,9 @@ class WasteVLM(nn.Module):
         self.device_str = device
         self.dtype = dtype
         self.system_prompt = system_prompt
+        self.is_pruning = prune
+        self.mask_params: list = []
+        self.mask_adapter = None
 
         # --- frozen vision encoder (fp32) ---
         self.encoder = VisionEncoder(encoder_id, device=device, image_size=image_size)
@@ -90,14 +167,52 @@ class WasteVLM(nn.Module):
         patch_dim = self.encoder.patch_dim
 
         # --- LLM ---
-        self.tokenizer = AutoTokenizer.from_pretrained(llm_path)
-        if self.tokenizer.pad_token_id is None:
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.llm = AutoModelForCausalLM.from_pretrained(
-            llm_path,
-            torch_dtype=dtype,
-            attn_implementation=attn_implementation,
-        ).to(device)
+        if prune:
+            # Joint prune+finetune: build the decoder as the custom masked Qwen-2
+            # (per-layer flexible GQA + learnable structural masks). The mask
+            # search is driven by the VLM task loss during stage-2/2.5 training;
+            # the trainer adds the sparsity penalty + controllers + materializes.
+            P = _import_pruning()
+            self.llm, self.tokenizer = P["create_qwen2_and_tokenizer"](
+                llm_path, llm_path, cache_dir=None,
+            )
+            if self.tokenizer.pad_token_id is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+            self.mask_adapter = P["Qwen2MaskAdapter"]()
+            # Wrap on CPU (adds mask params + tau buffers), THEN move the whole
+            # module — masks included — to the device, so DDP sees a uniform
+            # device (mirrors the pruning trainer's build order).
+            self.mask_params = P["wrap_model_with_masks"](
+                self.llm, self.mask_adapter,
+                tau_init=prune_tau_start, logit_init=prune_logit_init,
+                gate_type="sigmoid", enable_layer_drop=prune_enable_layer_drop,
+                prune_blocks=prune_blocks,
+            )
+            self._MaskedTransformerLayer = P["MaskedTransformerLayer"]
+            self.llm = self.llm.to(device=device, dtype=dtype)
+        elif _is_custom_qwen2(llm_path):
+            # Inference on a materialized pruned decoder (per-layer flexible GQA,
+            # model_type custom-qwen2). Stock AutoModel can't build it; load via
+            # the pruning toolkit's custom Qwen2ForCausalLM, which reads the
+            # per-layer mlp/qkv config and loads the pruned weights 1:1 — but do
+            # NOT wrap masks: the structure is already baked in, this is the final
+            # model. `create_qwen2_and_tokenizer` also registers the arch.
+            P = _import_pruning()
+            self.llm, self.tokenizer = P["create_qwen2_and_tokenizer"](
+                llm_path, llm_path, cache_dir=None,
+            )
+            if self.tokenizer.pad_token_id is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+            self.llm = self.llm.to(device=device, dtype=dtype)
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(llm_path)
+            if self.tokenizer.pad_token_id is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+            self.llm = AutoModelForCausalLM.from_pretrained(
+                llm_path,
+                torch_dtype=dtype,
+                attn_implementation=attn_implementation,
+            ).to(device)
         hidden = self.llm.config.hidden_size
 
         # Qwen turn terminator (<|im_end|>); fall back to eos.
@@ -105,7 +220,10 @@ class WasteVLM(nn.Module):
         self.turn_end_id = im_end if im_end is not None and im_end >= 0 else self.tokenizer.eos_token_id
 
         # --- projector (trainable) ---
-        self.projector = Projector(patch_dim, hidden).to(device=device, dtype=dtype)
+        self.pixel_shuffle = pixel_shuffle
+        self.projector = Projector(
+            patch_dim, hidden, pixel_shuffle=pixel_shuffle,
+        ).to(device=device, dtype=dtype)
         self.patch_dim = patch_dim
         self.hidden = hidden
 
@@ -127,6 +245,29 @@ class WasteVLM(nn.Module):
             target_modules=target_modules, bias="none", task_type="CAUSAL_LM",
         )
         self.llm = get_peft_model(self.llm, cfg)
+        # get_peft_model freezes every non-LoRA param, including the structural
+        # mask logits. Re-enable them so the joint prune+finetune keeps learning
+        # the masks alongside LoRA.
+        if self.is_pruning:
+            self.unfreeze_masks()
+
+    def unfreeze_masks(self) -> None:
+        """Mark the structural mask logits trainable (idempotent)."""
+        for p in self.mask_params:
+            p.requires_grad_(True)
+
+    def mask_sparsity_terms(self):
+        """(l1_probability_sum, total_prunable_params) summed over masked layers.
+
+        Used by the trainer to form the sparsity penalty and to read achieved
+        sparsity for the PI controller. Only valid when built with prune=True."""
+        l1 = 0.0
+        total = 0
+        for m in self.llm.modules():
+            if isinstance(m, self._MaskedTransformerLayer):
+                l1 = l1 + m.l1_probability_sum()
+                total += m.total_params()
+        return l1, max(1, total)
 
     def gradient_checkpointing_enable(self, **kwargs) -> None:
         self.llm.gradient_checkpointing_enable(**kwargs)
@@ -149,14 +290,23 @@ class WasteVLM(nn.Module):
         for p in self.projector.parameters():
             p.requires_grad_(True)
 
-    def trainable_parameter_groups(self, projector_lr: float, lora_lr: float):
+    def trainable_parameter_groups(self, projector_lr: float, lora_lr: float,
+                                   mask_lr: float = 0.0):
+        mask_ids = {id(p) for p in self.mask_params}
         proj_params = [p for p in self.projector.parameters() if p.requires_grad]
-        lora_params = [p for n, p in self.llm.named_parameters() if p.requires_grad]
+        # LoRA group = trainable LLM params minus the structural mask logits
+        # (those go in their own group at mask_lr).
+        lora_params = [p for _, p in self.llm.named_parameters()
+                       if p.requires_grad and id(p) not in mask_ids]
         groups = []
         if proj_params:
             groups.append({"params": proj_params, "lr": projector_lr})
         if lora_params:
             groups.append({"params": lora_params, "lr": lora_lr})
+        if self.is_pruning and mask_lr > 0:
+            mp = [p for p in self.mask_params if p.requires_grad]
+            if mp:
+                groups.append({"params": mp, "lr": mask_lr})
         return groups
 
     # ------------------------------------------------------------------
@@ -250,6 +400,56 @@ class WasteVLM(nn.Module):
             labels=labels,
             use_cache=False,
         )
+
+    # ------------------------------------------------------------------
+    # Inference / generation
+    # ------------------------------------------------------------------
+    @torch.no_grad()
+    def generate(
+        self,
+        pixel_values: Optional[torch.Tensor],
+        user_content: str,
+        max_new_tokens: int = 256,
+    ) -> str:
+        """Single-image greedy generation for eval.
+
+        `pixel_values` is a preprocessed [1,3,H,W] tensor (encoder.transform);
+        `user_content` is the user-turn text with a single `<image>` placeholder.
+        Prompt assembly mirrors `vlm_data.encode_messages` exactly (Qwen ChatML,
+        same system prompt + `<image>`→IMAGE_TOKEN_INDEX marker) so the model
+        sees the same format it was trained on. Returns the decoded response.
+        """
+        self.eval()
+        IMAGE_PLACEHOLDER = "<image>"
+
+        def tok(t: str) -> list[int]:
+            return self.tokenizer(t, add_special_tokens=False).input_ids
+
+        ids: list[int] = tok(f"<|im_start|>system\n{self.system_prompt}<|im_end|>\n")
+        if IMAGE_PLACEHOLDER in user_content:
+            pre, post = user_content.split(IMAGE_PLACEHOLDER, 1)
+            ids += tok(f"<|im_start|>user\n{pre}") + [IMAGE_TOKEN_INDEX] + tok(f"{post}<|im_end|>\n")
+        else:
+            ids += tok(f"<|im_start|>user\n{user_content}<|im_end|>\n")
+        ids += tok("<|im_start|>assistant\n")
+
+        device = self.llm.device
+        input_ids = torch.tensor([ids], dtype=torch.long, device=device)
+        attn = torch.ones_like(input_ids)
+        labels = torch.full_like(input_ids, -100)
+        image_embeds = self.encode_images(pixel_values) if pixel_values is not None else None
+        inputs_embeds, attn, _ = self.prepare_multimodal(input_ids, attn, labels, image_embeds)
+
+        out = self.llm.generate(
+            inputs_embeds=inputs_embeds,
+            attention_mask=attn,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+            eos_token_id=self.turn_end_id,
+            pad_token_id=self.tokenizer.pad_token_id,
+        )
+        # inputs_embeds path: generate returns only the new tokens.
+        return self.tokenizer.decode(out[0], skip_special_tokens=True).strip()
 
 
 # ---------------------------------------------------------------------------

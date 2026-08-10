@@ -7,7 +7,7 @@ RedPajama/SlimPajama domains. Produces::
     <out_root>/waste/shard_00000.arrow …
     <out_root>/waste/manifest_waste.json    # token count + packing config
 
-Run in an env with ``datasets`` (e.g. ``gausdino``), on a compute or login node
+Run in an env with ``datasets`` (e.g. ``myenv``), on a compute or login node
 (no internet needed — reads local ``corpus.jsonl``)::
 
     python -m src.corpus.tokenize_domain \\

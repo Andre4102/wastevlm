@@ -53,11 +53,11 @@ python -m src.corpus.build_corpus --min-chars 400
 cat .../waste_corpus_web/stats.json
 ```
 
-**3. Tokenize into the `waste/` domain** — needs `datasets` (`gausdino` env) and
+**3. Tokenize into the `waste/` domain** — needs `datasets` (`myenv`) and
 the base-model tokenizer:
 
 ```bash
-conda activate gausdino
+conda activate myenv
 python -m src.corpus.tokenize_domain \
   --tokenizer <path-or-HF-id of the LLaMA base you'll prune> \
   --pruning-repo /leonardo/home/userexternal/adiecidu/scripts/pruning

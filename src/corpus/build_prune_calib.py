@@ -8,7 +8,7 @@ language / reasoning, so the calib is **mostly waste + a small general slice**:
 
     all packed ``waste`` sequences  +  ``general_frac`` worth of RedPajama calib
 
-Run in an env with ``datasets`` (e.g. ``gausdino``), any node (local reads)::
+Run in an env with ``datasets`` (e.g. ``myenv``), any node (local reads)::
 
     python -m src.corpus.build_prune_calib --general-frac 0.25
 

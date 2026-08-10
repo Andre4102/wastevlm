@@ -6,3 +6,6 @@ logs/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Thesis chapter drafts (kept local, not tracked)
+thesis_chapter/

@@ -37,6 +37,26 @@ from src.vlm_model import IMAGE_TOKEN_INDEX
 
 IMAGE_PLACEHOLDER = "<image>"
 
+# A handful of files in the external corpora are corrupt or mislabeled (e.g. an
+# SVG saved as `.jpg`), which PIL raises UnidentifiedImageError on. Under DDP one
+# such raise kills a single rank mid-epoch; the survivors then deadlock on the
+# next allreduce until the 600s NCCL watchdog aborts the whole job. So decode
+# defensively: on any failure substitute a neutral gray image and warn once per
+# path. A few blank images out of ~46k are a negligible loss contribution.
+_BAD_IMAGE_WARNED: set[str] = set()
+
+
+def _safe_open_rgb(path: Path) -> Image.Image:
+    try:
+        return Image.open(path).convert("RGB")
+    except Exception as e:  # UnidentifiedImageError, OSError (truncated), etc.
+        key = str(path)
+        if key not in _BAD_IMAGE_WARNED:
+            _BAD_IMAGE_WARNED.add(key)
+            print(f"[vlm_data] WARN unreadable image, using blank: {path} ({e})",
+                  flush=True)
+        return Image.new("RGB", (336, 336), (127, 127, 127))
+
 
 def _record_to_messages(rec: dict) -> tuple[Optional[str], list[tuple[str, str]]]:
     """Return (image_path, [(role, content), ...])."""
@@ -79,7 +99,7 @@ class VQADataset(Dataset):
 
     def __getitem__(self, idx: int) -> dict:
         image, messages = _record_to_messages(self.records[idx])
-        pil = Image.open(self._resolve(image)).convert("RGB") if image else None
+        pil = _safe_open_rgb(self._resolve(image)) if image else None
         return {"image": pil, "messages": messages}
 
 
@@ -150,7 +170,7 @@ class PretokenizedVQADataset(Dataset):
         input_ids = self.tokens[a:b].tolist()
         labels = self.labels[a:b].tolist()
         image = self.images[idx]
-        pil = Image.open(self._resolve(image)).convert("RGB") if image else None
+        pil = _safe_open_rgb(self._resolve(image)) if image else None
         return {"input_ids": input_ids, "labels": labels, "image": pil}
 
 

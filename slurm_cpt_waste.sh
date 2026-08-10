@@ -4,15 +4,23 @@
 # pruning_llama3_pretrain.py via the --extra_domains hook that adds our small
 # `waste` domain to the RedPajama mix.
 #
-# Mask-off recipe: target_sparsity 0.0 + mask_lr 0 + reg_weight 0 + high
-# logit_init (masks frozen ≈1.0) + enable_layer_drop false.
+# Mask-off recipe: target_sparsity 0.0 + mask_lr 0 + high logit_init (masks
+# frozen ≈1.0) + enable_layer_drop false. NOTE: the trainer now ALWAYS builds a
+# PI SparsityController and seeds rw_init from --reg_weight, which must be > 0
+# (it rejects 0.0). reg_weight is inert here since mask_lr=0 freezes the masks;
+# it only seeds the (unused) controller. Keep it positive (0.05).
 #
 # Env knobs (override at submit):
 #   RUN_NAME       (default cpt_waste_300M)
 #   TOTAL_TOKENS   (default 300000000; set ~2000000 for a smoke test)
+#   MODEL_PATH     (default base llama-3.1-8b; point at a materialized-pruned
+#                   custom-llama3 checkpoint to run post-prune recovery CPT)
 #
-# Usage:  sbatch slurm_cpt_waste.sh        # full run
+# Usage:  sbatch slurm_cpt_waste.sh        # full CPT from base
 #         TOTAL_TOKENS=2000000 RUN_NAME=cpt_smoke sbatch slurm_cpt_waste.sh
+#         # post-prune recovery on the 45% checkpoint:
+#         MODEL_PATH=.../mask_pruning_prune_waste_ts0.5/materialized_thr0.5 \
+#           RUN_NAME=cpt_recover_prune45 TOTAL_TOKENS=150000000 sbatch slurm_cpt_waste.sh
 #
 #SBATCH --job-name=cpt_waste
 #SBATCH --account=IscrC_FICHE
@@ -50,7 +58,7 @@ TOTAL_TOKENS=${TOTAL_TOKENS:-300000000}
 PRUNING=/leonardo/home/userexternal/adiecidu/scripts/pruning
 WASTEVLM=/leonardo/home/userexternal/adiecidu/scripts/wastevlm
 DATA_ROOT=/leonardo_scratch/large/userexternal/adiecidu/waste_vlm/data/cpt_mix
-MODEL_PATH=/leonardo_scratch/large/userexternal/adiecidu/pruning/results/llama/basemodel/llama-3.1-8b
+MODEL_PATH=${MODEL_PATH:-/leonardo_scratch/large/userexternal/adiecidu/pruning/results/llama/basemodel/llama-3.1-8b}
 RESULT_ROOT=/leonardo_scratch/large/userexternal/adiecidu/waste_vlm/results/llm
 REF_LOSSES=${WASTEVLM}/src/corpus/reference_losses_waste.json
 
@@ -71,7 +79,7 @@ srun --export=ALL --ntasks=${NUM_TASKS} --ntasks-per-node=${SLURM_NTASKS_PER_NOD
         --target_sparsity 0.0 \
         --enable_layer_drop false \
         --mask_lr 0.0 \
-        --reg_weight 0.0 \
+        --reg_weight 0.05 \
         --logit_init 10.0 \
         --total_tokens ${TOTAL_TOKENS} \
         --seq_len 2048 \
