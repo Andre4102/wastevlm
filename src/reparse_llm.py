@@ -1,9 +1,17 @@
 """LLM-judge re-parser for VLM open_cot raw responses.
 
 Reads an existing raw_responses.jsonl (no new VLM inference), sends batches
-of VLM text to the claude CLI (already authenticated via Claude Code), gets
-back JSON bool dicts of which waste classes are present, recomputes F1.
-Saves test_eval_llm_judge.json alongside the source file.
+of VLM text to a judge, gets back JSON bool dicts of which waste classes are
+present, recomputes F1. Saves test_eval_llm_judge.json alongside the source.
+
+Two backends:
+  api  (default) — Anthropic Python SDK, needs ANTHROPIC_API_KEY (or --key-file)
+                   and outbound network, so run it on a login node, not a
+                   compute node. Uses structured outputs, so a malformed judge
+                   reply can no longer be silently scored as all-false, and
+                   caches the (large, static) category prompt across batches.
+  cli            — the `claude` CLI. No API cost, but subject to the Claude
+                   Code session quota, which previously zeroed whole runs.
 """
 from __future__ import annotations
 
@@ -57,8 +65,14 @@ def find_claude_bin() -> str:
     return "claude"  # fall back to PATH
 
 
-def build_batch_prompt(classes: dict[str, dict], texts: list[str],
-                       require_confident: bool = False) -> str:
+def build_system_prompt(classes: dict[str, dict],
+                        require_confident: bool = False) -> str:
+    """The static half of the judge prompt: task, rubric, category cues.
+
+    Kept separate from the descriptions so the API backend can put a cache
+    breakpoint here — it is identical across every batch of a run, and is by
+    far the larger half.
+    """
     lines = [
         "A drone captured aerial images of illegal waste dump sites.",
         "Several vision models described the images; their texts are listed below.",
@@ -104,14 +118,6 @@ def build_batch_prompt(classes: dict[str, dict], texts: list[str],
         lines.append(f'  "{name}": {cue}. Synonyms: {tags}.')
     lines += [
         "",
-        "Descriptions:",
-    ]
-    for idx, txt in enumerate(texts):
-        # truncate very long texts so the prompt stays manageable
-        snippet = txt[:800].replace('"', "'")
-        lines.append(f'[{idx}] "{snippet}"')
-    lines += [
-        "",
         "Return ONLY a JSON array with one object per description (same order).",
         "Each object maps every category name exactly to true or false.",
         "No explanation, no markdown fences — raw JSON only.",
@@ -119,6 +125,30 @@ def build_batch_prompt(classes: dict[str, dict], texts: list[str],
         + json.dumps([{k: False for k in classes}, {k: False for k in classes}]),
     ]
     return "\n".join(lines)
+
+
+def build_user_message(texts: list[str]) -> str:
+    """The per-batch half: the numbered descriptions to judge."""
+    lines = ["Descriptions:"]
+    for idx, txt in enumerate(texts):
+        # truncate very long texts so the prompt stays manageable
+        snippet = txt[:800].replace('"', "'")
+        lines.append(f'[{idx}] "{snippet}"')
+    return "\n".join(lines)
+
+
+def build_batch_prompt(classes: dict[str, dict], texts: list[str],
+                       require_confident: bool = False) -> str:
+    """Single-string prompt for the CLI backend (no separate system channel).
+
+    The output contract is repeated after the descriptions: with everything in
+    one message it would otherwise sit far above the texts it applies to.
+    """
+    return (
+        build_system_prompt(classes, require_confident=require_confident)
+        + "\n\n" + build_user_message(texts)
+        + f"\n\nReturn the raw JSON array of {len(texts)} objects now."
+    )
 
 
 def _call_claude(bin_path: str, model: str, prompt: str, max_retries: int = 4) -> str:
@@ -137,6 +167,103 @@ def _call_claude(bin_path: str, model: str, prompt: str, max_retries: int = 4) -
             print(f"  [error] {exc}", flush=True)
             time.sleep(2 ** attempt)
     return "[]"
+
+
+def make_judge_client(key_file: Path | None):
+    """Anthropic client + a lock-protected usage tally shared across threads."""
+    import anthropic  # noqa: E402  (only needed for --backend api)
+
+    if key_file is not None:
+        os.environ["ANTHROPIC_API_KEY"] = key_file.read_text().strip()
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        raise SystemExit(
+            "[judge] no API key: export ANTHROPIC_API_KEY or pass --key-file. "
+            "Note the API backend needs outbound network, so run this on a "
+            "login node, not a compute node."
+        )
+    return anthropic.Anthropic(max_retries=5)
+
+
+def judge_schema(cats: list[str]) -> dict:
+    """Structured-output schema: one all-boolean object per description.
+
+    Constraining the reply removes the old silent failure mode where an
+    unparseable answer fell back to all-false and was scored as a wrong
+    prediction rather than as a judge error.
+    """
+    item = {
+        "type": "object",
+        "properties": {c: {"type": "boolean"} for c in cats},
+        "required": list(cats),
+        "additionalProperties": False,
+    }
+    return {
+        "type": "object",
+        "properties": {"results": {"type": "array", "items": item}},
+        "required": ["results"],
+        "additionalProperties": False,
+    }
+
+
+def call_judge_batch_api(
+    client,
+    model: str,
+    classes: dict[str, dict],
+    cats: list[str],
+    texts: list[str],
+    require_confident: bool = False,
+    effort: str = "low",
+) -> tuple[list[dict[str, bool]] | None, dict]:
+    """Judge one batch via the Messages API.
+
+    Returns (predictions, usage). predictions is None if the call failed, so
+    the caller can count the batch as an error instead of scoring it as a
+    batch of all-negative predictions.
+    """
+    system = build_system_prompt(classes, require_confident=require_confident)
+    usage = {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0}
+    try:
+        resp = client.messages.create(
+            model=model,
+            max_tokens=8000,
+            # The system block is identical for every batch of a run and is the
+            # bulk of the prompt, so cache it; the descriptions vary and stay
+            # after the breakpoint.
+            system=[{"type": "text", "text": system,
+                     "cache_control": {"type": "ephemeral"}}],
+            messages=[{"role": "user", "content": build_user_message(texts)}],
+            output_config={
+                "effort": effort,
+                "format": {"type": "json_schema", "schema": judge_schema(cats)},
+            },
+        )
+    except Exception as exc:
+        print(f"  [api-error] {type(exc).__name__}: {exc}", flush=True)
+        return None, usage
+
+    u = resp.usage
+    usage = {
+        "input": u.input_tokens,
+        "output": u.output_tokens,
+        "cache_read": getattr(u, "cache_read_input_tokens", 0) or 0,
+        "cache_write": getattr(u, "cache_creation_input_tokens", 0) or 0,
+    }
+    if resp.stop_reason == "refusal":
+        print("  [api-error] judge refused this batch", flush=True)
+        return None, usage
+
+    text = next((b.text for b in resp.content if b.type == "text"), "")
+    try:
+        items = json.loads(text)["results"]
+    except (json.JSONDecodeError, KeyError, TypeError) as exc:
+        print(f"  [api-error] unparseable reply ({exc}); "
+              f"stop_reason={resp.stop_reason}", flush=True)
+        return None, usage
+    if len(items) != len(texts):
+        print(f"  [api-error] judge returned {len(items)} rows for "
+              f"{len(texts)} descriptions", flush=True)
+        return None, usage
+    return [{c: bool(row.get(c, False)) for c in cats} for row in items], usage
 
 
 def call_judge_batch(
@@ -185,8 +312,21 @@ def main() -> int:
     p.add_argument("--raw-jsonl", type=Path, required=True)
     p.add_argument("--dataset", choices=list(DATASET_TO_DESC_JSON), required=True)
     p.add_argument("--out-json", type=Path, required=True)
-    p.add_argument("--model", default="claude-haiku-4-5-20251001",
-                   help="Claude model alias or full ID (default: claude-haiku-4-5-20251001)")
+    p.add_argument("--backend", choices=["api", "cli"], default="api",
+                   help="api = Anthropic SDK (needs ANTHROPIC_API_KEY + network, "
+                        "so run on a login node); cli = `claude` CLI, free but "
+                        "quota-limited (default: api)")
+    p.add_argument("--model", default=None,
+                   help="Claude model ID (default: claude-opus-5 for --backend api, "
+                        "claude-haiku-4-5-20251001 for --backend cli). Pass "
+                        "claude-haiku-4-5 for a cheaper judge.")
+    p.add_argument("--key-file", type=Path, default=None,
+                   help="file containing the API key, read into ANTHROPIC_API_KEY "
+                        "(avoids putting the key on a command line)")
+    p.add_argument("--effort", default="low",
+                   choices=["low", "medium", "high", "xhigh", "max"],
+                   help="api backend: judge effort level (default: low — this is "
+                        "a bounded labelling task, not open-ended reasoning)")
     p.add_argument("--turn", type=int, choices=[1, 2], default=2,
                    help="Which CoT turn to judge: 1=pure description, 2=classification output (default: 2)")
     p.add_argument("--batch-size", type=int, default=8,
@@ -200,8 +340,17 @@ def main() -> int:
                         "the keyword-bag parser).")
     args = p.parse_args()
 
-    bin_path = find_claude_bin()
-    print(f"[judge] claude binary: {bin_path}")
+    if args.model is None:
+        args.model = ("claude-opus-5" if args.backend == "api"
+                      else "claude-haiku-4-5-20251001")
+    bin_path = None
+    client = None
+    if args.backend == "cli":
+        bin_path = find_claude_bin()
+        print(f"[judge] backend=cli  binary: {bin_path}")
+    else:
+        client = make_judge_client(args.key_file)
+        print(f"[judge] backend=api  effort={args.effort}")
 
     desc_path = DATASET_TO_DESC_JSON[args.dataset]
     classes_dict = load_classes(desc_path)
@@ -210,8 +359,14 @@ def main() -> int:
     print(f"[judge] dataset={args.dataset}  classes={n_cats}  model={args.model}")
     print(f"[judge] mode={'asserted-only' if args.require_confident else 'any-mention'}")
 
-    records = [json.loads(l) for l in
-               args.raw_jsonl.read_text(encoding="utf-8").splitlines() if l.strip()]
+    # Newline-only split. str.splitlines() also splits on U+2028/U+0085/\f,
+    # which VLM generations do contain (a pruned-Qwen run emits raw U+2028) and
+    # json.dumps does not escape — the splitlines() idiom tears records apart.
+    records = []
+    with args.raw_jsonl.open(encoding="utf-8") as fh:
+        for line in fh:
+            if line.strip():
+                records.append(json.loads(line))
     print(f"[judge] records: {len(records)}")
 
     Y_true = np.zeros((len(records), n_cats), dtype=np.int32)
@@ -246,24 +401,59 @@ def main() -> int:
     print(f"[judge] batches: {len(batches)}  batch_size: {args.batch_size}  workers: {args.workers}")
 
     done = 0
+    n_failed = 0
+    total_usage = {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0}
 
-    def run_batch(batch: list[tuple[int, str]]) -> tuple[list[int], list[dict[str, bool]]]:
+    def run_batch(batch: list[tuple[int, str]]):
         idxs  = [x[0] for x in batch]
         texts = [x[1] for x in batch]
+        if args.backend == "api":
+            preds, usage = call_judge_batch_api(
+                client, args.model, classes_dict, cats, texts,
+                require_confident=args.require_confident, effort=args.effort,
+            )
+            return idxs, preds, usage
         preds = call_judge_batch(bin_path, args.model, classes_dict, cats, texts,
                                  require_confident=args.require_confident)
-        return idxs, preds
+        return idxs, preds, None
 
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         futures = {pool.submit(run_batch, b): b for b in batches}
         for fut in as_completed(futures):
-            idxs, preds = fut.result()
-            for i, pred in zip(idxs, preds):
-                for c, present in pred.items():
-                    if present and c in cats:
-                        Y_pred[i, cats.index(c)] = 1
+            idxs, preds, usage = fut.result()
+            if usage is not None:
+                for k, v in usage.items():
+                    total_usage[k] += v
+            if preds is None:
+                # Judge failed on this batch. Leave the rows all-zero but count
+                # them, so a partly-failed run is visible instead of quietly
+                # looking like a model that predicted nothing.
+                n_failed += len(idxs)
+            else:
+                for i, pred in zip(idxs, preds):
+                    for c, present in pred.items():
+                        if present and c in cats:
+                            Y_pred[i, cats.index(c)] = 1
             done += len(idxs)
             print(f"  judged {done}/{len(to_judge)} …", flush=True)
+
+    if n_failed:
+        print(f"\n[judge] WARNING: {n_failed}/{len(to_judge)} records failed to "
+              f"judge and are scored as no-prediction — metrics are a lower bound.")
+    if args.backend == "api":
+        # list prices, USD/MTok: opus-5 5/25, haiku-4.5 1/5; cache reads ~0.1x
+        # input, writes ~1.25x. Rough — read the console for the real bill.
+        rate_in, rate_out = ((5.0, 25.0) if "opus" in args.model
+                             else (1.0, 5.0) if "haiku" in args.model
+                             else (3.0, 15.0))
+        cost = (total_usage["input"] * rate_in
+                + total_usage["cache_write"] * rate_in * 1.25
+                + total_usage["cache_read"] * rate_in * 0.1
+                + total_usage["output"] * rate_out) / 1e6
+        print(f"[judge] tokens: in={total_usage['input']} "
+              f"cache_read={total_usage['cache_read']} "
+              f"cache_write={total_usage['cache_write']} "
+              f"out={total_usage['output']}  ≈ ${cost:.2f} at list price")
 
     scores = Y_pred.astype(np.float32)
     rep = ml_metrics(cats, Y_true, Y_pred, scores)
@@ -271,6 +461,10 @@ def main() -> int:
     rep["task"]          = meta["task"]
     rep["dataset"]       = args.dataset
     rep["judge_model"]   = args.model
+    rep["judge_backend"] = args.backend
+    rep["n_judge_failed"] = n_failed
+    if args.backend == "api":
+        rep["judge_usage"] = total_usage
     rep["prompt_style"]  = f"open_cot_turn{args.turn}+llm_judge"
     rep["cot_turn"]      = args.turn
     rep["n_empty_raw"]   = n_empty
