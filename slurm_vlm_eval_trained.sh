@@ -45,7 +45,15 @@ PROMPT_STYLE=${5:-open_cot}   # open_cot | closed_vocab | open_caption
 IMG_SIZE=${IMG_SIZE:-512}
 PSHUF=${PSHUF:-1}
 ETAG=${ENCODER//\//_}
-OUTNAME=vlm_${ETAG}_r${IMG_SIZE}ps${PSHUF}_${DATASET}_${PROMPT_STYLE}
+# The ckpt's stage (finetune / finetune_next / ...) MUST be part of the output
+# name: without it, evaluating a second stage of the same encoder+resolution
+# silently overwrites the first stage's results dir. Derived from the ckpt dir
+# basename with the redundant encoder/resolution prefix stripped; override with
+# OUT_TAG=... for one-off runs.
+STAGE=$(basename "$CKPT_DIR")
+STAGE=${STAGE#${ETAG}_r${IMG_SIZE}ps${PSHUF}_}
+STAGE=${STAGE#${ETAG}_}
+OUTNAME=${OUT_TAG:-vlm_${ETAG}_r${IMG_SIZE}ps${PSHUF}_${STAGE}_${DATASET}_${PROMPT_STYLE}}
 RESULTS=$WROOT/results/vlm_eval/$OUTNAME
 
 export WASTE_VLM_WEIGHTS=$WROOT/weights

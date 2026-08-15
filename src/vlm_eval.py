@@ -35,6 +35,7 @@ import os
 import re
 import sys
 import time
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -424,6 +425,31 @@ class VLMAdapter:
 
 
 # --- classification post-processors -----------------------------------------
+
+def _best_constant_f1(Y_true: "np.ndarray") -> dict:
+    """Micro-F1 of the best image-independent predictor: the fixed label set that,
+    emitted for every image, maximises micro-F1 against Y_true.
+
+    This is the floor any real result has to clear. Exhaustive over 2^n_classes,
+    which is fine for the 5-10 classes these benchmarks use.
+    """
+    from itertools import combinations
+
+    n_cls = Y_true.shape[1]
+    gt_tot = int(Y_true.sum())
+    best_f1, best_set = 0.0, ()
+    for k in range(1, n_cls + 1):
+        for combo in combinations(range(n_cls), k):
+            # every image gets the same prediction, so tp/fp/fn are column sums
+            tp = int(Y_true[:, list(combo)].sum())
+            fp = len(Y_true) * k - tp
+            fn = gt_tot - tp
+            denom = 2 * tp + fp + fn
+            f1 = 2 * tp / denom if denom else 0.0
+            if f1 > best_f1:
+                best_f1, best_set = f1, combo
+    return {"micro_f1": float(best_f1), "label_idx": list(best_set)}
+
 
 _NONE_SET = {"none", "no waste", "no waste visible", "nothing", "n/a", "na", ""}
 
@@ -1227,11 +1253,66 @@ def run_classify(adapter: VLMAdapter, args) -> dict:
     rep["n_nonempty_parse"] = n_nonempty
     rep["prompt"] = prompt
 
+    # micro-F1 alone cannot separate "the visual signal reached the decision"
+    # from "the model got better calibrated": the A1 dw failure mode was
+    # predicting nearly every class on every image (recall ~1.0, precision
+    # ~0.03). So also report how many labels are asserted per image, and the
+    # binary waste/no-waste decision, which is scored against the negatives
+    # already present in both benchmarks' test splits.
+    from sklearn.metrics import precision_recall_fscore_support  # noqa: E402
+    pred_counts = Y_pred.sum(axis=1)
+    gt_counts = Y_true.sum(axis=1)
+    any_pred = (pred_counts > 0).astype(np.int32)
+    any_gt = (gt_counts > 0).astype(np.int32)
+    bin_p, bin_r, bin_f, _ = precision_recall_fscore_support(
+        any_gt, any_pred, average="binary", zero_division=0
+    )
+    rep["labels_per_image"] = {
+        "pred_mean": float(pred_counts.mean()),
+        "pred_median": float(np.median(pred_counts)),
+        "pred_max": int(pred_counts.max()),
+        "gt_mean": float(gt_counts.mean()),
+    }
+    rep["binary_presence"] = {
+        "f1": float(bin_f), "precision": float(bin_p), "recall": float(bin_r),
+        "accuracy": float((any_pred == any_gt).mean()),
+        "n_gt_positive": int(any_gt.sum()),
+        "n_pred_positive": int(any_pred.sum()),
+    }
+
+    # A multi-label micro-F1 has a high floor: emitting one fixed label set on
+    # every image, ignoring the pixels entirely, scores well above zero when the
+    # label prior is skewed (AerialWaste: 0.31-0.36). Several arms have landed
+    # *below* that floor while looking respectable in isolation, so report it
+    # next to the score and report how image-conditioned the predictions are
+    # (a near-constant predictor is a degenerate operating point, not a result).
+    rep["constant_baseline"] = _best_constant_f1(Y_true)
+    n_uniq = len({tuple(row) for row in Y_pred})
+    modal = Counter(tuple(row) for row in Y_pred).most_common(1)[0][1]
+    rep["prediction_diversity"] = {
+        "n_unique_label_sets": n_uniq,
+        "modal_share": float(modal / len(Y_pred)),
+    }
+
     print()
     print(f"=== {args.model} {args.prompt_style} — {args.dataset} ({len(test_samples)} imgs) ===")
+    cb = rep["constant_baseline"]["micro_f1"]
+    flag = "  <-- AT OR BELOW CONSTANT BASELINE" if rep["micro"]["f1"] <= cb else ""
     print(f"  micro F1 = {rep['micro']['f1']:.4f}   "
           f"macro F1 = {rep['macro']['f1']:.4f}")
+    print(f"  best constant-predictor micro F1 = {cb:.4f}{flag}")
+    print(f"  prediction diversity: {rep['prediction_diversity']['n_unique_label_sets']} "
+          f"unique label sets, modal share "
+          f"{100 * rep['prediction_diversity']['modal_share']:.1f}%")
     print(f"  nonempty preds = {n_nonempty}   empty = {n_empty}")
+    print(f"  labels/image: pred mean={rep['labels_per_image']['pred_mean']:.2f} "
+          f"median={rep['labels_per_image']['pred_median']:.0f} "
+          f"max={rep['labels_per_image']['pred_max']}  "
+          f"gt mean={rep['labels_per_image']['gt_mean']:.2f}")
+    bp = rep["binary_presence"]
+    print(f"  waste present/absent: F1={bp['f1']:.3f} P={bp['precision']:.3f} "
+          f"R={bp['recall']:.3f} acc={bp['accuracy']:.3f} "
+          f"(gt pos {bp['n_gt_positive']}, pred pos {bp['n_pred_positive']})")
     print()
     print("per-class F1:")
     for name in cats:
