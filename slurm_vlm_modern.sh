@@ -187,8 +187,37 @@ case "$MODE" in
       --epochs 1 --batch-size "$BS" --grad-accum "$ACCUM_FT" \
       --save-steps "${SAVE_STEPS:-250}" $RESUME_ARG
     ;;
+  finetune_stage3)
+    # Stage 3: short adaptation on top of a FINISHED stage 2, not a mix change.
+    # Stage 2 merges LoRA into the LLM on save, so this warm-starts from that
+    # merged LLM + its projector and fits a FRESH LoRA -- no adapter stacking.
+    #
+    # Dose is the whole point. The pilot arm collapsed to unconditional "none" at
+    # 50.8% RS record share, and a pure-RS stage 3 would be 100%; the s3/s3a mixes
+    # therefore carry 25% general replay, and SAVE_STEPS defaults to 50 so one run
+    # yields the whole dose-response curve instead of one point per retrain.
+    # LoRA LR defaults lower than stage 2's 2e-5 for the same reason.
+    S3_INIT=${S3_INIT:-$WROOT/results/vlm/${TAG}_finetune_next}
+    if [ ! -d "$S3_INIT/llm_merged" ] || [ ! -f "$S3_INIT/projector.pt" ]; then
+      echo "[slurm] ERROR stage-3 needs $S3_INIT/{llm_merged,projector.pt}" >&2; exit 1
+    fi
+    S3_JSON=${S3_JSON:-"$DATA/train_mixes/mix_s3.jsonl"}
+    echo "[slurm] stage3 init=$S3_INIT"
+    echo "[slurm] stage3 train=$S3_JSON lora_lr=${LORA_LR:-1e-5}"
+    RESUME_ARG=""
+    [ "${RESUME:-}" = "auto" ] && RESUME_ARG="--resume auto"
+    $LAUNCH --stage finetune $RES_ARGS \
+      --llm-path "$S3_INIT/llm_merged" \
+      --projector-init "$S3_INIT/projector.pt" \
+      --train "$S3_JSON" --image-root "$DATA/alignment/normalized" \
+      --out-dir "$WROOT/results/vlm/${TAG}_stage3${ARM:+_$ARM}" \
+      --epochs 1 --batch-size "$BS" --grad-accum "$ACCUM_FT" \
+      --lora-lr "${LORA_LR:-1e-5}" \
+      --save-steps "${SAVE_STEPS:-50}" $RESUME_ARG
+    ;;
   *)
-    echo "unknown mode: $MODE (use smoke|pretrain|finetune|finetune_next)"; exit 1 ;;
+    echo "unknown mode: $MODE (use smoke|pretrain|finetune|finetune_next|finetune_stage3)"
+    exit 1 ;;
 esac
 
 echo "[slurm] done=$(date -Is)"
