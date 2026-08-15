@@ -24,6 +24,7 @@ import argparse
 import contextlib
 import math
 import os
+import time
 
 import torch
 import torch.distributed as dist
@@ -455,6 +456,14 @@ def train(model, train_module, loader, sampler, optimizer, scheduler, *,
     running_loss = torch.zeros((), device=device)
     running_count = 0
     n_micro = len(loader)
+    # Step time and peak memory are what size the next arm: visual-token count
+    # scales as (image_size / (patch * pixel_shuffle))^2, so a pixel-shuffle or
+    # resolution change moves both, and guessing the batch size wastes a queue
+    # slot. Reported on the periodic log line rather than only at the end.
+    step_timer = time.time()
+    last_log_step = global_step
+    if torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
 
     for epoch in range(math.ceil(epochs)):
         if sampler is not None:
@@ -538,8 +547,16 @@ def train(model, train_module, loader, sampler, optimizer, scheduler, *,
                         extra = (f" sparsity={prune_ctx['cur_sp']:.4f}/"
                                  f"{prune_ctx['target_sparsity']:.2f} "
                                  f"lam={prune_ctx['lam']:.3g} tau={tau_now:.3g} {phase}")
+                    now = time.time()
+                    s_per_step = (now - step_timer) / max(global_step - last_log_step, 1)
+                    peak_gb = (torch.cuda.max_memory_allocated() / 2**30
+                               if torch.cuda.is_available() else 0.0)
+                    eta_h = s_per_step * max(total_steps - global_step, 0) / 3600
                     print(f"[train] step {global_step}/{total_steps} "
-                          f"loss={avg.item():.4f} lr={lr:.2e}{extra}", flush=True)
+                          f"loss={avg.item():.4f} lr={lr:.2e}{extra} "
+                          f"{s_per_step:.1f}s/step peak={peak_gb:.1f}GB eta={eta_h:.1f}h",
+                          flush=True)
+                    step_timer, last_log_step = now, global_step
                 running_loss.zero_()
                 running_count = 0
 
@@ -773,6 +790,7 @@ def main() -> int:
               f"trainable={n_trainable/1e6:.2f}M total_steps={total_steps} "
               f"warmup={warmup_steps}", flush=True)
 
+    run_t0 = time.time()
     final_step = train(
         model, train_module, loader, sampler, optimizer, scheduler,
         device=device, rank=rank, distributed=distributed,
@@ -786,6 +804,18 @@ def main() -> int:
     if distributed:
         dist.barrier()
     if main_proc:
+        # Always-on cost report. A --smoke run is only 4 steps, so it never hits
+        # the periodic log line, yet sizing the next arm (pixel-shuffle or
+        # resolution change) is exactly what the smoke is for.
+        ran = max(final_step - start_step, 1)
+        wall = time.time() - run_t0
+        vis_tok = (args.image_size // (16 * getattr(args, "pixel_shuffle", 1))) ** 2
+        peak_gb = (torch.cuda.max_memory_allocated() / 2**30
+                   if torch.cuda.is_available() else 0.0)
+        print(f"[cost] img={args.image_size} pshuf={getattr(args, 'pixel_shuffle', 1)} "
+              f"visual_tokens={vis_tok} bs={args.batch_size} accum={args.grad_accum} "
+              f"world={world_size} | {wall/ran:.1f}s/step peak={peak_gb:.1f}GB "
+              f"({ran} steps in {wall/60:.1f}min)", flush=True)
         if prune_ctx is not None:
             finalize_prune(model, args, args.out_dir)
             what = "pruned+merged decoder + projector"
