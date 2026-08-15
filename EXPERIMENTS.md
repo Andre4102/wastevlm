@@ -582,3 +582,80 @@ Trap to design against: a 69%-negative SFT set is exactly what teaches a model t
 answer "none" unconditionally — the 819K arm's AW failure mode (`pile` on 3.5% of
 positives, micro 0.025). Both degenerate attractors are reachable, so the mix ratio
 and scoring *both* error directions matter more than total size.
+
+## Arm "pilot": the RS SFT injection, measured (2026-08-15, jobs 52364030 / 52408835-40)
+
+First test of the abstention-SFT design. Mix = LLaVA-150K x1 + `rs_sft_p2` x3
+(320,828 records, 2506 steps, 10h26 on 4x A100, loss 2.13 -> 1.00, cosine run to
+term). Evaluated zero-shot on all three benchmarks in both prompt styles.
+
+**The matched control is the 150K arm (`_finetune_`), not 819K (`_finetune_next_`).**
+The pilot's general component is 150K, so comparing it against 819K would conflate
+the injection with a base-mix swap. Both are shown; only the 150K column is the
+controlled contrast.
+
+### Detection (Youden J = TPR - FPR)
+
+| eval | 150K control | **pilot (+rs_sft x3)** | 819K | encoder ceiling |
+|---|---|---|---|---|
+| aw_m2 closed_vocab | **0.233** | -0.003 | 0.200 | 0.853 |
+| aw_m4 closed_vocab | -0.008 | 0.006 | 0.139 | 0.837 |
+| aw_m4 open_cot | 0.083 | 0.000 | 0.062 | 0.837 |
+| **dw_paper10 closed_vocab** | 0.000 | **0.292** | 0.673 | — |
+| dw_paper10 open_cot | — | 0.119 | — | — |
+
+### It flipped the degeneracy instead of removing it
+
+The control was a constant-YES predictor: on DroneWaste it answered on all 293
+positives *and* all 1211 negatives (TPR 1.000, FPR 1.000, J exactly 0.000); on
+aw_m4 closed_vocab, 393 false alarms out of 409 negatives. The pilot is a
+constant-NO predictor on AerialWaste: 0/182 positives on aw_m2 (both styles),
+1/172 on aw_m4. Two degenerate attractors, opposite signs, J ~ 0 either way.
+
+This is exactly the trap written down at the end of the previous section before
+the arm was built. Writing it down did not prevent it: the design's four negative
+types and 45% `absent_category` share were chosen without a dose control.
+
+### Where it genuinely worked
+
+DroneWaste closed_vocab, J 0.000 -> 0.292, detection precision 0.195 -> 0.798,
+micro-F1 0.0603 -> 0.1910. That is a real decision boundary where the control had
+none. Naming on answered positives also holds up (0.369, and 0.508 on open_cot,
+vs the control's 0.281). Still below the 819K arm's J 0.673.
+
+### The asymmetry is the mechanism
+
+AerialWaste is nadir, high-altitude imagery -- what DIOR and VRSBench look like.
+The abstention prior transferred most strongly to the eval domain that most
+resembles the SFT source, and AerialWaste's diffuse low-contrast piles are
+precisely the case the `not_determinable` rule was written to refuse. DroneWaste's
+low-altitude oblique views are less similar and kept the discrimination benefit
+without the silence. Collapse tracks domain similarity to the injection.
+
+### Dose, and why this does not directly predict a1
+
+| arm | RS record share | RS answer-token share |
+|---|---|---|
+| pilot | **50.8%** | 6.4% |
+| a1 | **17.3%** | 1.5% |
+
+At x3 against the small 150K base the injection stopped being an injection and
+became half the training records. Against 819K it is 17%.
+
+**6.4% of answer tokens flipped the entire decision policy.** That is direct
+support for the composition note in `scripts/build_train_mix.py`: for teaching a
+decision policy, record share governs and token share badly understates the
+effect. Any future mix must be specified in record share.
+
+### What this changes
+
+| lever | status after the pilot |
+|---|---|
+| abstention SFT as a concept | **not refuted** — produced real discrimination on dw where the control had none |
+| x3 upsampling on a small base | **refuted** — 50.8% record share is a dose, not an injection |
+| 45% `absent_category` + `not_determinable` | suspect on diffuse-target imagery; AW is the worst case for both |
+| domain match SFT<->eval | newly implicated: collapse is strongest where the eval looks most like the SFT |
+
+Next: a1 (819K + rs_sft x3, 17.3% record share) is the arm whose control is
+J 0.139/0.200/0.673. If it also collapses, the fix is dose (`rs_sft x1`) and the
+negative-type mix, not the concept.
