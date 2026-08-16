@@ -37,6 +37,7 @@ COMPONENTS = {
     "general_150k": DATA / "llava_instruct/llava_instruct_150k.json",
     "rs_sft": DATA / "rs_sft_p2/rs_sft.jsonl",
     "waste_sft": DATA / "waste_sft/train.json",
+    "nadir_desc": DATA / "nadir_desc/nadir_desc.jsonl",
 }
 
 # Each component resolves its relative image paths against a DIFFERENT root:
@@ -50,6 +51,7 @@ COMPONENT_ROOTS = {
     "general_150k": DATA / "coco/train2017",
     "rs_sft": None,
     "waste_sft": None,
+    "nadir_desc": None,
 }
 
 # arm -> {component: repeat}. AerialWaste and DroneWaste appear nowhere, in any
@@ -79,6 +81,16 @@ ARMS = {
     # needed the VIEWPOINT, not the refusal training -- a cleaner claim than any
     # mixed arm can support. Pair with s3 (full 50% negatives) to separate them.
     "s3a": {"rs_sft": 1, "general_819k": {"share": 0.25}, "_neg_share": 0.15},
+    # 3b "describe at nadir" -- the corrected stage 3. s3/s3a both used `rs_sft`,
+    # whose nadir lesson is REFUSAL (1.1-word answers, 15% not_determinable), and
+    # the AUC work showed what that did: the representation was untouched
+    # (aw_m2 AUC 0.869 vs control 0.837) while the model went mute (J 0.000).
+    # The missing capability is saying what is there when the target is diffuse
+    # and low-contrast. `nadir_desc` is VRSBench captions (53-word grounded
+    # descriptions) + LoveDA at ~0.3 m/px with per-pixel masks, so its negatives
+    # are true absences rather than an invented refusal policy. Pair with
+    # --decision-loss-weight: 5,477 of its records carry a `decision` field.
+    "s3b": {"nadir_desc": 1, "general_819k": {"share": 0.25}},
 }
 
 

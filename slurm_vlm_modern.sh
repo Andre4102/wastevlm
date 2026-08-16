@@ -202,8 +202,17 @@ case "$MODE" in
       echo "[slurm] ERROR stage-3 needs $S3_INIT/{llm_merged,projector.pt}" >&2; exit 1
     fi
     S3_JSON=${S3_JSON:-"$DATA/train_mixes/mix_s3.jsonl"}
+    # DEC_W>0 turns on the Yes/No margin BCE for records carrying a `decision`
+    # field (s3b's LoveDA half). Token CE weights a record by answer length, so
+    # without this a 3-token decision inside 53-word captions is a rounding error
+    # -- the mechanism that let 6.4% of answer tokens flip the whole policy.
+    DEC_ARGS=""
+    if [ -n "${DEC_W:-}" ] && [ "${DEC_W}" != "0" ]; then
+      DEC_ARGS="--decision-loss-weight $DEC_W"
+      [ -n "${DEC_POS_W:-}" ] && DEC_ARGS="$DEC_ARGS --decision-pos-weight $DEC_POS_W"
+    fi
     echo "[slurm] stage3 init=$S3_INIT"
-    echo "[slurm] stage3 train=$S3_JSON lora_lr=${LORA_LR:-1e-5}"
+    echo "[slurm] stage3 train=$S3_JSON lora_lr=${LORA_LR:-1e-5} dec='${DEC_ARGS:-off}'"
     RESUME_ARG=""
     [ "${RESUME:-}" = "auto" ] && RESUME_ARG="--resume auto"
     $LAUNCH --stage finetune $RES_ARGS \
@@ -212,7 +221,7 @@ case "$MODE" in
       --train "$S3_JSON" --image-root "$DATA/alignment/normalized" \
       --out-dir "$WROOT/results/vlm/${TAG}_stage3${ARM:+_$ARM}" \
       --epochs 1 --batch-size "$BS" --grad-accum "$ACCUM_FT" \
-      --lora-lr "${LORA_LR:-1e-5}" \
+      --lora-lr "${LORA_LR:-1e-5}" $DEC_ARGS \
       --save-steps "${SAVE_STEPS:-50}" $RESUME_ARG
     ;;
   *)
