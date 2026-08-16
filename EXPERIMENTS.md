@@ -820,3 +820,76 @@ between AW and DW margins, so "zero labels anywhere" is not available.
 **Protocol to quote**: detection threshold calibrated on 50 images with binary
 waste/no-waste labels only; no category labels used for fitting; all multi-label
 results category-zero-shot; one scalar parameter.
+
+### s3b: the nadir description corpus (2026-08-16, jobs 52463710/52463712, evals 52492112-147)
+
+`nadir_desc` = VRSBench [caption] (20,264 grounded captions, mean 53 words) +
+LoveDA (8,482 records from 3,035 masked tiles at ~0.3 m/px, true absence, 5,477
+carrying a `decision` field). 38,328-record mix at 75% nadir / 25% general replay,
+299 steps, ~75 min. Two arms differing ONLY in loss: `s3b` CE, `s3bd` CE + margin
+BCE (`--decision-loss-weight 1.0`, decision loss 0.234 -> 0.075).
+
+**Caption conditioning on AerialWaste -- the thing the corpus was built to fix:**
+
+| arm | "pile" gt+ / gt- | diff | "debris" diff | distinct caps | modal opening |
+|---|---|---:|---:|---:|---:|
+| 819K control | 3.3 / 0.5 | **+2.8** | +1.6 | 330/581 | 9% |
+| **s3b** | 12.6 / 0.8 | **+11.9** | +4.4 | 544/581 | 3% |
+| s3bd | 4.9 / 0.5 | +4.4 | +2.8 | 511/581 | 3% |
+
+s3b **quadruples** AW caption discrimination and breaks the template: distinct
+captions 330 -> 544 of 581, modal 12-word opening 9% -> 3%. The negative rate stays
+low (0.8%), so this is discrimination, not verbosity. On dw, "debris" goes
++25.3 -> +40.5 and distinct captions 900 -> 1230.
+
+**Detection, threshold fitted on train:**
+
+| eval | control | s3b | s3bd | | AUC control | s3b | s3bd |
+|---|---:|---:|---:|---|---:|---:|---:|
+| aw_m2 | **0.5075** | 0.4606 | 0.4940 | | **0.837** | 0.801 | 0.815 |
+| aw_m4 | **0.4944** | 0.4323 | 0.4788 | | **0.829** | 0.791 | 0.806 |
+| dw    | 0.6714 | 0.6595 | **0.6930** | | 0.899 | 0.897 | **0.908** |
+
+Two findings, and they point opposite ways:
+
+1. **The margin BCE works.** s3bd beats s3b on all three evals in BOTH AUC and
+   calibrated J (+0.034 / +0.047 / +0.034 J), same corpus, same steps, same LR --
+   only the loss differs. Cleanest controlled evidence we have for the training
+   routine change. On dw, s3bd is the best model recorded: AUC 0.908, J 0.693.
+2. **The corpus did NOT fix AW detection.** Both arms sit below the 819K control
+   on AW AUC. Descriptions improved sharply while detection slid.
+
+**Description and detection dissociate**, and the two arms trade off against each
+other: s3b has the better captions (+11.9) and the worse detection (0.801); s3bd
+the reverse (+4.4, 0.815). The margin BCE pulls capacity toward the decision and
+away from description.
+
+Note the decision loss did NOT recentre the AW operating point (J at margin 0 is
+still 0.072 / 0.080). BCE centres the cut for the QUESTIONS IT TRAINED ON -- LoveDA
+land cover -- and "is there waste" was never one of them. Centring does not
+transfer across question semantics; only the ranking does.
+
+**Product reading**: for an open-description demo on satellite imagery, `s3b` is
+the best model we have -- 4.3x caption conditioning, template collapse fixed. For
+a calibrated triage gate, the 819K control still wins on AW and `s3bd` on drone.
+
+### Rejected calibration source: Yuan et al. 2026 global landfill segmentation
+
+(Eng. Appl. Artif. Intell. 176:114721, doi 10.1016/j.engappai.2026.114721.)
+1,380 landfills, 118 countries, six continents, Google WMTS, 2,000x2,000 px tiles
+covering 16 km^2 at **2 m/px**. Proposed as a calibration set; **rejected**:
+
+- **All 1,380 images are landfill images**, randomly split into train/val/test.
+  There are no negative (no-landfill) images at all -- their "recall 99.51% for
+  presence detection" has no FPR to go with it. **A threshold cannot be fitted
+  without negatives**, so the dataset cannot do the one job proposed for it.
+- **2 m/px vs AerialWaste's ~0.2**, and 16 km^2 per image vs AW's 0.04 km^2 --
+  a 400x difference in ground coverage. Our own transfer numbers (AW->DW keeps
+  31%) say a cut does not survive that kind of domain gap.
+- Data is "available on request"; the GitHub repo carries code only.
+
+Still interesting as a TRAINING corpus (globally diverse landfills with masks,
+semantically on-target), but it would need the request fulfilled and a site-level
+leakage check against AW -- Google-sourced imagery over 118 countries plausibly
+includes Lombardy, and site overlap would not be caught by pHash at 10x GSD
+difference.
