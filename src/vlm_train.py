@@ -99,6 +99,57 @@ def build_model(args, device: str) -> WasteVLM:
     return model
 
 
+def decision_token_ids(tokenizer) -> tuple[list[int], list[int]]:
+    """First-token ids of the Yes / No surface forms, deduplicated.
+
+    Only the first token is scored: "Yes" and "No" tokenize to different lengths,
+    so summing whole-word logprobs would compare sequences of unequal length and
+    bake a length bias into the decision.
+    """
+    def ids(words):
+        out = []
+        for w in words:
+            enc = tokenizer(w, add_special_tokens=False).input_ids
+            if enc:
+                out.append(enc[0])
+        return sorted(set(out))
+    return ids(["Yes", " Yes", "yes", " yes", "YES"]), ids(["No", " No", "no", " no", "NO"])
+
+
+def decision_margin_loss(logits, labels, decision, yes_ids, no_ids, pos_weight=None):
+    """BCE on the Yes-vs-No logit margin at the first answer token.
+
+    Token CE weights a record by how long its answer is, so a 3-token decision
+    sitting in a mix whose captions average 185 tokens contributes almost nothing
+    -- which is how a 6.4% answer-token share came to flip the entire decision
+    policy. This term is one scalar per record, so it cannot be diluted by answer
+    length, and BCE puts the operating point at margin 0 by construction instead
+    of leaving it wherever the answer prior happens to land. That is the failure
+    we measured: AW ranks at AUC 0.84 but speaks at J 0.11 because its positives
+    sit at margin -1.9.
+
+    `labels` must be the EXPANDED mask returned by `WasteVLM.forward`, whose
+    indices line up with `logits`. Records with decision < 0 are skipped.
+    """
+    import torch.nn.functional as F
+
+    tgt = labels != -100
+    decision = decision.to(logits.device)
+    keep = (decision >= 0) & tgt.any(dim=1)
+    if not bool(keep.any()):
+        return logits.new_zeros(())
+    # logits[t] predicts token t+1, so the position that predicts the first
+    # answer token is one before it.
+    first = tgt.float().argmax(dim=1)
+    pos = (first - 1).clamp(min=0)
+    sel = logits[torch.arange(logits.size(0), device=logits.device), pos].float()
+    lp = torch.log_softmax(sel, dim=-1)
+    margin = (torch.logsumexp(lp[:, yes_ids], dim=-1)
+              - torch.logsumexp(lp[:, no_ids], dim=-1))
+    return F.binary_cross_entropy_with_logits(
+        margin[keep], decision[keep].float(), pos_weight=pos_weight)
+
+
 def build_optimizer(model: WasteVLM, projector_lr: float, lora_lr: float,
                     weight_decay: float = 0.0, mask_lr: float = 0.0
                     ) -> torch.optim.Optimizer:
@@ -439,7 +490,8 @@ def build_dataloader(dataset, collate, batch_size: int, distributed: bool,
 def train(model, train_module, loader, sampler, optimizer, scheduler, *,
           device, rank, distributed, epochs, grad_accum, total_steps,
           max_grad_norm, logging_steps, save_steps, out_dir, stage,
-          do_periodic_save, prune_ctx=None, start_step=0, sampler_offset=0):
+          do_periodic_save, prune_ctx=None, dec_ctx=None, start_step=0,
+          sampler_offset=0):
     """Functional bf16 DDP loop with grad accumulation and trainable-only saves.
 
     When ``prune_ctx`` is set, a learned-mask structural-sparsity penalty is
@@ -454,6 +506,7 @@ def train(model, train_module, loader, sampler, optimizer, scheduler, *,
     # resumed job draws a fresh permutation instead of replaying job-1's prefix.
     global_step = start_step
     running_loss = torch.zeros((), device=device)
+    running_dec = torch.zeros((), device=device)
     running_count = 0
     n_micro = len(loader)
     # Step time and peak memory are what size the next arm: visual-token count
@@ -492,6 +545,13 @@ def train(model, train_module, loader, sampler, optimizer, scheduler, *,
                 with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
                     out = train_module(**batch)
                     loss = out.loss
+                    if dec_ctx is not None and "decision" in batch:
+                        d_loss = decision_margin_loss(
+                            out.logits, out.expanded_labels, batch["decision"],
+                            dec_ctx["yes_ids"], dec_ctx["no_ids"],
+                            pos_weight=dec_ctx["pos_weight"])
+                        loss = loss + dec_ctx["weight"] * d_loss
+                        running_dec += d_loss.detach()
                 step_loss = loss
                 # Add the structural-sparsity penalty once per step (on the
                 # boundary micro, inside the synced backward). The ×grad_accum
@@ -534,11 +594,15 @@ def train(model, train_module, loader, sampler, optimizer, scheduler, *,
                 # all_reduce is a collective: every rank must call it in lockstep,
                 # so this block runs on all ranks and only the print is main-only.
                 avg = running_loss / max(running_count, 1)
+                avg_dec = running_dec / max(running_count, 1)
                 if distributed:
                     dist.all_reduce(avg, op=dist.ReduceOp.AVG)
+                    dist.all_reduce(avg_dec, op=dist.ReduceOp.AVG)
                 if main:
                     lr = scheduler.get_last_lr()[0]
                     extra = ""
+                    if dec_ctx is not None:
+                        extra += f" dec={avg_dec.item():.4f}"
                     if prune_ctx is not None:
                         tau_now = _prune_tau_at(
                             global_step, prune_ctx["warmup"], prune_ctx["anneal_end"],
@@ -558,6 +622,7 @@ def train(model, train_module, loader, sampler, optimizer, scheduler, *,
                           flush=True)
                     step_timer, last_log_step = now, global_step
                 running_loss.zero_()
+                running_dec.zero_()
                 running_count = 0
 
             if do_periodic_save and main and save_steps > 0 and global_step % save_steps == 0:
@@ -612,6 +677,13 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--projector-lr", type=float, default=None,
                     help="default: 1e-3 (pretrain) / 2e-4 (finetune)")
     ap.add_argument("--lora-lr", type=float, default=2e-5)
+    ap.add_argument("--decision-loss-weight", type=float, default=0.0,
+                    help="weight of the Yes/No margin BCE on records carrying a "
+                         "`decision` field; 0 disables (default, so existing arms "
+                         "are bit-identical)")
+    ap.add_argument("--decision-pos-weight", type=float, default=None,
+                    help="BCE pos_weight for the decision term; use >1 when the "
+                         "decision records are negative-heavy")
     ap.add_argument("--lora-r", type=int, default=16)
     ap.add_argument("--lora-alpha", type=int, default=32)
     ap.add_argument("--lora-dropout", type=float, default=0.05)
@@ -728,6 +800,19 @@ def main() -> int:
         total_steps = max(int(steps_per_epoch * args.epochs), 1)
     warmup_steps = int(total_steps * args.warmup_ratio)
     prune_ctx = build_prune_ctx(args, model, total_steps)
+    dec_ctx = None
+    if args.decision_loss_weight > 0:
+        yes_ids, no_ids = decision_token_ids(model.tokenizer)
+        if not yes_ids or not no_ids:
+            raise SystemExit("could not resolve Yes/No token ids for the decision loss")
+        pw = (torch.tensor(args.decision_pos_weight, device=device)
+              if args.decision_pos_weight else None)
+        dec_ctx = {"yes_ids": yes_ids, "no_ids": no_ids,
+                   "weight": args.decision_loss_weight, "pos_weight": pw}
+        if main_proc:
+            print(f"[train] decision margin BCE on: weight={args.decision_loss_weight} "
+                  f"pos_weight={args.decision_pos_weight} "
+                  f"yes={yes_ids} no={no_ids}", flush=True)
     if prune_ctx is not None:
         scheduler = make_prune_scheduler(
             optimizer, mode=prune_ctx["mode"], warmup=warmup_steps,
@@ -797,7 +882,7 @@ def main() -> int:
         epochs=args.epochs, grad_accum=args.grad_accum, total_steps=total_steps,
         max_grad_norm=args.max_grad_norm, logging_steps=args.logging_steps,
         save_steps=args.save_steps, out_dir=args.out_dir, stage=args.stage,
-        do_periodic_save=not args.smoke, prune_ctx=prune_ctx,
+        do_periodic_save=not args.smoke, prune_ctx=prune_ctx, dec_ctx=dec_ctx,
         start_step=start_step, sampler_offset=sampler_offset,
     )
 

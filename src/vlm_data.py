@@ -98,9 +98,14 @@ class VQADataset(Dataset):
         return p
 
     def __getitem__(self, idx: int) -> dict:
-        image, messages = _record_to_messages(self.records[idx])
+        rec = self.records[idx]
+        image, messages = _record_to_messages(rec)
         pil = _safe_open_rgb(self._resolve(image)) if image else None
-        return {"image": pil, "messages": messages}
+        # `decision` is the optional binary target for the margin loss (1 = the
+        # asked-about thing is present). -1 means "this record has no decision",
+        # which is most of them -- captions and free-form QA are CE-only.
+        return {"image": pil, "messages": messages,
+                "decision": float(rec.get("decision", -1))}
 
 
 # ---------------------------------------------------------------------------
@@ -251,6 +256,9 @@ def build_collator(
         batch["pixel_values"] = torch.stack(
             [image_transform(s["image"].convert("RGB")) for s in samples]
         )
+        batch["decision"] = torch.tensor(
+            [s.get("decision", -1.0) for s in samples], dtype=torch.float
+        )
         return batch
 
     return collate
@@ -265,6 +273,12 @@ def build_cached_collator(pad_id: int, image_transform: Callable) -> Callable:
         batch = _pad_batch(enc, pad_id)
         batch["pixel_values"] = torch.stack(
             [image_transform(s["image"].convert("RGB")) for s in samples]
+        )
+        # The token cache stores ids/labels only, so cached records carry no
+        # decision target. Emit -1 rather than omitting the key: the trainer then
+        # sees a uniform batch shape and simply finds nothing to score.
+        batch["decision"] = torch.tensor(
+            [s.get("decision", -1.0) for s in samples], dtype=torch.float
         )
         return batch
 

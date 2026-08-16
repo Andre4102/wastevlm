@@ -394,12 +394,19 @@ class WasteVLM(nn.Module):
         inputs_embeds, attn, labels = self.prepare_multimodal(
             input_ids, attention_mask, labels, image_embeds
         )
-        return self.llm(
+        out = self.llm(
             inputs_embeds=inputs_embeds,
             attention_mask=attn,
             labels=labels,
             use_cache=False,
         )
+        # The image marker expands into patch tokens, so these labels are longer
+        # than the caller's and are the ones whose indices line up with
+        # `out.logits`. Hand them back so the decision loss can locate the first
+        # answer token directly, instead of re-deriving a patch-count-dependent
+        # offset that would silently rot if the token geometry changed.
+        out.expanded_labels = labels
+        return out
 
     # ------------------------------------------------------------------
     # Inference / generation

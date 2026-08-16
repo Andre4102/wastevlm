@@ -659,3 +659,122 @@ effect. Any future mix must be specified in record share.
 Next: a1 (819K + rs_sft x3, 17.3% record share) is the arm whose control is
 J 0.139/0.200/0.673. If it also collapses, the fix is dose (`rs_sft x1`) and the
 negative-type mix, not the concept.
+
+### Stage 3 (2026-08-16, jobs 52413403/52413404, evals 52443964-78)
+
+A third alignment pass on top of the finished 819K stage 2: warm-start from
+`_finetune_next/{llm_merged,projector.pt}`, fit a fresh LoRA on `rs_sft` + 25%
+general replay. Arms `s3` (72,496 recs, 566 steps, 2h21) and `s3a` (42,644 recs,
+15% negatives, 333 steps, 1h24). Both ran clean at world=4, global batch 128.
+
+Youden J against the 819K control, all six eval cells:
+
+| eval | control | s3 | s3a |
+|---|---|---:|---:|
+| aw_m2 closed_vocab | **0.200** | 0.079 | 0.159 |
+| aw_m2 open_cot | **0.044** | 0.011 | 0.027 |
+| aw_m4 closed_vocab | **0.139** | 0.005 | 0.028 |
+| aw_m4 open_cot | **0.062** | 0.012 | 0.041 |
+| dw closed_vocab | **0.673** | 0.564 | 0.634 |
+| dw open_cot | **0.324** | 0.194 | 0.280 |
+
+control > s3a > s3 in 6/6. Read alone this says "sequencing changes magnitude,
+not sign, and dose is the knob". **The AUC section below retracts that reading**:
+the ordering is threshold displacement, not learning damage.
+
+Caveats carried: `s3a` differs from `s3` in BOTH negative share (15% vs 50%) and
+steps (333 vs 566), so it does not isolate abstention; `checkpoint-350` of s3 is
+the matched-step probe (needs a merge step -- checkpoints hold `lora_adapter/`,
+the eval script wants `llm_merged/`). Stage 3 also moved the PROJECTOR at 2e-4
+(the finetune default) alongside LoRA at 1e-5, so "steps x LoRA LR was the dose
+knob" is not established by these runs.
+
+Naming-on-answered rises on dw open_cot (0.538 -> 0.630) but the answered set
+shrinks 97 -> 58 images. That is selection, not skill; do not quote it.
+
+### The decision is calibration, not perception (2026-08-16, jobs 52454126-52455987)
+
+Every AW number above comes from sampled tokens through a parser, which fixes one
+operating point and cannot distinguish "not represented" from "represented,
+verbalised at the wrong threshold". The DW split makes that concrete: identical
+weights give recall 0.83/FPR 0.16 under closed_vocab and 0.33/0.007 under
+open_cot.
+
+So score the Yes-vs-No logit margin at the first answer token and sweep it
+(`scripts/vlm_binary_auc.py`). Threshold-free, parser-free:
+
+| ckpt | eval | AUC | best J | J at margin 0 | pos margin | neg margin |
+|---|---|---:|---:|---:|---:|---:|
+| 819K | aw_m2 | **0.837** | 0.526 | 0.107 | -1.93 | -3.27 |
+| 819K | aw_m4 | **0.829** | 0.501 | 0.114 | -1.90 | -3.24 |
+| 819K | dw | **0.899** | 0.690 | 0.663 | **+1.48** | -2.15 |
+| s3 | aw_m2 | 0.869 | 0.569 | **0.000** | -3.71 | -4.85 |
+| s3 | dw | 0.897 | 0.678 | 0.389 | -0.80 | -4.04 |
+| s3a | aw_m2 | 0.793 | 0.458 | 0.071 | -2.45 | -3.56 |
+
+AUC 0.84 on AerialWaste -- nowhere near chance. The LLM ranks AW images almost as
+well as drone images (0.90). What differs is where zero sits: DW positives are at
++1.48 (above the cut, so the model speaks), AW positives at -1.93 (below it, so
+both classes read as "No"). The whole AW distribution is ~3.4 logits low.
+
+**This retracts the stage-3 conclusion.** s3 on aw_m2 has AUC 0.869 vs the
+control's 0.837 -- a slightly BETTER representation -- while scoring J=0.000
+because it says No to all 581 images. On dw, s3 and control are identical in AUC
+(0.897 vs 0.899) while spoken J falls 0.663 -> 0.389. The measured "dose-response
+damage" was threshold displacement. `s3a` is the one genuine regression
+(AUC 0.793 < 0.837).
+
+Threshold fitted on the TRAIN split, applied to test untouched (the only quotable
+number; an oracle cut on test is not a result):
+
+| eval | as spoken | **train-fitted** | oracle-on-test | gap | frozen probe |
+|---|---:|---:|---:|---:|---:|
+| aw_m2 | 0.200 | **0.5075** (TPR 0.643, FPR 0.135) | 0.526 | +0.019 | 0.853 |
+| aw_m4 | 0.139 | **0.4944** (TPR 0.680, FPR 0.186) | 0.501 | +0.006 | 0.837 |
+| dw    | 0.673 | **0.6714** (TPR 0.823, FPR 0.151) | 0.690 | +0.019 | -- |
+
+AW detection improves 2.5-3.6x with **no retraining**, and the threshold
+generalises (gap <= 0.019; train AUC 0.822 vs test 0.837, no overfit). DW is the
+control that makes this credible: already calibrated, so fitting a threshold
+changes nothing (0.673 -> 0.671). A sweep cannot manufacture J where the model is
+not broken.
+
+Decomposition on aw_m2, in J: spoken 0.200 -> calibrated 0.508 -> probe 0.853.
+Calibration recovers ~47% of the gap for free; the remaining ~53% is genuine
+projector->LLM representation loss and needs the summary-token arm / stronger
+nadir supervision. Note the AUC uses a plain yes/no question while J=0.200 comes
+from the closed_vocab labelling prompt, so those two are not a matched protocol.
+
+Caption-conditioning, same 819K model: "pile" in captions gt+ vs gt- is
+**DW +54.0** (60.1% vs 6.0%) against **AW +2.8** (3.3% vs 0.5%). Across five
+older AW configs (cradiov4 r1024ps2 / r768ps1 / r768ps2, dinov3-b, radio-l) the
+same diff is -0.1 / -0.9 / +0.3 / +0.0 / -0.7 -- those arms say "pile" on ~100%
+of ALL images. Both degenerate modes (always-yes, always-no) are threshold
+pathologies, consistent with the AUC result.
+
+### Training routine implied by the above (implemented 2026-08-16)
+
+Loss is token-CE over answer strings (`vlm_data.py`), so a record's weight is its
+answer length: a 3-token decision inside a mix whose captions average 185 tokens
+is a rounding error. That is how a 6.4% answer-token share flipped the whole
+policy. Added `--decision-loss-weight`: BCE on the Yes-vs-No margin at the first
+answer token, for records carrying a `decision` field.
+
+- one scalar per record -> immune to answer length
+- BCE centres the operating point at margin 0 by construction, instead of leaving
+  it wherever the answer prior lands (the measured failure)
+- no new parameters; still pure LM
+- `--decision-pos-weight` for negative-heavy decision sets (the 69%-negative
+  "answer none" attractor)
+
+Plumbing: `WasteVLM.forward` returns `expanded_labels` (the image marker expands
+into patch tokens, so caller-side label indices do not line up with `logits`);
+the answer position is derived as `first(labels != -100) - 1` because `logits[t]`
+predicts `t+1`. Default weight 0, so existing arms are bit-identical. Unit-tested
+with decoys at the answer index itself to pin the offset.
+
+Multi-label, not yet built: replace "list the categories" with one binary
+question per class, each with its own margin and threshold fitted on train. That
+removes the parser from the causal path, gives per-class confidence, and lets
+class-balanced sampling kill the "answer none" attractor. Cost is N forwards per
+image at eval (AW 5-6 cheap, DW 20 ~2.5h); the image encoding is shared.
