@@ -778,3 +778,45 @@ question per class, each with its own margin and threshold fitted on train. That
 removes the parser from the causal path, gives per-class confidence, and lets
 class-balanced sampling kill the "answer none" attractor. Cost is N forwards per
 image at eval (AW 5-6 cheap, DW 20 ~2.5h); the image encoding is shared.
+
+### How few labels the threshold needs (2026-08-16, `scripts/calib_budget.py`, CPU)
+
+Fitting the cut on AW's full 3,689-image train split spends a lot of supervision
+on ONE scalar and muddies the zero-shot claim. Priced offline from the per-image
+margins already dumped by `vlm_binary_auc.py` -- no GPU. Draws are random, not
+stratified: a real calibration set is "label the next n images", and stratifying
+would assume you already know which are positive.
+
+| n | aw_m2 median J | p10 | % of full-fit | aw_m4 | dw |
+|---:|---:|---:|---:|---:|---:|
+| 10 | 0.461 | 0.306 | 88% | 88% | 89% |
+| 30 | 0.477 | 0.403 | 91% | 91% | 94% |
+| **50** | **0.491** | **0.422** | **93%** | 93% | 95% |
+| 100 | 0.494 | 0.437 | 94% | 93% | 96% |
+| 400 | 0.495 | 0.427 | 94% | 93% | 98% |
+| full | 0.526 | -- | 100% | 100% | 100% |
+
+Saturates at n~50-75; 50 -> 400 labels buys ~1 point. A p10 draw at n=50 (0.422)
+is still double the uncalibrated 0.200, so downside risk is small. Below n~30 the
+median holds but the spread opens (p10 0.306 at n=10).
+
+Threshold transfer, fitted on A applied to B with no in-domain labels:
+
+| fit -> apply | J | % of own-fit |
+|---|---:|---:|
+| aw_m2 -> aw_m4 | 0.498 | **99.5%** |
+| aw_m4 -> aw_m2 | 0.514 | **97.6%** |
+| aw_m2 -> dw | 0.399 | 57.9% |
+| dw -> aw_m2 | 0.160 | 30.5% |
+
+**The cut is a property of the DOMAIN, not the label set**: a threshold fitted for
+the 5-class m2 taxonomy transfers to 6-class m4 intact. Calibrate once per domain,
+evaluate any taxonomy on top, and the multi-label result stays category-zero-shot.
+Caveat: m2/m4 are the same images at different granularity (182 vs 172 positives),
+so their binary targets are correlated -- suggestive of taxonomy-independence, not
+proof. Cross-DOMAIN transfer fails (58% / 31%), consistent with the ~3-logit offset
+between AW and DW margins, so "zero labels anywhere" is not available.
+
+**Protocol to quote**: detection threshold calibrated on 50 images with binary
+waste/no-waste labels only; no category labels used for fitting; all multi-label
+results category-zero-shot; one scalar parameter.
