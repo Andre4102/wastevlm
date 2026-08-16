@@ -41,6 +41,8 @@ from PIL import Image
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
+from src import vlm_calib  # noqa: E402
+
 # The question is deliberately plain and symmetric: no label menu, no chain of
 # thought, nothing that pushes toward either answer. Anything fancier would put
 # the prompt back inside the measurement, which is what we are trying to escape.
@@ -258,7 +260,7 @@ def main() -> None:
         print(f"\n[fit] scoring {len(tr_samples)} TRAIN images to pick the threshold", flush=True)
         y_tr, sc_tr = score_samples(adapter, model, tr_samples, cats, args.question,
                                     yes_ids, no_ids, tag="train ")
-        j_tr, thr_tr, _, _ = best_youden(y_tr, sc_tr)
+        thr_tr, j_tr = vlm_calib.best_threshold(y_tr, sc_tr)
         pred = sc >= thr_tr
         tpr_f = float((pred & (y == 1)).sum() / max((y == 1).sum(), 1))
         fpr_f = float((pred & (y == 0)).sum() / max((y == 0).sum(), 1))
@@ -273,6 +275,17 @@ def main() -> None:
         print(f"  TEST J (honest)   {fit['test_j']:.4f}   (TPR {tpr_f:.3f}, FPR {fpr_f:.3f})")
         print(f"  vs oracle-on-test {j:.4f}   -> generalisation gap "
               f"{j - fit['test_j']:+.4f}")
+        # The artefact the eval consumes. Written next to the scores so a
+        # reported J always has a locatable provenance for its cut.
+        if args.out_json:
+            cal = args.out_json.parent / "calibration.json"
+            vlm_calib.write_calibration(
+                cal, dataset=args.dataset, ckpt=str(args.ckpt),
+                threshold=thr_tr, n_calib=len(y_tr), n_calib_pos=int(y_tr.sum()),
+                question=args.question,
+                extra={"fitted_on": "train split", "train_auc": fit["train_auc"],
+                       "train_best_j": j_tr})
+            print(f"[write] {cal}   <- pass to `vlm_eval --calib`")
 
     if args.out_json:
         args.out_json.parent.mkdir(parents=True, exist_ok=True)

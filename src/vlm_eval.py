@@ -46,6 +46,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from src import vlm_calib  # noqa: E402
 from src.datasets import DRONEWASTE_PAPER_10  # noqa: E402
 # NOTE: det_eval (pycocotools) and seg_dataset are imported lazily inside the
 # detect path only — the classify eval must not require pycocotools.
@@ -970,6 +971,17 @@ class WasteVLMAdapter(VLMAdapter):
         px = self._transform(image.convert("RGB")).unsqueeze(0)
         return self.model.generate(px, "<image>\n" + prompt, self.max_new_tokens)
 
+    def decision_margin(self, image: Image.Image, question: str) -> float:
+        """Yes-vs-No logit margin for the calibrated gate (prefill only, no
+        sampling -- cheaper than the generation it accompanies)."""
+        from src import vlm_calib
+        if not hasattr(self, "_yes_ids"):
+            self._yes_ids, self._no_ids = vlm_calib.decision_token_ids(
+                self.model.tokenizer)
+        px = self._transform(image.convert("RGB")).unsqueeze(0)
+        return vlm_calib.score_margin(self.model, px, question,
+                                      self._yes_ids, self._no_ids)
+
 
 ADAPTERS = {
     "clip": CLIPAdapter,
@@ -1182,6 +1194,22 @@ def run_classify(adapter: VLMAdapter, args) -> dict:
         prompt = dataset_spec["prompt_classify"][args.prompt_style]
         print(f"[task] classify  prompt_style={args.prompt_style}  prompt-len={len(prompt)} chars")
 
+    # Gate on by default wherever the model can produce a margin: the point of
+    # this change is that the calibrated readout is what we report, not an extra
+    # a caller has to remember. One prefill per image, no sampling.
+    gate_on = (not args.no_gate) and hasattr(adapter, "decision_margin")
+    # Indexed by k, not appended: the loop `continue`s past unreadable images, so
+    # an append-list would silently shift every later margin onto the wrong row.
+    margins = np.full(len(test_samples), np.nan) if gate_on else None
+    calib_thr, calib_meta = None, None
+    if args.calib:
+        calib_thr, calib_meta = vlm_calib.load_threshold(args.calib)
+        if not gate_on:
+            raise SystemExit("--calib needs a model that supports decision_margin")
+        print(f"[gate] threshold {calib_thr:+.3f} from {calib_meta.get('source')}")
+    elif gate_on:
+        print("[gate] scoring margins (AUC only; pass --calib for a thresholded J)")
+
     Y_true = np.zeros((len(test_samples), n_cats), dtype=np.int32)
     Y_pred = np.zeros((len(test_samples), n_cats), dtype=np.int32)
     n_empty = n_nonempty = 0
@@ -1209,6 +1237,12 @@ def run_classify(adapter: VLMAdapter, args) -> dict:
                 pred_labels = parse_classification(raw, args.prompt_style, dataset_spec)
         except Exception as e:
             print(f"[warn] inference failed on {s.image_path.name}: {e}", flush=True); continue
+
+        if margins is not None:
+            try:
+                margins[k] = adapter.decision_margin(img, args.calib_question)
+            except Exception as e:
+                print(f"[warn] margin failed on {s.image_path.name}: {e}", flush=True)
 
         gt_labels = set(s.extra["gt_categories"])
         for c in gt_labels:
@@ -1294,6 +1328,57 @@ def run_classify(adapter: VLMAdapter, args) -> dict:
         "modal_share": float(modal / len(Y_pred)),
     }
 
+    # --- calibrated gate ---------------------------------------------------
+    # Everything above reads the SAMPLED string, which fixes one operating point
+    # and cannot tell "the decision is not represented" from "it is represented
+    # and verbalised at the wrong threshold". On AerialWaste that distinction is
+    # the whole result: the margin ranks at AUC 0.837 while the string scores
+    # J 0.200. So when margins were collected, report the threshold-free AUC and
+    # the decision at a threshold fitted ELSEWHERE (never on this test set), plus
+    # the gated label set -- the diagnosis said false alarms are the entire AW
+    # gap, and the gate is what removes them without touching naming.
+    if margins is not None and np.isfinite(margins).any():
+        ok = np.isfinite(margins)
+        m, g = margins[ok], any_gt[ok]
+        auc = vlm_calib.roc_auc(g, m)
+        rep["calibrated_gate"] = {
+            "auc": auc, "question": args.calib_question,
+            "n_scored": int(ok.sum()), "n_unscored": int((~ok).sum()),
+            "margin_pos_mean": float(m[g == 1].mean()) if (g == 1).any() else None,
+            "margin_neg_mean": float(m[g == 0].mean()) if (g == 0).any() else None,
+        }
+        if calib_thr is not None:
+            j, tpr, fpr = vlm_calib.youden(g, m, calib_thr)
+            # Images with no margin are left un-gated rather than suppressed: a
+            # scoring failure is not evidence of absence.
+            gate = np.where(ok, margins >= calib_thr, True).astype(np.int32)
+            # Suppress every label on images the gate calls empty. Naming is left
+            # exactly as the parser produced it, so any change here is the gate's
+            # doing and not a re-parse.
+            Y_gated = Y_pred * gate[:, None]
+            rep_gated = ml_metrics(cats, Y_true, Y_gated, Y_gated.astype(np.float32))
+            # The gate is one-directional on micro-F1: it can suppress labels the
+            # parser emitted, never add ones it withheld. So it pays where the
+            # model OVER-asserts and does nothing where it under-asserts -- on AW
+            # today the model already answers empty on ~78% of images, so gated
+            # and ungated F1 coincide while detection J doubles. `n_gate_pos_
+            # parser_empty` is the size of the gap a namer would have to fill:
+            # images the gate calls waste but the parser left blank.
+            rep["calibrated_gate"].update({
+                "threshold": float(calib_thr), "calib_meta": calib_meta,
+                "j": j, "tpr": tpr, "fpr": fpr,
+                "micro_f1_gated": float(rep_gated["micro"]["f1"]),
+                "micro_f1_ungated": float(rep["micro"]["f1"]),
+                "n_gate_positive": int(gate.sum()),
+                "n_gate_suppressed": int((any_pred & (gate == 0)).sum()),
+                "n_gate_pos_parser_empty": int(((gate == 1) & (any_pred == 0)).sum()),
+            })
+        else:
+            rep["calibrated_gate"]["threshold"] = None
+            rep["calibrated_gate"]["note"] = (
+                "no --calib given: AUC only. A threshold picked on this split "
+                "would be an oracle, not a result.")
+
     print()
     print(f"=== {args.model} {args.prompt_style} — {args.dataset} ({len(test_samples)} imgs) ===")
     cb = rep["constant_baseline"]["micro_f1"]
@@ -1313,6 +1398,25 @@ def run_classify(adapter: VLMAdapter, args) -> dict:
     print(f"  waste present/absent: F1={bp['f1']:.3f} P={bp['precision']:.3f} "
           f"R={bp['recall']:.3f} acc={bp['accuracy']:.3f} "
           f"(gt pos {bp['n_gt_positive']}, pred pos {bp['n_pred_positive']})")
+    if "calibrated_gate" in rep:
+        cg = rep["calibrated_gate"]
+        # J from the SPOKEN decision, for the side-by-side that motivates all of
+        # this: same model, same images, only the readout differs.
+        spoken_j = bp["recall"] - (
+            (any_pred & (any_gt == 0)).sum() / max((any_gt == 0).sum(), 1))
+        print(f"  calibrated gate: AUC={cg['auc']:.4f}  "
+              f"margin pos={cg['margin_pos_mean']:+.2f} neg={cg['margin_neg_mean']:+.2f}"
+              + (f"  [{cg['n_unscored']} unscored]" if cg.get("n_unscored") else ""))
+        if cg.get("threshold") is not None:
+            print(f"    thr={cg['threshold']:+.3f} -> J={cg['j']:.4f} "
+                  f"(TPR {cg['tpr']:.3f}, FPR {cg['fpr']:.3f})   "
+                  f"vs spoken J={spoken_j:.4f}")
+            print(f"    micro F1 gated={cg['micro_f1_gated']:.4f} "
+                  f"(ungated {cg['micro_f1_ungated']:.4f}); "
+                  f"suppressed {cg['n_gate_suppressed']}, "
+                  f"gate-positive but unnamed {cg['n_gate_pos_parser_empty']}")
+        else:
+            print("    no --calib: AUC only (a cut fitted here would be an oracle)")
     print()
     print("per-class F1:")
     for name in cats:
@@ -1348,6 +1452,18 @@ def main() -> int:
     p.add_argument("--save-raw", type=Path, default=None,
                    help="optional path to dump per-image raw responses (jsonl)")
     p.add_argument("--out-json", type=Path, default=None)
+    # --- calibrated decision gate (see src/vlm_calib.py) --------------------
+    p.add_argument("--calib", default=None, metavar="FLOAT_OR_JSON",
+                   help="threshold for the Yes/No margin: a literal number, or a "
+                        "calibration JSON written by scripts/vlm_binary_auc.py. "
+                        "Must come from data OTHER than this split -- a cut fitted "
+                        "here is an oracle. Without it, only AUC is reported.")
+    p.add_argument("--no-gate", action="store_true",
+                   help="skip margin scoring entirely (gate is on by default for "
+                        "models that support it; costs one prefill per image)")
+    p.add_argument("--calib-question", default=vlm_calib.QUESTION,
+                   help="binary question scored for the gate; must match whatever "
+                        "the threshold was fitted with")
     # our trained VLM (--model waste_vlm)
     p.add_argument("--ckpt", type=Path, default=None,
                    help="waste_vlm only: finetune dir with llm_merged/ + projector.pt")

@@ -893,3 +893,35 @@ semantically on-target), but it would need the request fulfilled and a site-leve
 leakage check against AW -- Google-sourced imagery over 118 countries plausibly
 includes Lombardy, and site overlap would not be caught by pHash at 10x GSD
 difference.
+
+### The calibrated gate is now the default eval readout (2026-08-16)
+
+`src/vlm_calib.py` is the single source of truth for the margin readout, imported
+by BOTH the calibration step (`scripts/vlm_binary_auc.py`, which now writes a
+`calibration.json`) and the eval that applies it (`src/vlm_eval.py --calib`). If
+the question wording, token set, or scored position ever differed between fitting
+and applying, the threshold would be measured against one quantity and used on
+another -- and it would fail silently, looking merely like a bad number.
+
+Margin scoring is ON by default for models that support it (one prefill per image,
+no sampling -- cheaper than the generation it accompanies); `--no-gate` opts out.
+Without `--calib` only AUC is reported, because a cut fitted on the split being
+scored is an oracle, not a result. Every reported J now carries `calib_meta` with
+the provenance of its threshold.
+
+Smoke (819K ckpt, aw_m2, 60 imgs, thr -2.625 from the train fit):
+
+```
+calibrated gate: AUC=0.8194  margin pos=-1.89 neg=-3.12
+  thr=-2.625 -> J=0.4501 (TPR 0.736, FPR 0.286)   vs spoken J=0.2453
+  micro F1 gated=0.0857 (ungated 0.0857); suppressed 0, gate-positive but unnamed 28
+```
+
+**The gate is one-directional on micro-F1** and this is worth internalising: it can
+suppress labels the parser emitted, never add ones it withheld. So it pays where a
+model OVER-asserts (the 150K arm, dw closed_vocab at FPR 0.156) and does nothing
+where it under-asserts. On AW today the model answers empty on ~78% of images, so
+gated and ungated micro-F1 coincide *while detection J nearly doubles*. The new
+`n_gate_pos_parser_empty` counter sizes what a namer would have to fill: 28 of 60
+images here are called waste by the gate and left blank by the parser. That number
+is the AW naming gap, made countable for the first time.

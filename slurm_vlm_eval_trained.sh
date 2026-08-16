@@ -70,10 +70,17 @@ echo "[slurm] encoder=$ENCODER ckpt=$CKPT_DIR dataset=$DATASET limit=$LIMIT out=
 echo "[slurm] img=$IMG_SIZE pshuf=$PSHUF"
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader || true
 
+# CALIB = a literal threshold or a calibration.json from scripts/vlm_binary_auc.py.
+# It MUST come from data other than this split. NO_GATE=1 skips margin scoring.
+CALIB_ARGS=""
+[ -n "${CALIB:-}" ] && CALIB_ARGS="--calib $CALIB"
+[ "${NO_GATE:-0}" = "1" ] && CALIB_ARGS="$CALIB_ARGS --no-gate"
+echo "[slurm] gate args: ${CALIB_ARGS:-<auc only>}"
+
 mkdir -p "$RESULTS"
 "$PYBIN/python" -m src.vlm_eval \
   --model waste_vlm \
-  --ckpt "$CKPT_DIR" \
+  --ckpt "$CKPT_DIR" $CALIB_ARGS \
   --encoder "$ENCODER" \
   --image-size "$IMG_SIZE" \
   --pixel-shuffle "$PSHUF" \
