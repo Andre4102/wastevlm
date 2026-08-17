@@ -1041,3 +1041,105 @@ That is the work item, and it is a naming problem behind a working detector.
 | 150K base (`_finetune_`) | **best detector on file**; new baseline to beat |
 | nadir description corpus (s3b) | re-read as sound: it targeted naming, and naming is what is broken |
 | next arm | build on the 150K base, target naming, score with AUC only |
+
+## Naming arms n1/n2/n2d on the 150K base (2026-08-17, jobs 52570906-52585553)
+
+First arms built after the AUC sweep, and the first built on `_finetune_` (150K)
+rather than `_finetune_next_` (819K). Target: the ~30% of AW images that come back
+gate-positive with an empty parse. Replay is `general_150k`, matching the base's
+own distribution. New `_source_cap` build knob caps the two close-up tiers of
+`waste_sft` (trashbox 6000, wastebench 3000) -- they are also the TERSE tiers
+(wastebench answers have a median length of one word, 70% <=3), so uncapped this
+corpus teaches terseness, the opposite of naming. After the caps the four
+naming-shaped aerial sources are ~51% of the component instead of 19%.
+
+| arm | mix | records | steps | wall |
+|---|---|---:|---:|---:|
+| n1 | `waste_sft` + 25% `general_150k` | 24,449 | 191 | 45 min |
+| n2 | + `nadir_desc` | 62,777 | 490 | 115 min |
+| n2d | n2 with `--decision-loss-weight 1.0` | 62,777 | 490 | 115 min |
+
+Leakage re-verified before quoting any of this: MD5 + pHash (Hamming <=6) over all
+15,025 AW+DW images, **0 leaks from SWAD's 1,996 tiles**, 0 from TrashBox / TACO /
+ZeroWaste, and the single UAVVaste flag manually confirmed a false positive. SWAD
+is 1.8 m/px Henan; AerialWaste ~0.2 m/px Italy.
+
+### Detection
+
+| | aw_m2 AUC | aw_m2 calib J | aw_m2 J@0 | aw_m4 AUC | dw AUC | neg>0 aw / dw |
+|---|---:|---:|---:|---:|---:|---:|
+| 150K base | 0.8615 | 0.6053 | 0.066 | 0.8591 | **0.9042** | 0.00 / 0.10 |
+| **n1** | **0.9410** | **0.7338** | **0.695** | **0.9418** | 0.8639 | 0.26 / 0.38 |
+| n2 | 0.9171 | 0.6778 | 0.610 | 0.9190 | 0.8563 | **0.03** / 0.27 |
+| n2d | 0.9205 | 0.6563 | 0.498 | 0.9195 | **0.8751** | 0.04 / 0.33 |
+
+**n1 is the largest single gain in the project.** aw_m2 AUC 0.8615 -> 0.9410 closes
+73% of the remaining gap to the frozen-feature probe (0.970). AUC is
+shift-invariant, so this is ranking, not recentring. Separately, the operating
+point recentred on its own -- threshold -4.00 -> +1.38, J@0 0.066 -> 0.695 -- so
+the model now SAYS it with no calibration at all.
+
+### Naming (closed_vocab micro-F1, gated / ungated)
+
+| arm | aw_m2 | aw_m4 | dw | unnamed aw_m2 |
+|---|---:|---:|---:|---:|
+| 150K base | 0.289 | 0.166 | **0.310** | — |
+| **n1** | **0.355** / 0.352 | **0.345** / 0.190 | 0.212 / 0.142 | **90**/581 |
+| n2 | 0.089 / 0.088 | 0.291 / 0.165 | 0.175 / 0.089 | 186/581 |
+| n2d | 0.054 / 0.054 | 0.136 / 0.132 | 0.219 / 0.139 | 204/581 |
+
+n1 wins naming on both AW splits and cuts gate-positive-but-unnamed from a1's
+177/581 to **90/581**. Hold the claim to the baseline though: the aw_m2 constant
+predictor scores 0.3073 and aw_m4's scores 0.3585, so n1 clears the degenerate
+baseline by 0.048 on m2 and **still loses to it on m4**. Naming moved; it has not
+yet been won.
+
+### The gate stopped being inert
+
+Every earlier arm under-asserted, so the one-directional gate had nothing to
+suppress and gated == ungated micro-F1 throughout. These arms over-assert, and the
+gate now does real work: aw_m4 n1 0.190 -> **0.345** (199 images suppressed), dw n2
+0.089 -> 0.175 (529 suppressed). This is the first evidence that the calibrated
+gate improves the multi-label answer and not just the binary decision.
+
+### `nadir_desc` controls false alarms and mutes naming
+
+Adding it cut the fraction of AW negatives scoring positive from 0.26 to **0.03**,
+exactly the nadir-absence mechanism it was included for, and the risk written into
+the arm before the run. But it did NOT restore dw AUC (0.856/0.875 vs the base's
+0.904) and it cost AW ranking (0.941 -> 0.917) and *collapsed* aw_m2 naming
+(0.355 -> 0.089). Suppressing false positives is not the same as restoring
+discrimination -- the arm design conflated them.
+
+Mechanism, consistent with s3b: `nadir_desc`'s vocabulary is LAND COVER. It
+competes with waste vocabulary for the same answer slot, so the model describes
+the tile instead of naming the material. It improved captions on the 819K base for
+the same reason it mutes the taxonomy here.
+
+### The margin BCE is base-dependent, not a free win
+
+n2d vs n2 -- same corpus, same steps, only the loss differs. On the 819K base the
+same contrast (s3bd vs s3b) won all six. Here it splits: better on dw (AUC 0.8751
+vs 0.8563) and marginally on aw_m2 AUC, but worse on calibrated J (0.656 vs 0.678),
+much worse at zero (0.498 vs 0.610), and worse on naming everywhere. Its decision
+loss fell 0.078 -> 0.051 then ROSE to 0.097, where s3bd's fell monotonically
+0.234 -> 0.075: on a base that already arrives calibrated there is little for the
+BCE to fix, so it ends up trading against the CE term. Do not carry it forward as
+a default.
+
+### Where this leaves the model
+
+| domain | best model | AUC | calib J | naming |
+|---|---|---:|---:|---:|
+| AerialWaste | **n1** | 0.9410 | 0.7338 | 0.355 |
+| DroneWaste | **150K base** | 0.9042 | 0.6725 | 0.310 |
+
+No arm wins both, and the split is stable across all three readouts. Since the
+threshold is already per-domain (AW->DW transfers at 58%), **selecting the model
+per domain costs nothing operationally** -- that is the recommendation, rather than
+hunting for one arm that wins everywhere.
+
+Open: `open_cot` collapsed on AW for n1 (spoken J -0.063, micro-F1 0.000). n1
+trained on short answers and the two-turn format needs a turn-1 description to
+commit from; the caps fixed the vocabulary balance but not the format. A
+format-anchor tier scaled past its current 899 records is the obvious fix.
