@@ -1143,3 +1143,58 @@ Open: `open_cot` collapsed on AW for n1 (spoken J -0.063, micro-F1 0.000). n1
 trained on short answers and the two-turn format needs a turn-1 description to
 commit from; the caps fixed the vocabulary balance but not the format. A
 format-anchor tier scaled past its current 899 records is the obvious fix.
+
+### Descriptions: n2/n2d are the best on file, and it reverses the arm ranking
+
+The naming table above scores the taxonomy commit (turn 2). Scoring the
+DESCRIPTION (turn 1) instead puts the same arms in a different order, and for the
+open-description product framing this is the metric that matters.
+
+Caption conditioning on aw_m2, `open_cot` turn-1:
+
+| arm | "pile" gt+ - gt- | "debris" | any waste term gt+ / gt- | distinct caps | modal | mean len |
+|---|---:|---:|---|---:|---:|---:|
+| 819K control | +2.8 | +1.6 | 3.8% / 0.5% | 330/581 | 9% | 13w |
+| s3b | +11.9 | +4.4 | 12.6% / 1.5% | 544/581 | 3% | 26w |
+| n1 | **-35.3** | -12.5 | — | 468/581 | 2% | — |
+| n2 | +31.0 | +8.8 | 38.5% / 10.8% | 574/581 | 5% | 38w |
+| **n2d** | **+35.8** | **+9.7** | **61.0%** / 32.6% | 570/581 | 3% | 38w |
+
+**n2d triples s3b's caption conditioning** (+35.8 vs +11.9), mentions a waste term
+on 61% of AW positives against the 819K control's 3.8%, and all but eliminates the
+template (570/581 distinct, modal opening 3%). On dw it mentions waste on 92.5% of
+positives. Sampled turn-1: *"There is a small pile of debris in the bottom-left
+corner, which appears to be scattered or dumped materials."*
+
+Two things this exposes:
+
+**n1's `open_cot` collapse is vocabulary substitution, not muteness.** Its turn-1 is
+the swad template verbatim -- *"Solid waste is visible in the top-left, centre and
+bottom-left areas"* -- and turn 2 answers `solid waste`, which is not in the AW
+taxonomy, so the parser returns empty and micro-F1 is 0.000. n1 learned swad's
+single class name and uses it in place of every material word: "pile" conditioning
+is **-35.3** while "solid waste" is +46.7. Under `closed_vocab`, where the menu is
+supplied, it names correctly (0.355). The capability is there; the open vocabulary
+was overwritten.
+
+**s3b describes the scene and misses the waste.** On gt+ images it produces *"a
+large parking lot with many vehicles parked in rows"* -- fluent, grounded, and
+silent about the dumping. That is why its captions looked good on lexical
+diversity while its detection sat at AUC 0.801. Diversity is not conditioning.
+
+The cost of n2d's descriptions is over-mention: waste terms appear on 32.6% of AW
+negatives (s3b 1.5%). Same over-assertion as its detection, and the same fix --
+gate first, describe second, so the false mentions never surface.
+
+### Recommended product stack (open descriptions)
+
+1. **Decide with the calibrated gate** on `n2d`: one prefill, AUC 0.9205 aw_m2 /
+   0.8751 dw, threshold from 50 in-domain binary labels.
+2. **Describe with n2d turn-1** only when the gate fires: waste term on 61% of AW
+   and 92.5% of dw positives, 38-word grounded descriptions, template broken.
+3. **Do not use the turn-2 taxonomy commit.** It answers `none` even on images it
+   has just described as containing debris; it is the broken component, and the
+   product framing does not need a closed vocabulary.
+
+For a closed-vocabulary benchmark number instead, `n1` remains the naming arm
+(aw_m2 0.355) and the 150K base the drone arm.
