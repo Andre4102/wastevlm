@@ -925,3 +925,119 @@ gated and ungated micro-F1 coincide *while detection J nearly doubles*. The new
 `n_gate_pos_parser_empty` counter sizes what a namer would have to fill: 28 of 60
 images here are called waste by the gate and left blank by the parser. That number
 is the AW naming gap, made countable for the first time.
+
+## The AUC re-scoring sweep: two retractions (2026-08-17, jobs 52562245-52566514)
+
+With the gate wired, every arm on file was re-scored through the threshold-free
+readout: 8 arms x 3 benchmarks, AUC plus a threshold fitted on the TRAIN split.
+This was meant to close the dose curve with `a1`. It did that, and it also
+invalidated two conclusions the record was built on.
+
+### The full table (aw_m2; AUC, fitted threshold, calibrated J, J at margin 0)
+
+| arm | AUC | fitted thr | calib J | J@0 | spoken J |
+|---|---:|---:|---:|---:|---:|
+| 150K base (`_finetune_`) | 0.8615 | -4.000 | **0.6053** | 0.066 | 0.234 |
+| s3 | **0.8688** | -4.498 | 0.5500 | 0.000 | 0.079 |
+| pilot | 0.8436 | -5.625 | 0.5573 | 0.000 | -0.003 |
+| 819K (`_finetune_next_`) | 0.8368 | -2.625 | 0.5075 | 0.107 | 0.200 |
+| s3bd | 0.8148 | -3.625 | 0.4940 | 0.080 | 0.051 |
+| a1 | 0.8237 | -4.617 | 0.4629 | 0.060 | 0.074 |
+| s3b | 0.8006 | -3.250 | 0.4606 | 0.072 | 0.103 |
+| s3a | 0.7933 | -3.249 | 0.4432 | 0.071 | 0.159 |
+
+Spearman across the 8 arms, spoken J vs calibrated J: **rho = +0.02**. Spoken J
+vs AUC: **+0.02**. Calibrated J vs AUC: **+0.91**.
+
+**The spoken readout carries no information about arm quality.** Not inverted --
+uninformative. Every arm-vs-arm decision made by reading generated text was made
+by coin flip, and the two retractions below are what that cost.
+
+### Retraction 1: the 819K base-mix swap was a regression
+
+The 150K arm dominates the 819K arm it was replaced by, on all six calibrated
+measures:
+
+| eval | 150K AUC | 819K AUC | 150K calib J | 819K calib J |
+|---|---:|---:|---:|---:|
+| aw_m2 | **0.8615** | 0.8368 | **0.6053** | 0.5075 |
+| aw_m4 | **0.8591** | 0.8294 | **0.5886** | 0.4944 |
+| dw    | **0.9042** | 0.8987 | **0.6725** | 0.6714 |
+
+**The 150K arm is the best model on file for waste detection**, and it has been
+sitting in `results/vlm/cradiov4-so_r768ps2_finetune` since before the 819K arm
+was built. It was passed over because of its spoken behaviour: on dw closed_vocab
+it named a category on all 1504 images (`n_empty_parse=0`), TPR 1.000 / FPR 1.000,
+J exactly 0.000 -- filed as a constant-YES degenerate. Its margin AUC on that same
+split is 0.9042, and even at its natural cut J@0 is 0.666.
+
+So the model separated DroneWaste cleanly the whole time and emitted a constant.
+The degeneracy was in the verbalisation, never in the decision.
+
+### Retraction 2: abstention SFT is a pure cost
+
+The pilot's matched control is the 150K arm, and against it `rs_sft x3` loses on
+every AW measure while wrecking speakability:
+
+| | 150K base | pilot (+rs_sft x3) | delta |
+|---|---:|---:|---:|
+| aw_m2 AUC | 0.8615 | 0.8436 | **-0.018** |
+| aw_m4 AUC | 0.8591 | 0.8423 | **-0.017** |
+| aw_m2 calib J | 0.6053 | 0.5573 | **-0.048** |
+| fitted thr | -4.000 | -5.625 | -1.63 |
+| dw J@0 | 0.666 | 0.334 | **-0.332** |
+
+Earlier today, before the 150K column existed, the pilot's AUC 0.8436 looked like
+the best on file and the abstention track looked like it deserved promotion. It
+does not: the base was already at 0.8615 and the injection **subtracted** ranking
+while displacing the operating point 1.6 logits further out of reach. DW AUC is
+flat (0.9042 -> 0.9050) so nothing was gained there either.
+
+`x3 upsampling on a small base` stays refuted -- but for the opposite reason than
+recorded. It was not that 50.8% record share destroyed the decision (it did not;
+AUC held at 0.844). It is that the injection bought no ranking at any dose and
+cost the operating point at every dose. Confirmed by `a1` at 17.3% on the 819K
+base: AUC 0.8237 vs the control's 0.8368, calib J 0.4629 vs 0.5075, thr -4.617 vs
+-2.625. Same sign, smaller size, monotone in dose.
+
+**Recommendation: drop the abstention-SFT track.** Two doses on two bases, four
+arms, no ranking gain anywhere, consistent operating-point damage.
+
+### a1, and the dose curve closed
+
+| eval | a1 AUC | 819K control | a1 calib J | control |
+|---|---:|---:|---:|---:|
+| aw_m2 | 0.8237 | **0.8368** | 0.4629 | **0.5075** |
+| aw_m4 | 0.8153 | **0.8294** | 0.4782 | **0.4944** |
+| dw    | 0.8928 | **0.8987** | 0.6674 | **0.6714** |
+
+Loses on 6/6, small and consistent. `a1` cost 12h53 on 4x A100 and was built to
+test a dose hypothesis that the instrument had manufactured.
+
+### The naming gap, sized on the full splits
+
+`a1`'s calibrated-gate evals give the first full-split counts of images the gate
+calls positive and the parser leaves blank:
+
+| eval | gate-positive but unnamed | of |
+|---|---:|---:|
+| aw_m2 closed_vocab | 177 | 581 |
+| aw_m2 open_cot | 191 | 581 |
+| aw_m4 closed_vocab | 199 | 581 |
+| dw closed_vocab | 299 | 1504 |
+| dw open_cot | 381 | 1504 |
+
+Suppression stays near zero (0-10 images) because the gate is one-directional and
+these models under-assert. **~30% of AerialWaste images are detected and unnamed.**
+That is the work item, and it is a naming problem behind a working detector.
+
+### What this changes
+
+| lever | status |
+|---|---|
+| spoken J as an arm-selection metric | **refuted** -- rho +0.02 with calibrated J over 8 arms |
+| abstention SFT (`rs_sft`) | **drop** -- no ranking gain at 17.3% or 50.8%, costs the operating point |
+| 819K base mix | **regression** vs 150K on 6/6; the swap was made on spoken numbers |
+| 150K base (`_finetune_`) | **best detector on file**; new baseline to beat |
+| nadir description corpus (s3b) | re-read as sound: it targeted naming, and naming is what is broken |
+| next arm | build on the 150K base, target naming, score with AUC only |
