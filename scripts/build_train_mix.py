@@ -91,6 +91,44 @@ ARMS = {
     # are true absences rather than an invented refusal policy. Pair with
     # --decision-loss-weight: 5,477 of its records carry a `decision` field.
     "s3b": {"nadir_desc": 1, "general_819k": {"share": 0.25}},
+    # --- naming arms, on the 150K base (2026-08-17) ---------------------------
+    # The AUC sweep moved the target. Detection is not the problem: the 150K
+    # stage-2 arm ranks aw_m2 at AUC 0.8615 / calibrated J 0.6053, the best on
+    # file, and ~30% of AW images come back gate-positive with an EMPTY parse.
+    # So these arms warm-start from `_finetune_` (NOT `_finetune_next_`) and
+    # target the words, and replay is `general_150k` to match that base's own
+    # distribution rather than reintroducing the 819K mix that regressed it.
+    #
+    # n1 "vocabulary": is the naming gap simply missing waste words? `waste_sft`
+    # is the leakage-checked non-AW/DW tier that arm "b" was defined for and
+    # never ran. Its viewpoint mix is the risk -- 61% of it is TrashBox
+    # close-ups of single objects, a domain nothing like a satellite tile -- so
+    # the two close-up tiers are capped. Both caps are also ANSWER-LENGTH caps,
+    # which matters as much as viewpoint: wastebench answers have a median length
+    # of ONE word (70% are <=3) and trashbox 36% <=3, so uncapped this corpus
+    # teaches terseness -- the opposite of naming -- while swad/taco/uavvaste/
+    # format_anchor sit at medians of 8-30 words with no ultra-terse answers at
+    # all. After the caps those four are ~51% of the component instead of 19%.
+    #
+    # KNOWN RISK, stated before the run: `waste_sft` has NO aerial negatives.
+    # Every swad and uavvaste image contains waste -- their ~1000 "no" answers
+    # are negated PHRASINGS ("is this tile free of solid waste?") over positive
+    # images, and the affirmative form is answered yes 219/219 and 81/81. So n1
+    # can teach waste words but cannot teach nadir absence, and the 150K base
+    # already over-asserts (it named a category on all 1504 DW images). If n1
+    # displaces the operating point upward, that is why. It also rules out
+    # stamping a `decision` field on this corpus: BCE on positives only just
+    # pushes every margin up. n2's LoveDA half is where nadir absence comes from.
+    "n1": {"waste_sft": 1, "general_150k": {"share": 0.25},
+           "_source_cap": {"trashbox": 6000, "wastebench_zerowaste": 3000}},
+    # n2 "vocabulary + nadir form": same, plus `nadir_desc`. s3b showed that
+    # corpus quadruples AW caption conditioning and breaks the template while
+    # costing detection -- read against the old target that looked like a
+    # failure, but naming is exactly what it was good at. n2 has more records
+    # than n1 and therefore more steps; SAVE_STEPS=50 keeps the matched-step
+    # checkpoint that s3/s3a never had, so the contrast can be made honestly.
+    "n2": {"waste_sft": 1, "nadir_desc": 1, "general_150k": {"share": 0.25},
+           "_source_cap": {"trashbox": 6000, "wastebench_zerowaste": 3000}},
 }
 
 
@@ -121,6 +159,31 @@ def apply_neg_share(recs: list[dict], target: float, rng: random.Random) -> list
     print(f"[neg-share] negatives {len(neg)} -> {len(kept)} "
           f"({100*len(kept)/(len(pos)+len(kept)):.1f}% of component); pairing broken by design")
     out = pos + kept
+    rng.shuffle(out)
+    return out
+
+
+def apply_source_cap(recs: list[dict], caps: dict, rng: random.Random) -> list[dict]:
+    """Downsample records by their `source` field to at most `caps[source]`.
+
+    Composition, not size, is what has burned every arm so far: the pilot
+    collapsed at 50.8% record share, and `waste_sft` is 61% TrashBox close-ups of
+    single objects -- a viewpoint with nothing in common with a satellite tile.
+    Uncapped, "teach waste words" would in practice mean "teach TrashBox", and the
+    aerial sources that actually match the target (swad, uavvaste) would be 12% of
+    their own corpus. The drop is printed per source rather than done silently.
+    """
+    from collections import defaultdict
+    by = defaultdict(list)
+    for r in recs:
+        by[r.get("source", "?")].append(r)
+    out = []
+    for src, rs in sorted(by.items()):
+        cap = caps.get(src)
+        kept = rng.sample(rs, cap) if cap is not None and cap < len(rs) else rs
+        if len(kept) != len(rs):
+            print(f"[source-cap] {src:22s} {len(rs):6d} -> {len(kept):6d}")
+        out.extend(kept)
     rng.shuffle(out)
     return out
 
@@ -166,6 +229,7 @@ def main() -> None:
     # popped before the unknown-component check: `_neg_share` is a build knob, not
     # a component, and ARMS is copied above so --arm stays reusable in-process.
     neg_share = spec.pop("_neg_share", None)
+    source_cap = spec.pop("_source_cap", None)
 
     unknown = [k for k in spec if k not in COMPONENTS]
     if unknown:
@@ -217,6 +281,8 @@ def main() -> None:
         recs = load(name)
         if neg_share is not None and any("polarity" in r for r in recs[:50]):
             recs = apply_neg_share(recs, neg_share, rng)
+        if source_cap:
+            recs = apply_source_cap(recs, source_cap, rng)
         add(name, recs, repeat, f"x{repeat}")
 
     # share components are sized against what the fixed ones already contributed
