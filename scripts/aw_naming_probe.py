@@ -53,13 +53,22 @@ DATA = pathlib.Path(os.environ.get(
     "/leonardo_scratch/large/userexternal/adiecidu/waste_vlm/data"))
 
 
-def fit_category(X_tr, y_tr, X_te, y_te) -> dict:
+def fit_category(X_tr, y_tr, X_te, y_te, head: str = "linear") -> dict:
     """Per-class probe with the operating point chosen on TRAIN, never on test."""
     from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import roc_auc_score
     from sklearn.preprocessing import normalize
 
-    clf = LogisticRegression(C=1.0, max_iter=3000, class_weight="balanced", n_jobs=-1)
+    if head == "mlp":
+        # The linear probe is only an upper bound on what a prompt can extract if
+        # the representation is linearly readable. An MLP tests whether there is
+        # nonlinear signal a cleverer readout could in principle reach; if it does
+        # not beat the linear head, the ceiling argument holds.
+        from sklearn.neural_network import MLPClassifier
+        clf = MLPClassifier(hidden_layer_sizes=(512,), max_iter=400,
+                            early_stopping=True, random_state=0)
+    else:
+        clf = LogisticRegression(C=1.0, max_iter=3000, class_weight="balanced", n_jobs=-1)
     clf.fit(normalize(X_tr), y_tr)
     s_tr = clf.predict_proba(normalize(X_tr))[:, 1]
     s_te = clf.predict_proba(normalize(X_te))[:, 1]
@@ -93,6 +102,8 @@ def main() -> None:
     ap.add_argument("--version", default="m2", choices=["m2", "m4"])
     ap.add_argument("--image-size", type=int, default=768)
     ap.add_argument("--batch-size", type=int, default=8)
+    ap.add_argument("--heads", nargs="+", default=["linear"],
+                    choices=["linear", "mlp"])
     ap.add_argument("--out-json", type=pathlib.Path, default=None)
     args = ap.parse_args()
 
@@ -117,9 +128,10 @@ def main() -> None:
            "image_size": args.image_size, "n_train": len(train),
            "n_test": len(test), "pooling": {}}
 
-    for pool in ("cls", "mean", "max"):
+    for pool, head in [(p, h) for p in ("cls", "mean", "max") for h in args.heads]:
         print(f"\n=== AW {args.version} naming, frozen {args.encoder} "
-              f"@{args.image_size}px, {pool} pooling, {len(test)} test positives")
+              f"@{args.image_size}px, {pool} pooling, {head} head, "
+              f"{len(test)} test positives")
         print(f"  {'category':24s} {'prev':>6s} {'AUC':>6s} {'P':>6s} {'lift':>7s} "
               f"{'R':>6s} {'F1':>6s}")
         TP = FP = FN = 0
@@ -127,7 +139,7 @@ def main() -> None:
         for c in cats:
             y_tr = np.array([1 if c in s.extra["gt_categories"] else 0 for s in train])
             y_te = np.array([1 if c in s.extra["gt_categories"] else 0 for s in test])
-            r = fit_category(F_tr[pool], y_tr, F_te[pool], y_te)
+            r = fit_category(F_tr[pool], y_tr, F_te[pool], y_te, head)
             per[c] = r
             TP += r["tp"]; FP += r["fp"]; FN += r["fn"]
             print(f"  {c[:24]:24s} {r['prevalence']:6.3f} {r['auc']:6.3f} "
@@ -138,7 +150,7 @@ def main() -> None:
         mf = 2 * mp * mr / (mp + mr) if mp + mr else 0.0
         print(f"  micro  P {mp:.3f}  R {mr:.3f}  F1 {mf:.3f}   "
               f"(TP {TP} FP {FP} FN {FN})")
-        rep["pooling"][pool] = {"per_class": per, "micro_f1": mf,
+        rep["pooling"][f"{pool}/{head}"] = {"per_class": per, "micro_f1": mf,
                                 "micro_p": mp, "micro_r": mr}
 
     # The constant predictor is the bar every naming readout has to clear.

@@ -30,7 +30,7 @@ export HF_HOME=/leonardo_scratch/large/userexternal/adiecidu/hf_cache
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 echo "[slurm] $(hostname) job=${SLURM_JOB_ID:-?} enc=$ENCODER ver=$VERSION img=$IMG task=$TASK bs=$BS"
 if [ "$TASK" = "naming" ]; then
-  "$PYBIN/python" scripts/aw_naming_probe.py --encoder "$ENCODER" --version "$VERSION" \
+  "$PYBIN/python" scripts/aw_naming_probe.py --encoder "$ENCODER" --version "$VERSION" --heads ${HEADS:-linear} \
     --image-size "$IMG" --batch-size "$BS" \
     --out-json "$WROOT/results/probe_naming_${ENCODER}_${VERSION}_${IMG}.json"
 else

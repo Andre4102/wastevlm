@@ -54,7 +54,26 @@ RS_CLIPS = {
 
 
 def load_rois(dataset: str, split: str = "test"):
-    """-> [(image_path, box_xywh, category)] one entry per annotated object."""
+    """-> [(image_path, box_xywh, category)] one entry per annotated object.
+
+    DroneWaste is the control for the AerialWaste result. Its objects are 7.96
+    visual tokens against AerialWaste's 0.90, and its labels come from drawn
+    annotations rather than site-level inspection records, so if material naming
+    works anywhere it should work there. Failure on BOTH would mean material
+    naming from aerial imagery is hard in general; failure on AerialWaste alone
+    would localise the problem to that dataset's scale and label semantics.
+    """
+    if dataset == "dronewaste":
+        w = json.loads((DATA / "dronewaste" / "dronewaste_v1.0.json").read_text())
+        cat = {c["id"]: c["name"] for c in w["categories"]}
+        img = {i["id"]: i["file_name"] for i in w["images"]}
+        out = []
+        for a in w["annotations"]:
+            p = DATA / "dronewaste" / "images" / img[a["image_id"]]
+            if p.exists() and a["category_id"] in cat:
+                out.append((p, tuple(a["bbox"]), cat[a["category_id"]]))
+        return sorted({c for c in cat.values()}), out
+
     d = json.loads((DATA / "aerialwaste" / MCML[dataset] / f"{split}.json").read_text())
     cat = {c["id"]: c["name"] for c in d["categories"]}
     out = []
@@ -78,7 +97,8 @@ def crop(img, box, ctx: float):
 
 def cue_prompts(dataset: str, cats: list[str]) -> dict[str, list[str]]:
     """Text prompts per category: the plain name plus the hand-written aerial cue."""
-    path = pathlib.Path(__file__).resolve().parents[1] / "src" / f"{dataset}_descriptions.json"
+    stem = {"dronewaste": "paper10"}.get(dataset, dataset)
+    path = pathlib.Path(__file__).resolve().parents[1] / "src" / f"{stem}_descriptions.json"
     d = json.loads(path.read_text()) if path.exists() else {}
     out = {}
     for c in cats:
@@ -188,7 +208,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--generate", action="store_true")
     ap.add_argument("--report")
-    ap.add_argument("--dataset", default="aw_m2", choices=["aw_m2", "aw_m4"])
+    ap.add_argument("--dataset", default="aw_m2",
+                    choices=["aw_m2", "aw_m4", "dronewaste"])
     ap.add_argument("--ckpt")
     ap.add_argument("--encoder", default="cradiov4-so")
     ap.add_argument("--image-size", type=int, default=768)
