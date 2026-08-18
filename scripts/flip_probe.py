@@ -109,7 +109,11 @@ def report(args) -> None:
         print(f"    flipped the word: {swapped}/{n} = {swapped/n:.0%}"
               f"   (repeat-the-prior predicts 0%, grounded predicts 100%,"
               f" iid-guessing predicts {chance:.0%})")
-        print(f"    p vs coin-flip: {binom_p(swapped, n):.2ග}".replace("ග", "g"))
+        # The null that matters is not a coin flip, it is "the word is drawn from
+        # the same marginal no matter where the waste is", which predicts `chance`.
+        print(f"    p vs position-blind null ({chance:.0%}): "
+              f"{binom_p(swapped, n, chance):.3g}"
+              f"   |  p vs fully-grounded (100%): {0.5**n if swapped < n else 1.0:.3g}")
         kept = [(a, b) for a, b in pairs if a == b]
         if kept:
             side = "".join(sorted({lo if a == -1 else hi for a, _ in kept}))
