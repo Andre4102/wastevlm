@@ -43,6 +43,28 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 CTX_FRAME = "Based on this aerial image analysis:\n{desc}\n\n{q}"
 
+# Injected reference: what each category LOOKS LIKE from above, hand-written for
+# aerial identification and already in the repo (src/aw_m2_descriptions.json).
+# The whole block is 172 tokens, so it is nearly free -- the binding question is
+# not budget but whether the model can read the properties the cues appeal to.
+# Every cue leans on colour and texture ("grey/beige, dusty", "bright colours,
+# smooth/glossy", "rusty-brown"), and the ladder's appearance rung came back as a
+# template with colour mentioned once in six images. If the model cannot report
+# those properties unprompted, telling it which property maps to which label
+# cannot help, and this condition is what shows that rather than assuming it.
+CUE_FRAME = "Use these descriptions of how each material looks from above:\n{cues}\n\n{q}"
+
+
+def cue_block(dataset: str) -> str:
+    """The `aerial_cue` line for each category, as one reference block."""
+    import json as _json
+    name = {"aw_m2": "aw_m2", "aw_m4": "aw_m4", "dw_paper10": "paper10"}[dataset]
+    path = pathlib.Path(__file__).resolve().parents[1] / "src" / f"{name}_descriptions.json"
+    d = _json.loads(path.read_text())
+    return "\n".join(f"- {k}: {v['aerial_cue']}"
+                     for k, v in d.items()
+                     if isinstance(v, dict) and "aerial_cue" in v)
+
 
 def questions(dataset: str) -> dict[str, str]:
     """One Yes/No question per category, built from the same cue file the
@@ -70,6 +92,7 @@ def generate(args) -> None:
     from scripts.make_convo import load_samples
 
     qs = questions(args.dataset)
+    cues = cue_block(args.dataset)
     print(f"[names] {len(qs)} category questions:")
     for c, q in qs.items():
         print(f"   {c:22s} {q}")
@@ -104,11 +127,13 @@ def generate(args) -> None:
         rec = {"image_id": s.image_id, "gt": sorted(s.extra["gt_categories"]),
                "desc": desc,
                "gate": adapter.decision_margin(img, vlm_calib.QUESTION),
-               "bare": {}, "ctx": {}}
+               "bare": {}, "ctx": {}, "cued": {}}
         for cat, q in qs.items():
             rec["bare"][cat] = adapter.decision_margin(img, q)
             rec["ctx"][cat] = adapter.decision_margin(
                 img, CTX_FRAME.format(desc=desc, q=q))
+            rec["cued"][cat] = adapter.decision_margin(
+                img, CUE_FRAME.format(cues=cues, q=q))
         out.append(rec)
         if n % 25 == 0:
             print(f"[names] {n}/{len(have)}", flush=True)
@@ -150,7 +175,8 @@ def report(args) -> None:
         print("  [warn] no --fit: thresholds fitted on the test set itself, "
               "so these numbers are an upper bound, not an estimate")
 
-    for cond in ("bare", "ctx"):
+    conds = [c for c in ("bare", "ctx", "cued") if c in test[0]]
+    for cond in conds:
         print(f"\n=== {cond}: one Yes/No question per category "
               f"({len(fit)} fit / {len(test)} test images)")
         print(f"  {'category':24s} {'prev':>6s} {'AUC':>6s} {'thr':>7s} "
