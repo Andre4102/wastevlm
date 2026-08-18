@@ -1198,3 +1198,92 @@ gate first, describe second, so the false mentions never surface.
 
 For a closed-vocabulary benchmark number instead, `n1` remains the naming arm
 (aw_m2 0.355) and the 150K base the drone arm.
+
+## Grounded-architecture batch: what the six experiments settled (2026-08-18)
+
+Six experiments run against the Track A/B plan. Two contradict predictions made
+earlier the same day, and those come first.
+
+### Retraction: resolution does not unlock naming
+
+I argued that AerialWaste's 0.90-token median object was a *projector* artefact and
+that a finer dense map would lift the material head. The frozen-feature sweep says
+no. Naming micro-F1, positives only, best constant predictor **0.697**:
+
+| input | 768px | 1024px | 1536px |
+|---|---:|---:|---:|
+| naming micro-F1 | 0.727 | 0.727 | 0.720 |
+| detection AUC | 0.9696 | 0.9703 | 0.9692 |
+| detection J | 0.853 | 0.864 | 0.863 |
+
+Flat, then slightly down. The encoder does not matter either — C-RADIOv4-H 0.734,
+DINOv3-L 0.730, C-RADIOv4-SO400M 0.727, all within noise of each other *and of the
+constant predictor*. Whatever bounds material naming, it is neither spatial
+resolution nor backbone choice.
+
+### Ceiling experiment: naming fails with perfect localisation
+
+The 1350 labelled AerialWaste object crops (`scripts/roi_material.py`), detection
+removed entirely. Majority-class bar **0.399**:
+
+| readout | accuracy | macro-recall |
+|---|---:|---:|
+| GeoRSCLIP ViT-L/14 | 0.384 | 0.290 |
+| RemoteCLIP ViT-L/14 | 0.375 | 0.274 |
+| our VLM (Yes/No on crop) | 0.345 | 0.330 |
+
+Every readout is **below the bar**, at both context margins. Macro-recall against a
+0.20 chance floor says a trace of signal exists, but nothing here can name an
+AerialWaste material. With the supervised probe barely clearing its constant
+predictor, the honest reading is that these five categories are **not recoverable
+from this imagery** — a statement about the task, not the method, and one that
+bounds any material head built on top.
+
+### Retraction: the model *is* looking at the waste, for detection
+
+I wrote repeatedly that the decoder loses the signal. For the presence decision
+that is wrong. Removing the annotated waste (2.44% of the tile) vs removing an
+equal area elsewhere (`scripts/occlusion_probe.py`):
+
+| arm | Δ waste removed | Δ control removed | p | images |
+|---|---:|---:|---:|---:|
+| n2d | **−1.782** | +0.086 | 8e-26 | 84% |
+| n1 | **−1.389** | +0.033 | 3e-26 | 87% |
+
+Sign flips Yes→No: 44 vs 1 (n2d), 24 vs 1 (n1). Crop of the largest box scores
++0.002 against **−3.174** for a same-sized background crop. This is genuine
+grounding and the strongest positive result in the project.
+
+Category-level grounding is far weaker. Drop for categories that ARE present vs
+ABSENT on the same image: n2d +1.235 vs +0.886 (p=2e-9) — real, but **72% of the
+effect is presence, not identity**. n1 shows none (p=0.207).
+
+### Object scale is the lever for grounding, not for naming
+
+Grounding DINO, zero waste-specific training, identical code and prompts:
+
+| dataset | tokens/object | box recall @ IoU 0.5 |
+|---|---:|---:|
+| AerialWaste | 0.90 | 0.150 |
+| DroneWaste | 7.96 | **0.819** |
+
+A 5.5× recall difference tracking a 9× object-size difference. Generic
+open-vocabulary grounding **transfers** to aerial waste when objects are
+resolvable and collapses when they are not. Neither dataset gets image-level
+discrimination at the low threshold — both fire on ~100% of negatives — so this is
+a localisation result, not a detector.
+
+Kosmos-2 returns one box and a language-prior caption ("garbage or dumped waste is
+a major problem in the world"), the exact failure mode the grounding plan exists to
+avoid.
+
+### Consequence for the plan
+
+- **Detection + localisation is the defensible thesis story.** Grounding is real
+  (occlusion), transfers zero-shot at adequate object scale (GDINO on DroneWaste),
+  and the frozen probe reaches AUC 0.970.
+- **The material branch (B4/B5/Model 6-7) has no headroom on AerialWaste.** Three
+  independent readouts and a supervised probe all sit at or below their baselines,
+  and neither resolution nor encoder moves it.
+- **DroneWaste should carry the grounding experiments**, AerialWaste the detection
+  ones. Reporting AerialWaste grounding numbers measures object scale, not method.
