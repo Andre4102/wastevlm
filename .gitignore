@@ -9,3 +9,6 @@ __pycache__/
 
 # Thesis chapter drafts (kept local, not tracked)
 thesis_chapter/
+
+# Vendored upstream checkouts: large, and pinned by clone rather than by us.
+vendored/GeoChat/
