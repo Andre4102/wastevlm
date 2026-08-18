@@ -160,11 +160,16 @@ def generate(args) -> None:
         del model
         torch.cuda.empty_cache()
 
+    # Write once the CLIP passes are done. They are the expensive half and a
+    # failure in the VLM stage below should not discard them.
+    pathlib.Path(args.out).write_text(json.dumps({"cats": cats, "rows": recs}))
+    print(f"[write] {args.out}  (CLIP stage complete)", flush=True)
+
     # --- our VLM, per-category Yes/No on the crop -----------------------------
     if args.ckpt:
         from src.vlm_eval import WasteVLMAdapter
-        from scripts.name_probe import questions
-        qs = questions(args.dataset)
+        qs = {c: f"Is there {c.lower()} visible in this image? Answer Yes or No."
+              for c in cats}
         ad = WasteVLMAdapter(args.ckpt, encoder=args.encoder,
                              image_size=args.image_size, pixel_shuffle=args.pixel_shuffle)
         ad.load()
