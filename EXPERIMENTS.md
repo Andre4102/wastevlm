@@ -1362,11 +1362,32 @@ classes 5/5 -> 4/5. Blur collapses the readout onto "Bulky items", which is a
 better bet than anything it knew. That is why macro-recall is the reported
 column.
 
-### What this settles
+### What this settles, and what it does not
 
-AerialWaste's material labels come from site inspection records: mean 2.56 of 5
-categories per positive, and P(B|A) is approximately the marginal P(B). They
-describe what an inspector logged at the site, not what is in the pixels of a
-given crop. No sensor upgrade, no encoder and no prompt can recover a target that
-is not a function of the input. **Material naming needs per-object annotation,
-which is what DroneWaste has and AerialWaste does not.**
+CORRECTION. An earlier draft of this section said AerialWaste's material labels
+come from site inspection records and are therefore not statements about a given
+crop. Both halves are wrong. They are hand annotations made by looking at the
+imagery, and they are genuinely per-object: of the 191 test images carrying more
+than one box, 88.5% have boxes with differing categories, so the label is not an
+image-level tag broadcast onto every box.
+
+What the degradation curve does support is narrow and within-dataset: AerialWaste
+material signal is weak at *every* resolution it was measured at, 1.03x chance at
+16px rising only to 1.54x at native, so the last factor of two in pixels is not
+what stands between it and a usable classifier.
+
+What it does NOT support is the cross-dataset reading. Matched pixels are not
+matched information: AerialWaste's ground sampling distance is far coarser, so a
+40px AerialWaste crop is a downsampled patch of many metres of mixed ground while
+a 40px DroneWaste crop is a downsampled single object. Degrading DroneWaste
+removes pixels from one object; it does not reproduce what an AerialWaste crop
+contains. The 1.40x against 3.99x comparison is suggestive, not controlled.
+
+The most direct evidence that this task is hard for *people* and not only for
+models is in the label distribution itself: **25.8% of AerialWaste's annotated
+objects are labelled "Unknown material"**. Annotators working from the full
+image, at full resolution, with scene context, declined to name a quarter of what
+they boxed. Whatever a model recovers, it is bounded by a target that its own
+authors could not assign a quarter of the time -- alongside ordinary annotator
+noise, which the label set gives no way to estimate without a re-annotated
+subset.
