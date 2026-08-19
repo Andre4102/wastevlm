@@ -1287,3 +1287,42 @@ avoid.
   and neither resolution nor encoder moves it.
 - **DroneWaste should carry the grounding experiments**, AerialWaste the detection
   ones. Reporting AerialWaste grounding numbers measures object scale, not method.
+
+## The material branch is dataset-bound, not impossible (2026-08-19)
+
+The ceiling experiment run on DroneWaste, same code and same readouts as the
+AerialWaste run above, on 5135 ground-truth object crops across 20 categories.
+
+| readout | AerialWaste (5 cats) | DroneWaste (20 cats) |
+|---|---:|---:|
+| majority-class baseline | 0.399 | 0.198 |
+| GeoRSCLIP-L14 @ctx 0.5 | 0.356 (**−0.044**) | **0.314** (+0.116, p=7e-87) |
+| GeoRSCLIP-L14 @ctx 0.0 | 0.384 (−0.016) | 0.303 (+0.105, p=4e-72) |
+| RemoteCLIP-L14 @ctx 0.5 | 0.375 (−0.024) | 0.273 (+0.076, p=4e-39) |
+| RemoteCLIP-L14 @ctx 0.0 | 0.299 (−0.101) | 0.212 (+0.015, p=0.005) |
+
+Every AerialWaste readout is **at or below** the majority baseline. Every
+DroneWaste readout is above it, the best by 11.6 points on a problem with four
+times as many classes. Normalising for that, macro-recall against 1/K chance:
+
+| | best macro-recall | classes | × chance |
+|---|---:|---:|---:|
+| AerialWaste | 0.330 | 5 | 1.65× |
+| DroneWaste | 0.244 | 20 | **4.89×** |
+
+So material identity **is** readable from a remote-sensing CLIP given a correct
+crop — just not from AerialWaste's crops. This matches the grounding result
+exactly: 0.90 tokens/object versus 7.96. The same 9× scale gap that separates
+0.150 from 0.819 box recall separates naming that fails from naming that works.
+
+Context helps on DroneWaste (+0.011 to +0.061 for ctx 0.5 over a tight crop) and
+hurts or does nothing on AerialWaste, which is what one expects when the crop
+itself carries no signal to contextualise.
+
+### Revision to the previous section
+
+"The material branch has no headroom" was too broad — it holds for AerialWaste
+and does not generalise. **Model 6-7's material head is worth building, on
+DroneWaste.** AerialWaste's site-level labels (mean 2.56 of 5 categories per
+positive, P(B|A) ≈ marginal P(B)) describe a site, not the pixels in a crop, and
+no readout can recover from that.
