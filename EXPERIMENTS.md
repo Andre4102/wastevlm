@@ -1326,3 +1326,47 @@ and does not generalise. **Model 6-7's material head is worth building, on
 DroneWaste.** AerialWaste's site-level labels (mean 2.56 of 5 categories per
 positive, P(B|A) ≈ marginal P(B)) describe a site, not the pixels in a crop, and
 no readout can recover from that.
+
+## It is the labels, not the sensor (2026-08-19)
+
+The ceiling experiment crops to the object and upsamples, so the token-budget gap
+that explains grounding (0.90 tokens per object against 7.96) is already removed
+there. AerialWaste failed anyway, leaving two live explanations: too few pixels
+on the object, or a label that was never a statement about that crop.
+
+`--degrade` separates them. Crops are thrown down to N pixels across before the
+usual preprocess, so on DroneWaste -- whose labels are drawn per object -- label
+quality is held fixed and only pixels vary. GeoRSCLIP, ctx 0.5, macro-recall as a
+multiple of 1/K chance so the 5-class and 20-class problems are comparable:
+
+| pixels across the object | AerialWaste (5 cls) | DroneWaste (20 cls) |
+|---|---:|---:|
+| 16 | 1.03x | 2.37x |
+| 24 | 1.13x | 3.27x |
+| **40** (AerialWaste's native median) | **1.40x** | **3.99x** |
+| 64 | 1.50x | 4.46x |
+| native | 1.54x | 4.89x |
+
+**At a matched pixel budget DroneWaste is at 3.99x chance and AerialWaste at
+1.40x.** Same number of pixels on the object, roughly seven times the
+discriminative signal. Resolution cannot be the explanation.
+
+Both datasets degrade at the same rate -- 73% and 77% of their above-chance
+signal survives to 40px -- so the imagery behaves identically under pixel loss.
+The difference is that one of them has signal to lose (3.89x above chance) and
+the other never had any (0.54x).
+
+Note the accuracy column inverts on AerialWaste: degrading to 16px *raises*
+accuracy 0.384 -> 0.424 while dropping macro-recall 0.290 -> 0.237 and predicted
+classes 5/5 -> 4/5. Blur collapses the readout onto "Bulky items", which is a
+better bet than anything it knew. That is why macro-recall is the reported
+column.
+
+### What this settles
+
+AerialWaste's material labels come from site inspection records: mean 2.56 of 5
+categories per positive, and P(B|A) is approximately the marginal P(B). They
+describe what an inspector logged at the site, not what is in the pixels of a
+given crop. No sensor upgrade, no encoder and no prompt can recover a target that
+is not a function of the input. **Material naming needs per-object annotation,
+which is what DroneWaste has and AerialWaste does not.**
