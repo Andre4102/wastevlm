@@ -97,8 +97,39 @@ paraphrase, and by its EWC parent**, and report how far accuracy falls as the
 query gets more abstract. Also query with names that are *absent* from the
 dataset entirely, to measure how readily the vocabulary hallucinates.
 
-**Report 15 classes, not 20.** Five have too few instances to mean anything
-(Foundry 3, Asphalt milling 1, Paper 11, Electronic equipment 11, Appliances 35).
+### The long tail is the argument, not a nuisance
+
+An earlier draft of this plan said to report 15 classes and drop the other five.
+That was wrong, and backwards. The tail is the case *for* this approach.
+
+| | classes | objects | can a detector be trained on it? |
+|---|---:|---:|---|
+| head (>=100 objects) | 15 | 5074 | yes |
+| tail (<100 objects) | 5 | **61** | no -- Appliances 35, Paper 11, Electronic equipment 11, Foundry 3, Asphalt milling **1** |
+
+A YOLO or Faster R-CNN cannot learn a class from one training instance; there is
+nothing to fit. A text-driven pipeline needs zero instances, only the class name.
+So the honest comparison, and the one that makes the case:
+
+- Train the supervised detector on the head. Show that it scores ~0 on the tail,
+  because it must.
+- Run the zero-shot pipeline on all 20 without ever seeing any of them, and show
+  non-trivial tail performance.
+- Report **per-class results for all 20 with instance counts beside them**, plus
+  a *pooled* tail figure. Pooled over 61 objects the tail is a real measurement;
+  per-class at n=1 it is an anecdote, and should be labelled as one rather than
+  quietly averaged into a macro score.
+
+This also sharpens which naming arm carries the thesis. **A linear probe on ROI
+tokens needs labels per class and therefore inherits exactly the detector's tail
+problem.** Only the zero-shot text arm covers classes with no training instances.
+The strongest system is likely a hybrid -- probe on the head where labels are
+plentiful, text matching on the tail -- and the strongest *argument* is the tail
+column, where the supervised baseline is structurally at zero.
+
+Note that this makes the supervised detector a **baseline**, not a component. It
+gets trained; the proposed system still does not. Budget ~8 GPU-h for a
+Faster R-CNN / YOLO head-class baseline, and treat it as the thing to beat.
 
 ## Phase 3 — grounding verification (~8 GPU-h)
 

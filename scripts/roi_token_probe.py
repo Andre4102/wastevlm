@@ -66,19 +66,20 @@ def roi_pool(patches, grid: int, box, native, pad: float):
     return (g.mean(0), g.max(0).values, (y1 - y0) * (x1 - x0))
 
 
-def split_by_image(rois, frac=0.25):
-    """Hold out whole images, not objects: two crops of one pile are not two samples.
+def split_by_site(rois, held_out=("site5", "site9", "site13", "site17", "site2")):
+    """Hold out whole SITES, not images.
 
-    DroneWaste ships no train/test split, and splitting its objects at random
-    would put the same image on both sides.
+    DroneWaste ships no split, and its 4993 images are crops cut from 17
+    hand-annotated sites, so crops from one site are near duplicates of each
+    other. An image-level split leaves the same pile on both sides of the
+    evaluation and reports a number that is mostly memorisation. The default
+    held-out set spans large and small sites and 5 of the 17.
     """
-    import hashlib
+    def site(p):
+        return pathlib.Path(p).name.split("_")[0]
 
-    def bucket(p):
-        return int(hashlib.md5(str(p).encode()).hexdigest(), 16) % 1000 / 1000.0
-
-    te = [r for r in rois if bucket(r[0]) < frac]
-    tr = [r for r in rois if bucket(r[0]) >= frac]
+    te = [r for r in rois if site(r[0]) in held_out]
+    tr = [r for r in rois if site(r[0]) not in held_out]
     return tr, te
 
 
@@ -149,7 +150,7 @@ def main() -> None:
 
     cats, rois = load_rois(args.dataset, "test")
     if args.dataset == "dronewaste":
-        tr_rois, rois = split_by_image(rois)   # ships no split of its own
+        tr_rois, rois = split_by_site(rois)   # ships no split of its own
     else:
         _c2, tr_rois = load_rois(args.dataset, "train")
     print(f"[roi-token] {len(tr_rois)} train / {len(rois)} test objects, {len(cats)} classes")
