@@ -123,7 +123,7 @@ def encode(enc, rois, pad, batch_size):
     return out, ntok
 
 
-def fit_multiclass(X_tr, y_tr, X_te, y_te, cats):
+def fit_multiclass(X_tr, y_tr, X_te, y_te, cats, keep=None):
     from sklearn.linear_model import LogisticRegression
     from sklearn.preprocessing import normalize
 
@@ -133,6 +133,8 @@ def fit_multiclass(X_tr, y_tr, X_te, y_te, cats):
     acc = float((pred == y_te).mean())
     rec = [float((pred[y_te == c] == c).mean()) for c in range(len(cats))
            if (y_te == c).sum()]
+    if keep is not None:
+        keep.append(pred.tolist())
     return acc, float(np.mean(rec)), len(set(pred.tolist()))
 
 
@@ -175,9 +177,11 @@ def main() -> None:
 
     rep = {"dataset": args.dataset, "image_size": args.image_size, "cats": cats,
            "majority": base, "tokens_per_object_median": int(np.median(n_te)),
-           "readouts": {}}
+           "y_true": y_te.tolist(), "pred": {}, "readouts": {}}
     for k in ("roi_mean", "roi_max", "cls"):
-        acc, mrec, npred = fit_multiclass(F_tr[k], y_tr, F_te[k], y_te, cats)
+        keep = []
+        acc, mrec, npred = fit_multiclass(F_tr[k], y_tr, F_te[k], y_te, cats, keep)
+        rep["pred"][k] = keep[0]
         tag = "whole image, no ROI" if k == "cls" else "tokens inside the box"
         print(f"  {k:9s} acc {acc:.3f} ({acc - base:+.3f} vs majority)  "
               f"macro-recall {mrec:.3f} = {mrec * len(cats):.2f}x chance  "

@@ -150,7 +150,12 @@ def main() -> None:
     T = text_bank(cats, args.dataset, encode_text).to(dev)
     print(f"[zs] {args.encoder} @{args.image_size} -> {g}x{g}; text bank {tuple(T.shape)}")
 
-    rep = {"dataset": args.dataset, "image_size": args.image_size, "modes": {}}
+    # Keep per-object predictions, not only the aggregates. A tail of five classes
+    # holding 61 objects -- one of them a single instance -- says nothing when
+    # pooled, and re-running a GPU job to answer "which class" is a waste when the
+    # predictions could simply have been written down.
+    rep = {"dataset": args.dataset, "image_size": args.image_size,
+           "cats": cats, "y_true": y_true.tolist(), "modes": {}, "pred": {}}
 
     if "crop-summary" in args.modes:
         head = load_projection("siglip2-g", "summary", args.encoder, device=dev)
@@ -180,8 +185,10 @@ def main() -> None:
             if n % 640 == 0:
                 print(f"   crop-summary {n}/{len(rois)}", flush=True)
         for k in range(nslice):
+            yp = np.concatenate(S[k]).argmax(1)
+            rep["pred"][f"crop-summary[cls{k}]"] = yp.tolist()
             rep["modes"][f"crop-summary[cls{k}]"] = report(
-                f"crop-sum[cls{k}]", y_true, np.concatenate(S[k]).argmax(1), cats, prev)
+                f"crop-sum[cls{k}]", y_true, yp, cats, prev)
 
     if "roi-dense" in args.modes or "dense-seg" in args.modes:
         fp = load_projection("siglip2-g", "features", args.encoder, device=dev)
@@ -210,6 +217,7 @@ def main() -> None:
             if n % 100 == 0:
                 print(f"   dense {n}/{len(by_image)}", flush=True)
         if "roi-dense" in args.modes:
+            rep["pred"]["roi-dense"] = S.argmax(1).tolist()
             rep["modes"]["roi-dense"] = report("roi-dense", y_true, S.argmax(1), cats, prev)
         if seg_rows:
             mass = float(np.mean([r["mass_in_box"] for r in seg_rows]))
