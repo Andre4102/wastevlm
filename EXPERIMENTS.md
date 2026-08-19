@@ -1484,3 +1484,45 @@ several candidate prompt sets, keep the one that separates the candidates best o
 the actual image embeddings, since margin is already known to track correctness at
 AUROC 0.82. The failure mode to check is that confidently-wrong prompts also score
 high margin, which is what the development labels are for.
+
+## Detection, not reasoning or naming, is what bounds the compositional system (2026-08-19)
+
+The four-arm harness separates perception error from reasoning error, which an
+end-to-end evaluation cannot. On the development sites, 4496 questions over 759
+images with the symbolic solver verified at exactly 1.000 over ground-truth scenes:
+
+| family | trivial bar | symbolic / GT | symbolic / predicted |
+|---|---:|---:|---:|
+| count | 0.604 | 1.000 | **0.142** |
+| presence (control) | 1.000 | 1.000 | 0.692 |
+| area_compare | 0.508 | 1.000 | 0.585 |
+| negation_spatial | 0.517 | 1.000 | 0.584 |
+| spatial | 0.508 | 1.000 | 0.551 |
+| count_compare | 0.536 | 1.000 | 0.524 |
+| superlative | 0.268 | 1.000 | 0.309 |
+| **overall** | | **1.000** | **0.462** |
+
+**Perception costs 0.538 with reasoning held perfect**, and most families barely
+clear the majority-or-oracle bar they are scored against.
+
+The obvious explanation was over-proposal: the scene graph carried 29.3 detections
+per image against 4.8 real objects, with no deduplication. It is wrong. Filtering
+by score and applying NMS makes things monotonically WORSE -- 0.462 unfiltered, 0.447
+at 10.1 per image, 0.404 at 4.1 per image, which is the ground truth's own density
+almost exactly. Counting never recovers, at 0.142, 0.140 and 0.103.
+
+So the detections do not correspond to the annotated objects at any operating point,
+and matching the count does not make them the right objects. That agrees with the
+detector measured directly: at a proposal budget matched to the number of objects
+present, the bridged arm recalls 0.258 and native SAM3 0.340. Three quarters of the
+objects are not there to reason over.
+
+### Consequence
+
+Detection recall at a sane budget is the binding constraint on the whole agentic
+design. Naming, routing, prompt engineering and the decoder's composition all
+operate downstream of a scene graph that is missing most of its objects, and no
+amount of work on them can recover what was never detected. The complementarity
+already measured -- Grounding DINO 0.909 on large objects and 0.273 on small, SAM3
+0.716 and 0.682 -- makes their union the first thing to try, ahead of any further
+work on the language half.
