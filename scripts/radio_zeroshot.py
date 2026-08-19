@@ -175,6 +175,7 @@ def main() -> None:
     # predictions could simply have been written down.
     rep = {"dataset": args.dataset, "image_size": args.image_size,
            "cats": cats, "y_true": y_true.tolist(), "modes": {}, "pred": {}}
+    E = None
 
     if "crop-summary" in args.modes:
         head = load_projection("siglip2-g", "summary", args.encoder, device=dev)
@@ -192,6 +193,7 @@ def main() -> None:
             with torch.no_grad():
                 cls = enc.encode(ims).cls
                 if S is None:
+                    E = [[] for _ in range(4)]
                     nslice = max(1, cls.shape[-1] // hdim)
                     S = [[] for _ in range(nslice)]
                     print(f"[zs] CLS {cls.shape[-1]} = {nslice} x {hdim}; "
@@ -200,6 +202,8 @@ def main() -> None:
                     e = head(cls[:, k * hdim:(k + 1) * hdim].to(
                         next(head.parameters()).dtype))
                     e = torch.nn.functional.normalize(e.float(), dim=-1)
+                    if k == 0:
+                        E[0].append(e.cpu().numpy())
                     S[k].append((e @ T.T).cpu().numpy())
             if n % 640 == 0:
                 print(f"   crop-summary {n}/{len(rois)}", flush=True)
@@ -259,6 +263,13 @@ def main() -> None:
     if args.out_json:
         pathlib.Path(args.out_json).write_text(json.dumps(rep, indent=2))
         print(f"\n[write] {args.out_json}")
+        # Image embeddings beside the summary. Once these exist every further
+        # prompt experiment is text-only and costs seconds instead of a GPU pass
+        # over five thousand crops.
+        if "crop-summary" in args.modes and E and E[0]:
+            npy = str(pathlib.Path(args.out_json).with_suffix(".emb.npy"))
+            np.save(npy, np.concatenate(E[0]))
+            print(f"[write] {npy}  (SigLIP2-space image embeddings)")
 
 
 if __name__ == "__main__":
