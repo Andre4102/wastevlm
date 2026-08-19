@@ -58,11 +58,18 @@ GEOCHAT_BOX = re.compile(r"\{?<(\d+)><(\d+)><(\d+)><(\d+)>(?:\|<?-?\d+>?)?\}?")
 
 
 def parse_geochat_boxes(text: str, W: int, H: int) -> list[list[float]]:
-    """GeoChat emits {<x1><y1><x2><y2>|<angle>} with coords on a 0-100 grid."""
+    """GeoChat emits {<x1><y1><x2><y2>|<angle>} with coords on a 0-100 grid.
+
+    The grid spans the square the image was padded into, not the image, so the
+    padding has to come back off or every box on a non-square image is offset.
+    """
+    S = max(W, H)
+    px, py = (S - W) / 2, (S - H) / 2
     out = []
     for m in GEOCHAT_BOX.finditer(text):
         x1, y1, x2, y2 = (int(v) for v in m.groups())
-        out.append([x1 / 100 * W, y1 / 100 * H, x2 / 100 * W, y2 / 100 * H])
+        out.append([x1 / 100 * S - px, y1 / 100 * S - py,
+                    x2 / 100 * S - px, y2 / 100 * S - py])
     return out
 
 
@@ -115,7 +122,7 @@ def run_geochat(items, queries, args):
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "vendored" / "GeoChat"))
     from geochat.constants import DEFAULT_IMAGE_TOKEN, IMAGE_TOKEN_INDEX
     from geochat.conversation import conv_templates
-    from geochat.mm_utils import tokenizer_image_token
+    from geochat.mm_utils import process_images, tokenizer_image_token
     from geochat.model.builder import load_pretrained_model
 
     d = str(WEIGHTS / "grounding" / "geochat-7B")
@@ -127,8 +134,9 @@ def run_geochat(items, queries, args):
     for n, (path, gt, has) in enumerate(items):
         img = Image.open(path).convert("RGB")
         W, H = img.size
-        px = image_processor.preprocess(img, return_tensors="pt")["pixel_values"]
-        px = px.half().cuda()
+        # GeoChat runs at 504px on a pad-to-square image; the processor's own
+        # defaults are stock CLIP's 336, which is the wrong number of patches.
+        px = process_images([img], image_processor, model.config).half().cuda()
         rec = {"image": str(path), "gt": gt, "has_waste": has, "preds": {}, "text": {}}
         for qname, q in queries.items():
             qs = f"{DEFAULT_IMAGE_TOKEN}\n[refer] Give me the location of <p> {q} </p>"
