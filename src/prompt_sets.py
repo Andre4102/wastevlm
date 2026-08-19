@@ -76,10 +76,25 @@ CONTRASTIVE = {
 }
 
 
-def build(cats, base: dict, variant: str = "base") -> dict:
+def load_bank(path) -> dict:
+    """A generated prompt bank, written by scripts/expand_prompts.py."""
+    import json
+    import pathlib as _p
+    return json.loads(_p.Path(path).read_text())
+
+
+def build(cats, base: dict, variant: str = "base", bank: dict | None = None) -> dict:
     """-> {class: [prompt, ...]}. `base` is the generic/EWC set already in use."""
     if variant == "base":
         return base
+    if variant == "expanded":
+        # widened prompts for the conservative classes, PLUS the contrastive lines
+        # for the ones that collide -- the two fixes address different classes and
+        # composing them is the point
+        out = {}
+        for c in cats:
+            out[c] = list((bank or {}).get(c) or base.get(c, [])) + CONTRASTIVE.get(c, [])
+        return out
     if variant != "contrastive":
         raise ValueError(variant)
     out = {}

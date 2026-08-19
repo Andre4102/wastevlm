@@ -83,12 +83,12 @@ def mask_on_grid(seg, size, g: int) -> np.ndarray:
     return np.array([[a[np.ix_(y, x)].any() for x in xs] for y in ys], dtype=bool)
 
 
-def text_bank(cats, dataset, encode_text, variant="base"):
+def text_bank(cats, dataset, encode_text, variant="base", bank=None):
     """One L2-normalised embedding per class, averaged over its prompt list."""
     import torch
 
     from src.prompt_sets import build as build_prompts
-    prompts = build_prompts(cats, cue_prompts(dataset, cats), variant)
+    prompts = build_prompts(cats, cue_prompts(dataset, cats), variant, bank)
     T = []
     for c in cats:
         e = encode_text(prompts[c])
@@ -126,7 +126,9 @@ def main() -> None:
                     default=["crop-summary", "roi-dense", "dense-seg"])
     ap.add_argument("--ctx", type=float, default=0.5)
     ap.add_argument("--limit", type=int, default=0)
-    ap.add_argument("--prompt-set", default="base", choices=["base", "contrastive"])
+    ap.add_argument("--prompt-set", default="base",
+                    choices=["base", "contrastive", "expanded"])
+    ap.add_argument("--prompt-bank", help="json written by scripts/expand_prompts.py")
     ap.add_argument("--dev-sites", action="store_true",
                     help="score the TRAINING sites, for developing prompts without "
                          "touching the evaluation set")
@@ -166,7 +168,11 @@ def main() -> None:
     g = enc.image_size // enc.patch_size
     dev = enc.device
     encode_text = siglip2_text(device=dev)
-    T = text_bank(cats, args.dataset, encode_text, args.prompt_set).to(dev)
+    bank = None
+    if args.prompt_bank:
+        from src.prompt_sets import load_bank
+        bank = load_bank(args.prompt_bank)
+    T = text_bank(cats, args.dataset, encode_text, args.prompt_set, bank).to(dev)
     print(f"[zs] {args.encoder} @{args.image_size} -> {g}x{g}; text bank {tuple(T.shape)}")
 
     # Keep per-object predictions, not only the aggregates. A tail of five classes

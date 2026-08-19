@@ -51,10 +51,11 @@ def per_class(cats, y_true, y_pred):
         hit = sum(1 for j in idx if y_pred[j] == i)
         npred = sum(1 for p in y_pred if p == i)
         tp = hit
-        out[c] = {"n": len(idx), "recall": (hit / len(idx)) if idx else float("nan"),
-                  "ci": wilson(hit, len(idx)),
-                  "precision": (tp / npred) if npred else float("nan"),
-                  "n_pred": npred}
+        rec = (hit / len(idx)) if idx else float("nan")
+        pre = (tp / npred) if npred else float("nan")
+        f1 = (2 * pre * rec / (pre + rec)) if (pre and rec and pre + rec > 0) else 0.0
+        out[c] = {"n": len(idx), "recall": rec, "ci": wilson(hit, len(idx)),
+                  "precision": pre, "f1": f1, "n_pred": npred}
     return out
 
 
@@ -62,7 +63,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--zeroshot")
     ap.add_argument("--probe")
-    ap.add_argument("--zs-mode", default="crop-summary[cls0]")
+    ap.add_argument("--zs-mode", default="roi-head")
     ap.add_argument("--probe-mode", default="roi_mean")
     args = ap.parse_args()
 
@@ -86,10 +87,10 @@ def main() -> None:
     ref = cols.get("zero-shot") or cols.get("supervised")
     order = sorted(cats, key=lambda c: -ref[c]["n"])
     print(f"\n{'class':38s} {'n':>5s} | " +
-          " | ".join(f"{k:>26s}" for k in cols))
+          " | ".join(f"{k:>34s}" for k in cols))
     print(f"{'':38s} {'':>5s} | " +
-          " | ".join(f"{'recall [95% CI]':>26s}" for _ in cols))
-    print("-" * (46 + 29 * len(cols)))
+          " | ".join(f"{'recall [95% CI]      P     F1':>34s}" for _ in cols))
+    print("-" * (46 + 37 * len(cols)))
     for c in order:
         tail = ref[c]["n"] < TAIL_MAX
         line = f"{c:38s} {ref[c]['n']:5d} |"
@@ -99,7 +100,8 @@ def main() -> None:
                 line += f" {'--':>26s} |"
             else:
                 lo, hi = e["ci"]
-                line += f" {e['recall']:.3f} [{lo:.2f},{hi:.2f}]{'':>7s}|"
+                line += (f" {e['recall']:.3f} [{lo:.2f},{hi:.2f}]  "
+                         f"{e['precision']:.3f} {e['f1']:.3f} |")
         print(line + ("  TAIL" if tail else ""))
 
     print()

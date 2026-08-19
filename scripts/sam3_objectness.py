@@ -67,8 +67,10 @@ def main() -> None:
 
     _cats, rois = load_rois(args.dataset, "test")
     by_image = defaultdict(list)
-    for p, b, _c in rois:
+    gtcls = {}
+    for p, b, c in rois:
         by_image[str(p)].append(list(b))
+        gtcls[(str(p), b[0], b[1], b[2], b[3])] = c
     paths = sorted(by_image)[: args.limit]
     print(f"[sam3] {len(paths)} images, {sum(len(by_image[p]) for p in paths)} objects, "
           f"prompt={args.text!r}")
@@ -113,7 +115,9 @@ def main() -> None:
     SMALL, LARGE = 32.0, 96.0
     stats = {a: {"h25": 0, "h50": 0, "n": 0, "nbox": 0, "floor": 0, "tp": 0,
                  "bud": {k: 0 for k in BUDGETS},
-                 "size": {"small": [0, 0], "medium": [0, 0], "large": [0, 0]}}
+                 "size": {"small": [0, 0], "medium": [0, 0], "large": [0, 0]},
+                 "merged": {"small": [0, 0], "medium": [0, 0], "large": [0, 0]},
+                 "percls": {}}
              for a in args.arms}
     seen = None
     for i, path in enumerate(paths):
@@ -169,6 +173,20 @@ def main() -> None:
                 bucket = "small" if side < SMALL else ("medium" if side < LARGE else "large")
                 s["size"][bucket][0] += best >= 0.50
                 s["size"][bucket][1] += 1
+                # Does the union of the boxes overlapping this object cover it?
+                # If a detector fragments one heap into parts, no single box clears
+                # IoU 0.5 while their union would -- which is a merging problem, not
+                # a detection failure, and the two call for different fixes.
+                ov = [b for b in boxes if iou(b, box) > 0.05]
+                if ov:
+                    u = [min(b[0] for b in ov), min(b[1] for b in ov),
+                         max(b[2] for b in ov), max(b[3] for b in ov)]
+                    s["merged"][bucket][0] += iou(u, box) >= 0.50
+                s["merged"][bucket][1] += 1
+                cls = gtcls.get((path, gx, gy, gw, gh), "?")
+                pc = s["percls"].setdefault(cls, [0, 0])
+                pc[0] += best >= 0.50
+                pc[1] += 1
                 W, H = img.size
                 fb = 0.0
                 for b in boxes:
@@ -197,6 +215,11 @@ def main() -> None:
               "  ".join(f"{k}x objects {s['bud'][k]/s['n']:.3f}" for k in BUDGETS))
         print("    by object size: " + "  ".join(
             f"{b} {v[0]/v[1]:.3f} (n={v[1]})" for b, v in s["size"].items() if v[1]))
+        print("    same, if overlapping boxes are merged into one: " + "  ".join(
+            f"{b} {v[0]/v[1]:.3f}" for b, v in s["merged"].items() if v[1]))
+        top = sorted(s["percls"].items(), key=lambda kv: -kv[1][1])[:8]
+        print("    per class: " + "  ".join(
+            f"{c.split()[0][:11]} {v[0]/v[1]:.2f}(n={v[1]})" for c, v in top))
         rep[a] = {"recall25": r25, "recall50": r50, "precision50": prec,
                   "floor": s["floor"] / s["n"],
                   "boxes_per_image": s["nbox"] / len(paths),

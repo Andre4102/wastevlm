@@ -25,6 +25,6 @@ export HF_HOME=/leonardo_scratch/large/userexternal/adiecidu/hf_cache
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false
 echo "[slurm] $(hostname) job=${SLURM_JOB_ID:-?} dataset=$DATASET img=$IMG"
 "$PYBIN/python" scripts/radio_zeroshot.py --dataset "$DATASET" --image-size "$IMG" \
-  --modes ${MODES:-crop-summary roi-dense dense-seg} ${SITES:+--held-out-sites} ${DEV:+--dev-sites} --prompt-set ${PSET:-base} \
+  --modes ${MODES:-crop-summary roi-dense dense-seg} ${SITES:+--held-out-sites} ${DEV:+--dev-sites} --prompt-set ${PSET:-base} ${BANK:+--prompt-bank $BANK} \
   --out-json "$WROOT/results/radio_zs_${DATASET}_${IMG}_${PSET:-base}${DEV:+_dev}.json"
 echo "[slurm] done=$(date -Is)"
