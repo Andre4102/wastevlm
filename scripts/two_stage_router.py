@@ -77,7 +77,7 @@ def load_decoder(path: str, device: str = "cuda"):
 
     tok = AutoTokenizer.from_pretrained(path)
     model = AutoModelForCausalLM.from_pretrained(
-        path, dtype=torch.bfloat16, device_map=device).eval()
+        path, torch_dtype=torch.bfloat16, device_map=device).eval()
 
     def generate(prompt: str, max_new_tokens: int = 700) -> str:
         msgs = [{"role": "user", "content": prompt}]
