@@ -1,54 +1,86 @@
-# Open-world detection and segmentation of waste — plan
+# Training-free open-world detection and segmentation of waste — plan
 
-## Where this starts from
+Every weight this needs is already on disk. Nothing here is trained.
 
-Settled by the experiments in `EXPERIMENTS.md`:
+## Why training-free is a real option and not a compromise
 
-- **Waste/no-waste detection works.** Frozen-feature probe AUC 0.970; the VLM
-  reaches micro-F1 0.601 once the readout is a Yes/No margin rather than free text.
-- **The decision is genuinely grounded.** Occluding the waste moves the margin
-  −1.782 against +0.086 for a matched control edit (p=8e-26, 84% of images).
-- **Object scale governs localisation.** Grounding DINO, no waste training:
-  0.819 box recall on DroneWaste against 0.150 on AerialWaste, tracking
-  7.96 against 0.90 visual tokens per object.
-- **Material naming works on DroneWaste and not on AerialWaste.** GeoRSCLIP on
-  ground-truth crops: 4.89× chance macro-recall over 20 classes, against 1.54×
-  over 5 on AerialWaste, where every readout sits at or below the majority baseline.
-- **Off-the-shelf grounded VLMs fail at AerialWaste's scale.** Kosmos-2 returns
-  language-prior captions; GeoChat sits at the random-placement floor and fires
-  on 100% of negatives.
+Each component's ceiling has already been measured on these datasets, so the
+pipeline's performance can be predicted before it is built:
 
-So the thesis claim is: *detection on aerial imagery, and on drone imagery the
-same pipeline both detects and identifies materials.* Everything below builds the
-second half out to open-world detection and segmentation.
+| component | role | measured on DroneWaste unless noted |
+|---|---|---|
+| Grounding DINO (base) | open-vocabulary proposals | **0.819** box recall @ IoU 0.5, zero waste training |
+| SAM 2 (hiera-large) | box/point -> mask | masks exist for all 5135 objects, so mask AP is directly scorable |
+| GeoRSCLIP / RemoteCLIP / SkyCLIP | naming, open vocabulary | **4.89x chance** macro-recall over 20 classes on GT crops |
+| our VLM (Yes/No margin) | presence gate | micro-F1 **0.601**; grounded (occlusion p=8e-26) |
+| `src/attribution.py` | where it looked | mass-in-box lift **+0.338**, 8.5x a centre prior |
 
-## What DroneWaste actually gives us
+The 3822 unannotated DroneWaste crops are **true negatives** -- hand-annotated
+sites, then cropped -- which makes false-positive rate measurable rather than
+assumed. That matters more than it sounds: Grounding DINO returns a box on
+essentially every negative it is shown. A detector that cannot say "nothing here"
+is not a detector, and the gate is the part that fixes it.
 
-| | |
-|---|---|
-| images | 4993, 640×640 |
-| annotated images | **1171** (the other 3822 need checking — negatives or unlabelled?) |
-| objects | 5135, **every one carrying a segmentation mask** |
-| categories | 20, mapped to EWC-Stat codes |
-| sites | 17, recorded per image |
+## The architecture, and why each part is where it is
 
-Two structural facts drive the whole design.
+```
+image ─► Grounding DINO ─► boxes ─► SAM 2 ─► masks ─┬─► GeoRSCLIP ─► material name
+             (open vocab)                            │      (open vocab, text)
+                                                     └─► VLM Yes/No ─► keep / drop
+                                                            (presence gate)
+                              attribution map ◄─────────────┘  (why here)
+```
 
-**Splits must be by site, never by image.** Images from one site are near
-duplicates of each other; an image-level split leaks. Site sizes are very uneven
-(site16 has 848 images but 186 objects; site14 has 279 images and 792 objects),
-so the split has to be built by object count, not image count.
+Each part does the thing it is measured to be good at, and nothing is asked to do
+the thing it is measured to be bad at. Specifically:
 
-**The class tail is severe.** Usable (≥100 objects): Pallets 1016, Textile 876,
-C&D materials 397, Scrap 394, Mixed items 365, Plastic packaging 342, Tyres 311,
-Asbestos 210, Furniture 189, Plastic 186, Vehicles 178, Wood 175, Metal barrels
-172, Rubble 161, Excavation materials 102. Unusable: Appliances 35, Paper 11,
-Electronic equipment 11, Foundry 3, Asphalt milling 1. **15 classes, not 20** —
-reporting a 20-way number invites a reviewer to ask about the class with one
-instance.
+**The VLM localises; it does not name.** Attribution maps for "is there plastic"
+and "is there rubble" correlate at **+0.791**, and each correlates with the plain
+presence map at **+0.824**. The map does not respond to the content of the
+question. So open-vocabulary naming cannot be had by varying the prompt on this
+stack -- that route is closed by measurement, not by assumption -- and naming
+belongs to the text-aligned encoder.
 
-The EWC-Stat codes give a real hierarchy, which is what makes "open-world" more
-than a slogan here:
+**The VLM's real job is the gate.** Presence is where it is strong (0.601 F1,
+grounded), and suppressing proposals on 3822 true negatives is exactly a presence
+problem. Detector proposes, VLM disposes.
+
+## Phase 1 — class-agnostic detection and segmentation (~15 GPU-h)
+
+The denominator for everything else.
+
+- Grounding DINO with waste queries -> boxes; SAM 2 -> masks.
+- Score box AP/AP50 and **mask AP** against DroneWaste's ground-truth masks.
+- Score on the negatives: what fraction of the 3822 produce a proposal.
+- Then add the VLM gate and re-score. The gate's whole value is the change in
+  false positives per image at fixed recall, so report both points, not one.
+
+**Sub-question worth its own arm:** SAM 2's automatic mask generation as a
+proposal source, with no text at all. If class-agnostic SAM proposals plus the
+VLM gate match Grounding DINO, the text-conditioned detector is not earning its
+place and the pipeline gets simpler.
+
+## Phase 2 — open-vocabulary naming (~10 GPU-h)
+
+All training-free, all measurable against the 4.89x ceiling already established
+on ground-truth crops. The gap between predicted-box naming and GT-crop naming
+*is* proposal quality, which makes this a rare ablation that costs nothing.
+
+Arms, in increasing order of cleverness:
+
+1. **Box crop -> GeoRSCLIP.** The measured baseline.
+2. **Mask crop -> GeoRSCLIP**, background suppressed rather than merely cropped.
+   Untested here and plausibly a real gain for material ID, since it removes the
+   surrounding ground that the box drags in.
+3. **Context ratio.** ctx 0.5 beat ctx 0.0 on DroneWaste (+0.011 to +0.061) and
+   hurt on AerialWaste. With masks available, context and object can be varied
+   independently for the first time.
+4. **Prompt ensembling** over multiple templates per class -- free, typically
+   worth a couple of points, and `cue_prompts` already exists.
+5. **Encoder ensembling** across GeoRSCLIP / RemoteCLIP / SkyCLIP.
+
+**Open-world protocol.** The 20 categories carry EWC-Stat codes, which gives a
+real hierarchy rather than an arbitrary split:
 
 | parent | leaves |
 |---|---|
@@ -58,113 +90,55 @@ than a slogan here:
 | 10 household / mixed | Furniture 10.11, Mixed items 10.2 |
 | 12 mineral | C&D 12.11, Asphalt milling 12.12, Asbestos 12.21, Excavation 12.31, Foundry 12.42, Rubble 12.61 |
 
-A held-out leaf can be queried by its own name, by a paraphrase, or by its parent
-category — three difficulty levels from one split.
+Because nothing is trained there is no "held-out class" in the usual sense --
+every class is already zero-shot. That is a genuine advantage, and it changes the
+experiment into something better: **query the same object by its own name, by a
+paraphrase, and by its EWC parent**, and report how far accuracy falls as the
+query gets more abstract. Also query with names that are *absent* from the
+dataset entirely, to measure how readily the vocabulary hallucinates.
 
-## Phase 0 — close out what is running (~6 GPU-h)
+**Report 15 classes, not 20.** Five have too few instances to mean anything
+(Foundry 3, Asphalt milling 1, Paper 11, Electronic equipment 11, Appliances 35).
 
-Finish the attribution maps and the ROI-token probe, fold both into
-`EXPERIMENTS.md`. Nothing downstream depends on them; they close arguments
-already made.
+## Phase 3 — grounding verification (~8 GPU-h)
 
-**Decide the negatives question first**: if the 3822 unannotated images are true
-negatives, they are training background and a source of false-positive
-measurement. If they are merely unlabelled, training on them as background
-teaches the detector to suppress real waste. This gates Phase 1 and costs an hour
-of inspection, not GPU.
+The part that separates "right" from "right for the right reason", and the
+machinery exists.
 
-## Phase 1 — closed-set detection and segmentation (~30 GPU-h)
+- Attribution mass **inside the mask** rather than the box -- a strictly tighter
+  test, and `score_map` already takes a mask.
+- The occlusion battery against the assembled pipeline.
+- Report every map against both nulls, uniform and centre, as now.
 
-The reference ceiling everything open-world is measured against. Without it, an
-open-vocabulary number has no denominator.
+## Phase 4 — AerialWaste as the transfer test (~5 GPU-h)
 
-- Mask R-CNN and a DETR-style detector, site-split, 15 classes.
-- Report box AP/AP50/AP75, mask AP, and per-class AP so the tail is visible.
-- Run the same detector on AerialWaste for the transfer claim. Expect it to be
-  poor, and say so — that is the object-scale result restated in detection terms.
-
-**Deliverable:** the number a reviewer compares every later arm to.
-
-## Phase 2 — open-vocabulary detection (~40 GPU-h)
-
-Two arms, deliberately different in where the openness lives.
-
-**A. Class-agnostic proposals + RS-CLIP naming.** SAM or a class-agnostic
-detector proposes regions; GeoRSCLIP names them from text. This is the ceiling
-experiment with predicted boxes instead of ground-truth ones, so its upper bound
-is already measured (4.89× chance) and the gap to it is exactly proposal quality.
-Cheap, strong, and interpretable.
-
-**B. Text-conditioned detector.** Fine-tune Grounding DINO on DroneWaste with
-category names as queries. It already reaches 0.819 recall zero-shot here, so
-this arm should be strong; the question is whether fine-tuning on 15 names
-destroys the open-vocabulary behaviour that made it work in the first place.
-Measure that directly rather than assuming it.
-
-**Open-world protocol.** Hold out 3–4 usable classes from training entirely
-(candidates: Tyres 311, Asbestos 210, Wood 175, Metal barrels 172 — chosen to
-span different EWC parents). At test, query them by name. Report base AP and
-novel AP separately, plus the three query levels (own name / paraphrase /
-parent). Baseline to beat: proposals scored by a *fixed* class prior, which
-measures how much of "novel detection" is really just proposal quality.
-
-## Phase 3 — segmentation (~20 GPU-h)
-
-Masks exist for all 5135 objects, so this is free supervision we are currently
-ignoring.
-
-- Box→mask via SAM (GeoGround already ships this path) as the training-free arm.
-- A learned mask head as the supervised arm.
-- Report mask AP against box AP; where they diverge tells you whether the model
-  finds objects or merely regions.
-
-Segmentation also gives a better attribution target than boxes: mass-inside-mask
-is a tighter test than mass-inside-box, and the machinery in `src/attribution.py`
-takes a mask already.
-
-## Phase 4 — the language layer, on object tokens (~40 GPU-h)
-
-This is the original "separate perception from language" design, and it now has
-evidence behind it rather than intuition. The LLM never needed to *find* the
-object — at 0.90 tokens per object on AerialWaste it could not — it needs to talk
-about one that has already been found.
-
-- Feed pooled region features plus the predicted class as object tokens.
-- Evaluate description quality and VQA, and re-run the hallucination battery
-  (§8: crop / mask / shuffle / irrelevant-region / occlusion ΔP) on the new stack
-  using the existing occlusion and attribution code.
-
-The specific thing to test: whether per-category attribution maps become distinct
-once the model is given object tokens. On the current stack they are not, and
-that is the measured reason naming fails — 72% of the category effect is presence
-rather than identity.
-
-## Phase 5 — grounding verification as a first-class result (~10 GPU-h)
-
-Reuse `scripts/attribution_maps.py` and the occlusion probe against the final
-pipeline, reporting mass-in-mask lift over the uniform and centre nulls. This is
-the part of the thesis that distinguishes "the model is right" from "the model is
-right for the right reason", and the machinery already exists.
+Run the identical pipeline, unchanged, on AerialWaste. Expect class-agnostic
+detection to work and naming to fail; that is the object-scale result restated
+end to end, and it is a finding rather than a disappointment provided it is
+framed as one.
 
 ## Budget
 
-~150 GPU-hours across all five phases, against 750 remaining. Comfortable, with
-room for the ablation matrix **provided ablation arms are stage-3 finetunes
-(~8–10 h each) rather than full pipelines (~110–150 h each)**. Six full-pipeline
-arms would be 900 hours and would need the other cluster; the same six as
-stage-3 arms are 60.
+**~40 GPU-hours total**, against 750 remaining. Training-free is roughly a
+quarter the cost of the trained plan it replaces (~150 h), and it removes the
+risk that a training run consumes the budget and then has to be repeated.
 
-## Risks, stated up front
+## What training-free costs, stated plainly
 
-- **1171 annotated images is small** for 15-class detection. Expect wide
-  confidence intervals on novel classes; report them rather than point estimates.
-- **Novel-class AP on ~200 instances is noisy.** Use several held-out splits and
-  report the spread, not one favourable draw.
-- **17 sites is few.** A site-level split has high variance; cross-validate over
-  site folds rather than trusting a single split.
-- **AerialWaste material labels carry unmeasured annotator noise**, and 25.8% of
-  its objects are labelled "Unknown material". Any AerialWaste material number is
-  bounded by a target its own annotators could not assign a quarter of the time.
-  A small re-annotated subset would let that bound be quantified instead of
-  asserted; without it, AerialWaste material results should be reported as a
-  limitation rather than a finding.
+Bounded by the ceilings in the table above. Recall cannot exceed Grounding DINO's
+0.819; naming cannot exceed roughly 0.31 accuracy against a 0.198 majority
+baseline. **Class-agnostic detection and segmentation should be genuinely good;
+class-aware numbers will be modest.** If a stronger class-aware number is needed
+later, the cheapest additions in order of cost are: prompt/encoder ensembling
+(still training-free), a linear probe on frozen features (minutes), and only then
+anything resembling a fine-tune.
+
+## Risks
+
+- **Proposal recall is the binding constraint** and it is measured on
+  ground-truth-annotated images only. On the 3822 negatives the relevant number
+  is the false-positive rate, which nobody has measured yet.
+- **17 sites is few.** Cross-validate over site folds; never split by image,
+  since crops from one site are near duplicates.
+- **SAM 2 on 640px drone crops is untested here.** Small objects at 32-75px are
+  where promptable segmentation is weakest; verify on a handful before scaling.
