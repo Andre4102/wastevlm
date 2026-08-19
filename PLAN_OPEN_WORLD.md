@@ -260,72 +260,70 @@ Without at least the first, the honest conclusion available from this project is
 decoder's remaining value is untested" -- which is a real result, and better than
 an unsupported claim in either direction.
 
-## Constraint: nothing in the pipeline is fitted on AerialWaste or DroneWaste (2026-08-19)
+## The constraint: no fixed label vector (2026-08-19)
 
-Supervision on external data is allowed; supervision on the evaluation datasets is
-not. This is the project's standing rule -- both datasets are held out of every
-training mix so that every reported number is zero-shot with respect to them -- and
-it draws the line in a different place than "no supervision at all" would.
+Every component must take its vocabulary at inference time, as text or as
+exemplars. A class nobody enumerated when the system was built must still be
+askable. This is an architectural constraint, not a claim about training data, and
+it is the one that actually matters -- two earlier drafts of this section framed it
+as "no supervision" and then as "nothing fitted on the evaluation datasets", and
+both drew the line in the wrong place.
 
-### What leaves the pipeline
+Training is allowed, including on external waste data, and the standing rule that
+AerialWaste and DroneWaste stay out of every training mix still holds. What is not
+allowed is a head that emits a fixed vector of class logits, however it was
+trained. A model that must be rebuilt to answer a new class is not open-world, and
+rebuilding it is exactly what a waste taxonomy will demand -- anything can be
+dumped.
 
-| component | was | why it goes |
+### What this admits and excludes
+
+| component | verdict | why |
 |---|---|---|
-| ROI tokens + linear naming head | 0.665 AerialWaste / 0.733 DroneWaste | fitted on AerialWaste's train split and DroneWaste's train sites |
-| linear presence gate | AUC 0.970 | same |
+| C-RADIOv4 -> SigLIP2 head, scored against text | **in** | vocabulary is the prompt |
+| Grounding DINO | **in** | text-conditioned proposals |
+| SAM3 (native or C-RADIO-bridged) | **in** | text-promptable detection and masks |
+| decoder writing the text queries | **in** | this is what makes the vocabulary genuinely open |
+| nearest-prototype from exemplars | **in** | a new class is a new exemplar, not a new architecture |
+| ROI tokens + 20-way linear head | **out** | fixed label vector, whatever it was fitted on |
+| trained binary presence gate | **out** | same, for a vocabulary of one |
 
-Both were fitted on the datasets they were then evaluated on. Standard practice for
-a probe, and disqualifying for a component.
-
-### What stays, and what an earlier draft wrongly removed
-
-The LoRA-finetuned decoder **stays**. An earlier version of this section dropped it
-on the grounds that it had "seen waste", but the rule is about these two datasets
-and its LoRA never saw either. Base Qwen2.5-7B-Instruct remains available as the
-stricter alternative if a reviewer wants the harder claim, and is worth running as
-a second arm precisely because it costs nothing to compare.
+Gating becomes a text comparison in the SigLIP2 space, or SAM3's own detection
+score. Fine-tuning a text-image model on external waste data stays admissible,
+because the result is still queried by text; fine-tuning it into a 20-logit
+classifier does not.
 
 ```
 C-RADIOv4 (frozen, one pass) ─┬─ →SAM3 → FPN → DETR → boxes + masks
                               └─ →SigLIP2 summary → naming from text
 Grounding DINO (frozen) ────────► boxes, where its recall still leads
-decoder (LoRA, AW/DW unseen) ───► writes the queries, composes the answer
+decoder ────────────────────────► writes the queries, composes the answer
 ```
 
-### The avenue this opens
+### What it costs, and what it buys
 
-Heads may be *trained*, just not on these two datasets. So the naming head need not
-be abandoned -- it can be fitted on an external waste dataset and transferred, which
-keeps AerialWaste and DroneWaste zero-shot while recovering some of the gap between
-the zero-shot 0.442 and the supervised 0.733 on DroneWaste. That is a real
-experiment rather than a workaround, and the transfer gap is itself the result:
-it measures how much of a material head survives a change of sensor and site.
+Naming falls from the fitted head's 0.733 to 0.442 on DroneWaste -- still 6.66x
+chance against 20 classes on a 0.198 majority. On AerialWaste zero-shot naming
+sits at or below the majority baseline, so AerialWaste carries detection only.
 
-### What it costs
+What it buys is the part that cannot be quoted as a single number: the system is
+not limited to 20 classes, or to 15, or to whatever a published Faster R-CNN was
+trained on. **The comparison stops being "our accuracy against theirs on their
+label set" and becomes "their label set against no label set at all."** That is
+also why per-class reporting matters more here than a macro average -- the
+interesting rows are the ones a closed-set model could not have had.
 
-Naming in the shipped pipeline falls from the fitted 0.733 to the zero-shot 0.442
-on DroneWaste, still 6.66x chance against 20 classes on a 0.198 majority, unless
-external-data training closes some of it. On AerialWaste zero-shot naming sits at
-or below the majority baseline, so AerialWaste carries detection only.
-
-The probes stay in the thesis with a changed role: they bound what any zero-shot
-readout can reach from the same features, and they stand in for the trained
-detector in the Faster R-CNN / YOLO comparison. Measuring the gap is the result;
-shipping the probe is what stops.
+The probes keep a role, as diagnostics rather than components: they bound what any
+text-driven readout could extract from the same features, and they stand in for the
+trained detector in the Faster R-CNN / YOLO comparison. Measuring the gap is the
+result; shipping the probe is what stops.
 
 ### The leak to watch
 
-A pipeline with no fitted components still has thresholds -- SAM3's detection score,
-the gating margin, the matching IoU. **Choosing them on AerialWaste or DroneWaste
-labels is fitting on the evaluation data by another name**, and it is the easiest
-way for the claim to be quietly false. Three defensible options, in order of
-strength:
-
-1. fix them a priori and never tune them;
-2. select on one held-out site and report on the others, so the cost is visible;
-3. report a sweep and show the conclusion does not depend on the choice.
-
-The SAM3 sweep already run (0.05 / 0.15 / 0.30) exists for this reason and moved
-recall from 0.277 to 0.446 -- wide enough that picking the best on the test set
-would be a real distortion rather than a technicality. With 17 sites, spending one
-on threshold selection is cheap and makes the cost explicit.
+An open-vocabulary pipeline still has thresholds -- SAM3's detection score, the
+gating margin, the matching IoU -- and choosing them on AerialWaste or DroneWaste
+labels is closed-set fitting by another name. Not hypothetical: the SAM3 sweep
+already run moved recall from 0.277 to 0.446 across thresholds 0.30 to 0.15, wide
+enough that picking the best on the test set would be a real distortion. With 17
+sites, spending one on threshold selection is cheap and makes the cost explicit;
+that is the recommendation over fixing values a priori.
