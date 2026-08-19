@@ -260,67 +260,72 @@ Without at least the first, the honest conclusion available from this project is
 decoder's remaining value is untested" -- which is a real result, and better than
 an unsupported claim in either direction.
 
-## Constraint: no supervision anywhere in the pipeline (2026-08-19)
+## Constraint: nothing in the pipeline is fitted on AerialWaste or DroneWaste (2026-08-19)
 
-Nothing in the deployed system is trained on waste. This is a stronger claim than
-"training-free" as used earlier in this document, which still allowed a logistic
-regression over frozen features, and it removes components that were carrying the
-best numbers. Recording what goes, what stays, and what it costs.
+Supervision on external data is allowed; supervision on the evaluation datasets is
+not. This is the project's standing rule -- both datasets are held out of every
+training mix so that every reported number is zero-shot with respect to them -- and
+it draws the line in a different place than "no supervision at all" would.
 
 ### What leaves the pipeline
 
 | component | was | why it goes |
 |---|---|---|
-| ROI tokens + linear naming head | 0.665 AerialWaste / 0.733 DroneWaste | fitted on labelled objects |
-| linear presence gate | AUC 0.970 | fitted on labelled images |
-| our LoRA-finetuned decoder | gate micro-F1 0.601 | finetuned on a waste mix |
+| ROI tokens + linear naming head | 0.665 AerialWaste / 0.733 DroneWaste | fitted on AerialWaste's train split and DroneWaste's train sites |
+| linear presence gate | AUC 0.970 | same |
 
-The finetuned decoder goes too. Its LoRA never saw AerialWaste or DroneWaste, so
-it is zero-shot with respect to the evaluation, but it is not untrained on waste
-and the claim should not need that footnote. **The composer becomes base
-Qwen2.5-7B-Instruct**, which is already on disk. Nothing in the pipeline has then
-seen a waste label.
+Both were fitted on the datasets they were then evaluated on. Standard practice for
+a probe, and disqualifying for a component.
 
-### What the pipeline is now
+### What stays, and what an earlier draft wrongly removed
+
+The LoRA-finetuned decoder **stays**. An earlier version of this section dropped it
+on the grounds that it had "seen waste", but the rule is about these two datasets
+and its LoRA never saw either. Base Qwen2.5-7B-Instruct remains available as the
+stricter alternative if a reviewer wants the harder claim, and is worth running as
+a second arm precisely because it costs nothing to compare.
 
 ```
 C-RADIOv4 (frozen, one pass) ─┬─ →SAM3 → FPN → DETR → boxes + masks
                               └─ →SigLIP2 summary → naming from text
 Grounding DINO (frozen) ────────► boxes, where its recall still leads
-base Qwen2.5-7B-Instruct ───────► writes the queries, composes the answer
+decoder (LoRA, AW/DW unseen) ───► writes the queries, composes the answer
 ```
 
-Gating stops being a trained head and becomes a text comparison through the same
-SigLIP2 space, or SAM3's own detection score. Both need measuring; neither needs
-fitting.
+### The avenue this opens
 
-### What it costs, stated plainly
+Heads may be *trained*, just not on these two datasets. So the naming head need not
+be abandoned -- it can be fitted on an external waste dataset and transferred, which
+keeps AerialWaste and DroneWaste zero-shot while recovering some of the gap between
+the zero-shot 0.442 and the supervised 0.733 on DroneWaste. That is a real
+experiment rather than a workaround, and the transfer gap is itself the result:
+it measures how much of a material head survives a change of sensor and site.
 
-Naming drops from the supervised 0.733 to the zero-shot **0.442** on DroneWaste
-(still 6.66x chance against 20 classes, on a 0.198 majority). On AerialWaste
-zero-shot naming sits at or below the majority baseline, so **the material branch
-is not viable there without supervision** -- AerialWaste carries detection only.
+### What it costs
 
-The supervised probes do not disappear from the thesis, they change role. They are
-the reference for what a trained model extracts from the same features, which is
-both the upper bound on any zero-shot readout and the natural stand-in for the
-Faster R-CNN / YOLO comparison. Measuring the gap is the result; shipping the
-probe is what stops.
+Naming in the shipped pipeline falls from the fitted 0.733 to the zero-shot 0.442
+on DroneWaste, still 6.66x chance against 20 classes on a 0.198 majority, unless
+external-data training closes some of it. On AerialWaste zero-shot naming sits at
+or below the majority baseline, so AerialWaste carries detection only.
+
+The probes stay in the thesis with a changed role: they bound what any zero-shot
+readout can reach from the same features, and they stand in for the trained
+detector in the Faster R-CNN / YOLO comparison. Measuring the gap is the result;
+shipping the probe is what stops.
 
 ### The leak to watch
 
-A zero-shot pipeline still has thresholds -- SAM3's detection score, the SigLIP2
-margin used for gating, the IoU used for matching. **Choosing them on labelled
-data is supervision by another name**, and it is the easiest way for a
-"no supervision" claim to be quietly false. Three defensible options, in order of
+A pipeline with no fitted components still has thresholds -- SAM3's detection score,
+the gating margin, the matching IoU. **Choosing them on AerialWaste or DroneWaste
+labels is fitting on the evaluation data by another name**, and it is the easiest
+way for the claim to be quietly false. Three defensible options, in order of
 strength:
 
 1. fix them a priori and never tune them;
-2. select on one held-out site and report the result on the others, so the
-   selection cost is visible;
+2. select on one held-out site and report on the others, so the cost is visible;
 3. report a sweep and show the conclusion does not depend on the choice.
 
-Whichever is used has to be stated. The threshold sweep already run on SAM3
-(0.05 / 0.15 / 0.30) exists for this reason, and moved recall from 0.277 to 0.446 --
-a range wide enough that picking the best one on the test set would be a real
-distortion rather than a technicality.
+The SAM3 sweep already run (0.05 / 0.15 / 0.30) exists for this reason and moved
+recall from 0.277 to 0.446 -- wide enough that picking the best on the test set
+would be a real distortion rather than a technicality. With 17 sites, spending one
+on threshold selection is cheap and makes the cost explicit.
