@@ -1434,3 +1434,53 @@ independent method, and it is now visible rather than inferred.
 namer. Open-vocabulary naming cannot be obtained by varying the question text on
 this stack, because the attribution does not respond to the question's content.
 Naming has to come from a text-aligned encoder.
+
+## The decoder writes prompts, and they are worse than doing nothing (2026-08-19)
+
+Two-stage routing works. The first stage names an object by comparing C-RADIOv4's
+SigLIP2-projected embedding against text, is right 47.8% of the time on the
+development sites, and knows when it is not: entropy separates its right answers
+from its wrong ones at AUROC 0.817. Deferring the least-confident 30% and
+re-scoring them against only their top-5 candidates lifts that subset from 0.212 to
+0.348 and the whole set from 0.478 to 0.519.
+
+Every bit of that comes from hand-written prompts. The decoder-written arm, which
+is the one job in the design with no non-LLM substitute -- the candidate set does
+not exist until inference, so no fixed bank could have been written for it -- makes
+the deferred subset **worse than leaving it alone**.
+
+| deferred set, 913 objects | accuracy |
+|---|---:|
+| stage 1, no routing | 0.212 |
+| decoder prompts, first template | 0.097 |
+| decoder prompts, EWC-grounded, worked examples, cross-naming guard | 0.133 |
+| hand-written contrastive prompts | **0.348** |
+| oracle: top-5 containment | 0.802 |
+
+Dumping the generations explains the first template and not the gap that remains.
+Asbestos came back as "dark, irregular patches" in one candidate set and "small,
+uniform, dark grey rectangles, very flat" in another, when asbestos sheeting from a
+drone is light grey corrugated panel: fluent, confident, wrong about the material,
+and inconsistent between candidate sets so the scores stop being comparable across
+objects. Handing the decoder the official EWC entry fixed the facts -- 12.11 now
+produces "dark gray concrete chunks / red brick fragments / white gypsum boards",
+which is what the entry says -- and bought 0.036. It did not approach the
+hand-written arm.
+
+### The asymmetry worth stating before drawing a conclusion
+
+The hand-written prompts were written *after reading the confusion matrix*. They
+encode which classes collide and how. The decoder writes blind: it gets the
+candidate names and definitions, no feedback about what is being confused with
+what, and no signal about whether its wording works for this particular encoder.
+Prompt effectiveness for a CLIP-family model is not the same thing as
+human-readable accuracy, and nothing in the current design lets the decoder
+discover the difference.
+
+So the honest claim is narrow: **a decoder writing prompts open-loop, from names and
+definitions alone, is worse than not routing.** Whether it can do better with a
+selection signal is untested, and the signal to try is label-free -- generate
+several candidate prompt sets, keep the one that separates the candidates best on
+the actual image embeddings, since margin is already known to track correctness at
+AUROC 0.82. The failure mode to check is that confidently-wrong prompts also score
+high margin, which is what the development labels are for.
