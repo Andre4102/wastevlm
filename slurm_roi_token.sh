@@ -2,6 +2,7 @@
 #SBATCH --job-name=roi_tok
 #SBATCH --output=logs/roi_tok_%j.out
 #SBATCH --error=logs/roi_tok_%j.err
+#SBATCH --account=iscrc_fiche
 #SBATCH --partition=boost_usr_prod
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1

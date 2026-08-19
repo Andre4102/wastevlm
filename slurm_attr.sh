@@ -2,6 +2,7 @@
 #SBATCH --job-name=attr_map
 #SBATCH --output=logs/attr_%j.out
 #SBATCH --error=logs/attr_%j.err
+#SBATCH --account=iscrc_fiche
 #SBATCH --partition=boost_usr_prod
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
