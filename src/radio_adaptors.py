@@ -126,15 +126,24 @@ def siglip2_text(version: str = "google/siglip2-giant-opt-patch16-384", device="
     tc = dict(cfg_all["text_config"])
     proj = tc.pop("projection_size", None) or tc["hidden_size"]
     model = SiglipTextModel(SiglipTextConfig(**tc))
-    if proj != tc["hidden_size"]:
-        model.text_model.head = torch.nn.Linear(tc["hidden_size"], proj)
+    # transformers 4.49 nests the tower under .text_model; 5.x flattens it, and this
+    # loader now runs in both environments. Newer versions may also honour
+    # projection_size themselves, in which case the head is already the right shape.
+    inner = getattr(model, "text_model", model)
+    if getattr(inner, "head", None) is not None and inner.head.out_features != proj:
+        inner.head = torch.nn.Linear(tc["hidden_size"], proj)
 
     sd = {}
     for f in sorted(glob.glob(str(pathlib.Path(d) / "*.safetensors"))):
         sd.update({k: v for k, v in load_file(f).items() if k.startswith("text_model.")})
     missing, unexpected = model.load_state_dict(sd, strict=False)
     if missing:
-        raise RuntimeError(f"SigLIP2 text tower incomplete, missing {missing[:5]}")
+        # the flattened layout drops the prefix the checkpoint still carries
+        stripped = {k[len("text_model."):]: v for k, v in sd.items()}
+        missing, unexpected = model.load_state_dict(stripped, strict=False)
+    real = [k for k in missing if "position_ids" not in k]
+    if real:
+        raise RuntimeError(f"SigLIP2 text tower incomplete, missing {real[:5]}")
     model = model.to(device).eval()
     tok = AutoTokenizer.from_pretrained(d)
 
@@ -142,7 +151,9 @@ def siglip2_text(version: str = "google/siglip2-giant-opt-patch16-384", device="
     def encode(texts):
         b = tok(list(texts), padding="max_length", truncation=True,
                 max_length=64, return_tensors="pt").to(device)
-        e = model(**b).pooler_output.float()
+        out = model(**b)
+        e = (out.pooler_output if out.pooler_output is not None
+             else out.last_hidden_state[:, -1]).float()
         return torch.nn.functional.normalize(e, dim=-1)
 
     return encode
