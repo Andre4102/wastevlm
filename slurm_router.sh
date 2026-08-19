@@ -17,6 +17,6 @@ export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false
 RES=${RES:-$WROOT/results/radio_zs_dronewaste_640_contrastive_dev.json}
 echo "[slurm] $(hostname) job=${SLURM_JOB_ID:-?} defer=${DEFER:-0.30} topk=${TOPK:-5}"
 "$PYBIN/python" scripts/two_stage_router.py --result "$RES" \
-  --defer "${DEFER:-0.30}" --topk "${TOPK:-5}" --arms ${ARMS:-llm llm-loop fixed} --samples ${SAMPLES:-4} ${DUMP:+--dump-prompts} \
+  --defer "${DEFER:-0.30}" --topk "${TOPK:-5}" --arms ${ARMS:-llm llm-loop fixed} --samples ${SAMPLES:-4} --abstain-q ${ABSTAIN:-0.15} --max-rounds ${ROUNDS:-1} ${DUMP:+--dump-prompts} \
   --out-json "$WROOT/results/router_defer${DEFER:-0.30}_top${TOPK:-5}.json"
 echo "[slurm] done=$(date -Is)"

@@ -127,6 +127,11 @@ def main() -> None:
                     help="fraction of least-confident objects sent to stage 2")
     ap.add_argument("--topk", type=int, default=5)
     ap.add_argument("--arms", nargs="+", default=["llm", "llm-loop", "fixed"])
+    ap.add_argument("--abstain-q", type=float, default=0.15,
+                    help="quantile of the post-round margin below which an object is "
+                         "reported as unknown instead of guessed; 0 disables")
+    ap.add_argument("--max-rounds", type=int, default=1,
+                    help="hard cap on refinement rounds, so the loop terminates")
     ap.add_argument("--samples", type=int, default=4,
                     help="prompt sets sampled per candidate group for llm-loop")
     ap.add_argument("--dump-prompts", action="store_true",
@@ -149,6 +154,8 @@ def main() -> None:
 
     rank = (-sim).argsort(1)
     pred1 = rank[:, 0]
+    _srt = np.sort(sim, 1)
+    srt_margin = _srt[:, -1] - _srt[:, -2]
     p = np.exp((sim - sim.max(1, keepdims=True)) / 0.01)
     p /= p.sum(1, keepdims=True)
     entropy = -(p * np.log(p + 1e-12)).sum(1)
@@ -219,7 +226,7 @@ def main() -> None:
         for n, (cand, idxs) in enumerate(sets.items()):
             cl = list(cand)
             best, best_sep = None, -1e9
-            for k in range(args.samples):
+            for k in range(min(args.samples, max(1, args.max_rounds * args.samples))):
                 reply = gen(GEN_PROMPT.format(
                     cands="\n".join(f"- {c}" for c in cl),
                     codes="\n".join(f"- {c}: {ewc.get(c, c)}" for c in cl)),
@@ -244,12 +251,33 @@ def main() -> None:
                 print(f"   loop {n}/{len(sets)}  best separation {best_sep:.4f}",
                       flush=True)
 
+    UNKNOWN = "Unknown waste"
+
+    def risk_coverage(pred, keepmask, y, tag):
+        """Report an abstaining system honestly: what it answers, and how well.
+
+        Accuracy over everything is the wrong number once a system may decline --
+        it charges an abstention as an error, which is the opposite of the point.
+        Coverage and accuracy-on-answered are the pair, and the abstained subset's
+        own accuracy says whether the refusals were the right ones: a system
+        declining at random shows the same accuracy on both sides.
+        """
+        cov = float(keepmask.mean())
+        acc = float((pred[keepmask] == y[keepmask]).mean()) if keepmask.any() else float("nan")
+        rest = ~keepmask
+        acc_rest = float((pred[rest] == y[rest]).mean()) if rest.any() else float("nan")
+        print(f"    {tag:22s} answers {cov:5.1%}  accuracy on those {acc:.3f}   "
+              f"(declined set would have scored {acc_rest:.3f})")
+        return {"coverage": cov, "accuracy": acc, "declined_accuracy": acc_rest}
+
     out = {"stage1": float(correct1.mean()), "defer": args.defer,
            "deferred_stage1": float(correct1[deferred].mean()),
            "oracle_topk": float(cont), "n_sets": len(sets), "arms": {}}
 
+    margin_after = {}
     for arm in args.arms:
         pred2 = pred1.copy()
+        marg = srt_margin.copy()
         for cand, idxs in sets.items():
             if arm == "llm":
                 pm = banks.get(cand, {})
@@ -259,9 +287,21 @@ def main() -> None:
                 pm = {c: (CONTRASTIVE.get(c) or base_bank.get(c)) for c in cand}
             if not pm:
                 continue
+            cl = list(cand)
             for i in idxs:
-                j = score(emb[i], pm, list(cand), encode_text, base_bank)
-                pred2[i] = cats.index(list(cand)[j])
+                sims = []
+                for c in cl:
+                    ps = pm.get(c) or base_bank.get(c)
+                    if not ps:
+                        sims.append(-1e9); continue
+                    import torch as _t
+                    t = encode_text(ps)
+                    t = _t.nn.functional.normalize(t.mean(0), dim=-1)
+                    sims.append(float(t.cpu().numpy() @ emb[i]))
+                srt2 = sorted(sims)
+                marg[i] = srt2[-1] - srt2[-2] if len(srt2) > 1 else 0.0
+                pred2[i] = cats.index(cl[int(np.argmax(sims))])
+        margin_after[arm] = marg
         c2 = (pred2 == y)
         print(f"\n  arm={arm}")
         print(f"    deferred set  {correct1[deferred].mean():.3f} -> {c2[deferred].mean():.3f}"
@@ -269,6 +309,24 @@ def main() -> None:
         print(f"    overall       {correct1.mean():.3f} -> {c2.mean():.3f}")
         out["arms"][arm] = {"deferred": float(c2[deferred].mean()),
                             "overall": float(c2.mean())}
+        # The loop is bounded, so something has to come out at the end of it. An
+        # object still unresolved after the last round is reported as unknown
+        # rather than as a guess -- which is what the annotators themselves did on
+        # AerialWaste for 25.8% of objects, so it is the domain's own convention.
+        if args.abstain_q > 0:
+            # Threshold set on the deferred objects only, since the confident 70%
+            # are not candidates for abstention in the first place.
+            dm = margin_after[arm][deferred]
+            thr = float(np.quantile(dm, args.abstain_q))
+            keep = np.ones(len(y), bool)
+            keep[deferred] = margin_after[arm][deferred] >= thr
+            labels = [cats[p] if k else UNKNOWN for p, k in zip(pred2, keep)]
+            n_unk = sum(1 for l in labels if l == UNKNOWN)
+            print(f"    {n_unk} objects ({n_unk/len(y):.1%}) come out as {UNKNOWN!r} "
+                  f"after {args.max_rounds} round(s)")
+            out["arms"][arm]["abstain"] = risk_coverage(pred2, keep, y, "with abstention")
+            out["arms"][arm]["unknown_label"] = UNKNOWN
+            out["arms"][arm]["n_unknown"] = n_unk
 
     if args.out_json:
         pathlib.Path(args.out_json).write_text(json.dumps(out, indent=2))
