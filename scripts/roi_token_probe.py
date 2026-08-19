@@ -42,7 +42,7 @@ from scripts.roi_material import load_rois  # noqa: E402
 from src.vision_encoder import VisionEncoder  # noqa: E402
 
 
-def roi_pool(patches, grid: int, box, size, native, pad: float):
+def roi_pool(patches, grid: int, box, native, pad: float):
     """Mean- and max-pool the tokens covering `box`.
 
     `box` is in the original image's pixels and `native` is that image's size, so
