@@ -207,13 +207,23 @@ def main() -> None:
     ap.add_argument("--out", required=True)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--all-sites", action="store_true")
+    ap.add_argument("--dev-sites", action="store_true",
+                    help="generate over the TRAINING sites, for developing the "
+                         "harness without touching the evaluation set")
     args = ap.parse_args()
 
     rng = random.Random(args.seed)
-    data = load(None if args.all_sites else TEST_SITES)
+    if args.all_sites:
+        data = load(None)
+    elif args.dev_sites:
+        every = load(None)
+        data = {k: v for k, v in every.items()
+                if pathlib.Path(k).name.split("_")[0] not in TEST_SITES}
+    else:
+        data = load(TEST_SITES)
     cats_all = sorted({o["cat"] for r in data.values() for o in r["objs"]})
     print(f"[cq] {len(data)} annotated images, {len(cats_all)} categories, "
-          f"sites={'all' if args.all_sites else ','.join(TEST_SITES)}")
+          f"sites={'all' if args.all_sites else ('dev' if args.dev_sites else ','.join(TEST_SITES))}")
 
     rows = []
     for p, rec in sorted(data.items()):
