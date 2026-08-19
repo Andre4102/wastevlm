@@ -103,12 +103,18 @@ def main() -> None:
         print(line + ("  TAIL" if tail else ""))
 
     print()
+    # head/tail comes from ONE support definition, the reference column's. Taking
+    # it per column made each arm report a different number of head classes purely
+    # because their test sets differ in size, which reads as a finding and is not.
+    head = [c for c in cats if ref.get(c, {}).get("n", 0) >= TAIL_MAX]
+    tail = [c for c in cats if 0 < ref.get(c, {}).get("n", 0) < TAIL_MAX]
     for k, t in cols.items():
-        head = [c for c in cats if t.get(c, {}).get("n", 0) >= TAIL_MAX]
-        tail = [c for c in cats if 0 < t.get(c, {}).get("n", 0) < TAIL_MAX]
-        found = [c for c in tail if t[c]["recall"] > 0]
-        print(f"  {k:11s} head {len(head):2d} classes, mean recall "
-              f"{sum(t[c]['recall'] for c in head)/max(1,len(head)):.3f}"
+        n_here = sum(t.get(c, {}).get("n", 0) for c in cats)
+        print(f"  [{k}] scored {n_here} objects", end="  ")
+        found = [c for c in tail if t.get(c, {}).get("n", 0) and t[c]["recall"] > 0]
+        hd = [c for c in head if t.get(c, {}).get("n", 0)]
+        print(f"head {len(hd):2d} classes, mean recall "
+              f"{sum(t[c]['recall'] for c in hd)/max(1,len(hd)):.3f}"
               f"   |  tail {len(tail)} classes, "
               f"{len(found)} with any recall at all: {', '.join(found) or 'none'}")
 

@@ -125,6 +125,8 @@ def main() -> None:
                     default=["crop-summary", "roi-dense", "dense-seg"])
     ap.add_argument("--ctx", type=float, default=0.5)
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--held-out-sites", action="store_true",
+                    help="score only the sites the supervised probe holds out")
     ap.add_argument("--out-json")
     args = ap.parse_args()
 
@@ -134,6 +136,13 @@ def main() -> None:
     from src.radio_adaptors import load_projection, siglip2_text
 
     cats, rois = load_rois(args.dataset, "test")
+    if args.held_out_sites and args.dataset == "dronewaste":
+        # The supervised probe holds out sites; scoring this arm on all 5135
+        # objects made the two columns different evaluations, which is not a
+        # comparison however carefully the rows are lined up.
+        from scripts.roi_token_probe import split_by_site
+        _tr, rois = split_by_site(rois)
+        print(f"[zs] restricted to the probe's held-out sites: {len(rois)} objects")
     if args.limit:
         rois = rois[: args.limit]
     prev = Counter(c for _p, _b, c in rois)
