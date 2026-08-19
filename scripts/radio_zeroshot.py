@@ -219,6 +219,46 @@ def main() -> None:
             rep["modes"][f"crop-summary[cls{k}]"] = report(
                 f"crop-sum[cls{k}]", y_true, yp, cats, prev)
 
+    if "roi-head" in args.modes:
+        # Pool the RAW patch tokens inside the box, then push the pooled 1152-d
+        # vector through the SUMMARY head -- the text-aligned projection -- rather
+        # than projecting each patch through the dense head, which targets
+        # SigLIP2's patch space and is not text-aligned (that is `roi-dense`, and
+        # it lands below chance). If this works it removes one encoder pass per
+        # detected object and the whole image is genuinely encoded once.
+        #
+        # It is not guaranteed: the head was trained on RADIO's summary token, and
+        # a mean of patch tokens has different statistics. That is the question.
+        head = load_projection("siglip2-g", "summary", args.encoder, device=dev)
+        hd = next(head.parameters()).dtype
+        by_image = defaultdict(list)
+        for i, (p, b, c) in enumerate(rois):
+            by_image[str(p)].append((i, b))
+        S = np.zeros((len(rois), len(cats)), np.float32)
+        EMB = np.zeros((len(rois), T.shape[1]), np.float32)
+        for n, p in enumerate(sorted(by_image)):
+            img = Image.open(p).convert("RGB")
+            W, H = img.size
+            with torch.no_grad():
+                P = enc.encode([img]).patches[0]          # [N, 1152], raw
+                for i, (x, y, w, h) in by_image[p]:
+                    x0 = max(0, min(g - 1, int(x / W * g)))
+                    x1 = max(x0 + 1, min(g, int(np.ceil((x + w) / W * g))))
+                    y0 = max(0, min(g - 1, int(y / H * g)))
+                    y1 = max(y0 + 1, min(g, int(np.ceil((y + h) / H * g))))
+                    pooled = P.reshape(g, g, -1)[y0:y1, x0:x1].reshape(-1, P.shape[-1]).mean(0)
+                    e = head(pooled.unsqueeze(0).to(hd))
+                    e = torch.nn.functional.normalize(e.float(), dim=-1)
+                    EMB[i] = e[0].cpu().numpy()
+                    S[i] = (e @ T.T)[0].cpu().numpy()
+            if n % 100 == 0:
+                print(f"   roi-head {n}/{len(by_image)}", flush=True)
+        rep["pred"]["roi-head"] = S.argmax(1).tolist()
+        rep["sims"] = np.round(S, 4).tolist()
+        rep["sims_from"] = "roi-head"
+        E = [[EMB]]
+        rep["modes"]["roi-head"] = report("roi-head", y_true, S.argmax(1), cats, prev)
+
     if "roi-dense" in args.modes or "dense-seg" in args.modes:
         fp = load_projection("siglip2-g", "features", args.encoder, device=dev)
         by_image = defaultdict(list)
@@ -266,7 +306,7 @@ def main() -> None:
         # Image embeddings beside the summary. Once these exist every further
         # prompt experiment is text-only and costs seconds instead of a GPU pass
         # over five thousand crops.
-        if "crop-summary" in args.modes and E and E[0]:
+        if E and E[0]:
             npy = str(pathlib.Path(args.out_json).with_suffix(".emb.npy"))
             np.save(npy, np.concatenate(E[0]))
             print(f"[write] {npy}  (SigLIP2-space image embeddings)")
