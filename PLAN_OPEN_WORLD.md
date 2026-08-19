@@ -232,6 +232,17 @@ Reporting "the agentic system beats the end-to-end VLM" on this set is a fair
 claim about the *pipeline*; reporting it as evidence that the *decoder* earns its
 place is not.
 
+There is also a job in this design that only the decoder can do, and it is worth
+separating from composition. **The class list need not be fixed.** A question like
+"is there anything here that could leak into the soil" corresponds to no category
+in the taxonomy, but it does correspond to a set of text queries -- drums, oil
+barrels, asbestos sheeting, chemical containers -- and writing that set is a
+language task. The decoder generates the SigLIP2 queries, the encoder scores them,
+and the vocabulary stops being the twenty names anyone wrote down. Neither a
+linear head nor a fixed prompt bank can do this at all, so unlike composition it
+has no non-LLM baseline to tie against; the comparison is instead against a fixed
+prompt bank, and the measure is recall of objects whose class was never named.
+
 The decoder's advantage, if it has one, lives where automatic ground truth is
 hard: free-form description, unanticipated attributes, ambiguous or
 underspecified reference, and questions the schema never anticipated. Two honest
