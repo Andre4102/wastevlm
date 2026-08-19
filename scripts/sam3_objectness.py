@@ -56,7 +56,7 @@ def main() -> None:
     ap.add_argument("--limit", type=int, default=200)
     ap.add_argument("--threshold", type=float, default=0.3)
     ap.add_argument("--text", default="garbage or dumped waste")
-    ap.add_argument("--arms", nargs="+", default=["native", "bridged"])
+    ap.add_argument("--arms", nargs="+", default=["gdino", "native", "bridged"])
     ap.add_argument("--out-json")
     args = ap.parse_args()
 
@@ -73,7 +73,25 @@ def main() -> None:
     print(f"[sam3] {len(paths)} images, {sum(len(by_image[p]) for p in paths)} objects, "
           f"prompt={args.text!r}")
 
-    sam3, proc = load_sam3(device="cuda")
+    # Grounding DINO is scored by this same code rather than quoted from its own
+    # script. Its 0.819 was measured without a precision or budget control, so
+    # putting it in the table beside numbers that have both would compare a
+    # recall at an unknown proposal count against recalls at known ones.
+    gd = None
+    if "gdino" in args.arms:
+        from transformers import AutoModelForZeroShotObjectDetection, AutoProcessor
+        gdir = str(pathlib.Path(os.environ.get(
+            "WASTE_VLM_WEIGHTS",
+            "/leonardo_scratch/large/userexternal/adiecidu/waste_vlm/weights"))
+            / "grounding" / "grounding-dino-base")
+        gproc = AutoProcessor.from_pretrained(gdir)
+        gmodel = AutoModelForZeroShotObjectDetection.from_pretrained(
+            gdir, dtype=torch.float32).to("cuda").eval()
+        gd = (gproc, gmodel)
+
+    sam3 = proc = None
+    if {"native", "bridged"} & set(args.arms):
+        sam3, proc = load_sam3(device="cuda")
     enc = projection = None
     if "bridged" in args.arms:
         from src.radio_adaptors import load_projection
@@ -102,15 +120,27 @@ def main() -> None:
         img = Image.open(path).convert("RGB")
         gt = by_image[path]
         for arm in args.arms:
+            if arm == "gdino":
+                gproc, gmodel = gd
+                gi = gproc(images=img, text=args.text if args.text.endswith(".")
+                           else args.text + ".", return_tensors="pt").to("cuda")
+                with torch.no_grad():
+                    go = gmodel(**gi)
+                gr = gproc.post_process_grounded_object_detection(
+                    go, gi["input_ids"], threshold=args.threshold,
+                    target_sizes=[(img.height, img.width)])[0]
+                r = {"boxes": gr["boxes"], "scores": gr["scores"]}
+            else:
+                r = None
             ve = None
             if arm == "bridged":
                 with torch.no_grad():
                     px = enc.transform(img).unsqueeze(0).to(enc.device)
                     patches = enc.encode_tensor(px).patches
                 ve = radio_vision_embeds(sam3, patches, projection)
-            out = detect(sam3, proc, [img], args.text, vision_embeds=ve,
-                         threshold=args.threshold)
-            r = out[0]
+            if r is None:
+                r = detect(sam3, proc, [img], args.text, vision_embeds=ve,
+                           threshold=args.threshold)[0]
             boxes = r["boxes"].tolist() if hasattr(r.get("boxes"), "tolist") else list(r.get("boxes", []))
             scores = r["scores"].tolist() if hasattr(r.get("scores"), "tolist") else list(r.get("scores", []))
             order = sorted(range(len(boxes)), key=lambda i: -(scores[i] if scores else 0.0))
