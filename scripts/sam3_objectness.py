@@ -177,11 +177,18 @@ def main() -> None:
                 # If a detector fragments one heap into parts, no single box clears
                 # IoU 0.5 while their union would -- which is a merging problem, not
                 # a detection failure, and the two call for different fixes.
-                ov = [b for b in boxes if iou(b, box) > 0.05]
+                # Only boxes whose CENTRE falls inside the object. The first
+                # version of this took every box overlapping it at all, which with
+                # 94 proposals per image unions a region far larger than the
+                # object and measures over-proposal rather than fragmentation.
+                ov = [b for b in boxes
+                      if gx <= (b[0] + b[2]) / 2 <= gx + gw
+                      and gy <= (b[1] + b[3]) / 2 <= gy + gh]
                 if ov:
                     u = [min(b[0] for b in ov), min(b[1] for b in ov),
                          max(b[2] for b in ov), max(b[3] for b in ov)]
                     s["merged"][bucket][0] += iou(u, box) >= 0.50
+                    s.setdefault("nparts", {}).setdefault(bucket, []).append(len(ov))
                 s["merged"][bucket][1] += 1
                 cls = gtcls.get((path, gx, gy, gw, gh), "?")
                 pc = s["percls"].setdefault(cls, [0, 0])
@@ -215,8 +222,12 @@ def main() -> None:
               "  ".join(f"{k}x objects {s['bud'][k]/s['n']:.3f}" for k in BUDGETS))
         print("    by object size: " + "  ".join(
             f"{b} {v[0]/v[1]:.3f} (n={v[1]})" for b, v in s["size"].items() if v[1]))
-        print("    same, if overlapping boxes are merged into one: " + "  ".join(
+        print("    same, merging only boxes CENTRED inside the object: " + "  ".join(
             f"{b} {v[0]/v[1]:.3f}" for b, v in s["merged"].items() if v[1]))
+        np_ = s.get("nparts", {})
+        if np_:
+            print("    proposals centred inside one object (median): " + "  ".join(
+                f"{b} {int(np.median(v))}" for b, v in np_.items() if v))
         top = sorted(s["percls"].items(), key=lambda kv: -kv[1][1])[:8]
         print("    per class: " + "  ".join(
             f"{c.split()[0][:11]} {v[0]/v[1]:.2f}(n={v[1]})" for c, v in top))
