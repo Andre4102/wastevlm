@@ -83,11 +83,12 @@ def mask_on_grid(seg, size, g: int) -> np.ndarray:
     return np.array([[a[np.ix_(y, x)].any() for x in xs] for y in ys], dtype=bool)
 
 
-def text_bank(cats, dataset, encode_text):
+def text_bank(cats, dataset, encode_text, variant="base"):
     """One L2-normalised embedding per class, averaged over its prompt list."""
     import torch
 
-    prompts = cue_prompts(dataset, cats)
+    from src.prompt_sets import build as build_prompts
+    prompts = build_prompts(cats, cue_prompts(dataset, cats), variant)
     T = []
     for c in cats:
         e = encode_text(prompts[c])
@@ -125,6 +126,10 @@ def main() -> None:
                     default=["crop-summary", "roi-dense", "dense-seg"])
     ap.add_argument("--ctx", type=float, default=0.5)
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--prompt-set", default="base", choices=["base", "contrastive"])
+    ap.add_argument("--dev-sites", action="store_true",
+                    help="score the TRAINING sites, for developing prompts without "
+                         "touching the evaluation set")
     ap.add_argument("--held-out-sites", action="store_true",
                     help="score only the sites the supervised probe holds out")
     ap.add_argument("--out-json")
@@ -136,7 +141,12 @@ def main() -> None:
     from src.radio_adaptors import load_projection, siglip2_text
 
     cats, rois = load_rois(args.dataset, "test")
-    if args.held_out_sites and args.dataset == "dronewaste":
+    if args.dev_sites and args.dataset == "dronewaste":
+        from scripts.roi_token_probe import split_by_site
+        rois, _te = split_by_site(rois)
+        print(f"[zs] DEVELOPMENT sites only: {len(rois)} objects "
+              f"(the held-out sites are untouched)")
+    elif args.held_out_sites and args.dataset == "dronewaste":
         # The supervised probe holds out sites; scoring this arm on all 5135
         # objects made the two columns different evaluations, which is not a
         # comparison however carefully the rows are lined up.
@@ -156,7 +166,7 @@ def main() -> None:
     g = enc.image_size // enc.patch_size
     dev = enc.device
     encode_text = siglip2_text(device=dev)
-    T = text_bank(cats, args.dataset, encode_text).to(dev)
+    T = text_bank(cats, args.dataset, encode_text, args.prompt_set).to(dev)
     print(f"[zs] {args.encoder} @{args.image_size} -> {g}x{g}; text bank {tuple(T.shape)}")
 
     # Keep per-object predictions, not only the aggregates. A tail of five classes
