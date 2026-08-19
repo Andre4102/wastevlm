@@ -26,6 +26,8 @@ export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false
 ARGS=""
 [ -n "${CKPT:-}" ] && ARGS="--ckpt $CKPT"
 echo "[slurm] $(hostname) job=${SLURM_JOB_ID:-?} dataset=$DATASET ckpt=${CKPT:-none}"
+[ -n "${DEGRADE:-}" ] && ARGS="$ARGS --degrade $DEGRADE"
+OUT=${OUT:-$WROOT/results/roi_material_${DATASET}.json}
 "$PYBIN/python" scripts/roi_material.py --generate --resume --dataset "$DATASET" $ARGS \
-  --contexts 0.0 0.5 --out "$WROOT/results/roi_material_${DATASET}.json"
+  --contexts ${CONTEXTS:-0.0 0.5} --out "$OUT"
 echo "[slurm] done=$(date -Is)"

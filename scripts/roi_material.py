@@ -87,12 +87,21 @@ def load_rois(dataset: str, split: str = "test"):
     return sorted({c for c in cat.values()}), out
 
 
-def crop(img, box, ctx: float):
+def crop(img, box, ctx: float, degrade: int = 0):
     x, y, w, h = box
     W, H = img.size
     cx, cy = w * ctx, h * ctx
-    return img.crop((max(0, x - cx), max(0, y - cy),
-                     min(W, x + w + cx), min(H, y + h + cy)))
+    c = img.crop((max(0, x - cx), max(0, y - cy),
+                  min(W, x + w + cx), min(H, y + h + cy)))
+    if degrade:
+        # Throw away detail down to `degrade` pixels across, then let the usual
+        # preprocess upsample back. This is the only knob that separates "the
+        # sensor cannot resolve the material" from "the label does not describe
+        # the crop": the crop already fills the frame either way, so anything
+        # lost here is pixels, not framing.
+        from PIL import Image as _I
+        c = c.resize((degrade, degrade), _I.LANCZOS)
+    return c
 
 
 def cue_prompts(dataset: str, cats: list[str]) -> dict[str, list[str]]:
@@ -147,7 +156,9 @@ def generate(args) -> None:
         if not ckpt.exists():
             print(f"[skip] {name}: {ckpt} missing")
             continue
-        if all(f"{name}@{c}" in r for c in args.contexts for r in recs):
+        want = [f"{name}@{c}" + (f"d{d}" if d else "")
+                for c in args.contexts for d in ([0] + list(args.degrade))]
+        if all(k in r for k in want for r in recs):
             print(f"[skip] {name}: already scored")
             continue
         print(f"[roi] {name} ({arch})", flush=True)
@@ -167,15 +178,19 @@ def generate(args) -> None:
                 T.append(torch.nn.functional.normalize(e, dim=-1).mean(0))
             T = torch.nn.functional.normalize(torch.stack(T), dim=-1)
             for ctx in args.contexts:
+              for dg in ([0] + list(args.degrade)):
+                key = f"{name}@{ctx}" + (f"d{dg}" if dg else "")
+                if all(key in r for r in recs):
+                    continue
                 for i in range(0, len(rois), 64):
                     chunk = rois[i:i + 64]
-                    ims = torch.stack([preprocess(crop(Image.open(p).convert("RGB"), b, ctx))
+                    ims = torch.stack([preprocess(crop(Image.open(p).convert("RGB"), b, ctx, dg))
                                        for p, b, _ in chunk]).cuda()
                     F = torch.nn.functional.normalize(model.encode_image(ims), dim=-1)
                     for j, s in enumerate((F @ T.T).cpu().tolist()):
-                        recs[i + j].setdefault(f"{name}@{ctx}", s)
-                    if i % 640 == 0:
-                        print(f"   ctx={ctx} {i}/{len(rois)}", flush=True)
+                        recs[i + j].setdefault(key, s)
+                    if i % 1280 == 0:
+                        print(f"   {key} {i}/{len(rois)}", flush=True)
         del model
         torch.cuda.empty_cache()
 
@@ -233,6 +248,8 @@ def report(args) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--generate", action="store_true")
+    ap.add_argument("--degrade", type=int, nargs="*", default=[],
+                    help="also score crops thrown down to N pixels across")
     ap.add_argument("--resume", action="store_true",
                     help="keep whatever --out already holds and only fill the gaps")
     ap.add_argument("--report")
