@@ -173,3 +173,78 @@ anything resembling a fine-tune.
   since crops from one site are near duplicates.
 - **SAM 2 on 640px drone crops is untested here.** Small objects at 32-75px are
   where promptable segmentation is weakest; verify on a handful before scaling.
+
+## The decoder as a composer over tools, not as a perceiver
+
+Every measurement points the same way. Reading pixels through image tokens, the
+7B decoder loses to a linear head on the same frozen features (naming 0.665/0.733
+against a readout bounded at +0.043 over a constant predictor; the gate 0.029 AUC
+behind the probe), and its attribution maps do not respond to the content of the
+question (+0.791 between different category maps). It is not a perceiver.
+
+What it has never been asked to do is compose an answer out of facts that
+something else established. That is a different job and the evidence does not
+speak against it, because nothing has tested it.
+
+### Architecture
+
+```
+C-RADIOv4, one pass ─┬─ proposals   (Grounding DINO now; SAM3 decoder pending)
+                     ├─ masks       (SAM3)
+                     ├─ material    (ROI+linear on the head, SigLIP2 head on the tail)
+                     └─ presence    (linear gate)
+                                    │
+                                    ▼
+                        SCENE GRAPH: [{id, category, confidence,
+                                       box, mask, area, centroid}]
+                                    │
+                                    ▼
+                        decoder: question -> tool calls / program -> answer
+```
+
+The decoder plans and phrases; it never does arithmetic over a list, because code
+does that better and auditably. This is the visual-programming family
+(VisProg/ViperGPT) rather than the LLaVA family, and it is what the numbers have
+been arguing for since the attribution maps came back.
+
+### The evaluation that makes it a result
+
+Four arms on the same compositional query set, chosen so perception error and
+reasoning error come apart:
+
+| arm | what it isolates |
+|---|---|
+| end-to-end VLM on image tokens | the current design |
+| symbolic program over **ground-truth** detections | pure reasoning ceiling, ~100% by construction |
+| symbolic program over **predicted** detections | how much perception error costs |
+| decoder over predicted detections | how much the decoder costs on top of that |
+
+The gap between rows 2 and 3 is perception. Between 3 and 4 is the decoder. Most
+work of this kind reports only row 4 and cannot say which half is failing.
+
+### The caveat that decides whether this is honest
+
+**The query set is schema-computable by construction.** Counting, comparison,
+superlatives and spatial relations were generated from boxes and masks precisely
+so ground truth could be derived automatically -- which means a symbolic program
+should win them, and a decoder that merely matches it has demonstrated nothing.
+Reporting "the agentic system beats the end-to-end VLM" on this set is a fair
+claim about the *pipeline*; reporting it as evidence that the *decoder* earns its
+place is not.
+
+The decoder's advantage, if it has one, lives where automatic ground truth is
+hard: free-form description, unanticipated attributes, ambiguous or
+underspecified reference, and questions the schema never anticipated. Two honest
+ways to reach it, in order of cost:
+
+1. **Held-out query families.** Write questions whose answers need a *combination*
+   the schema exposes but no template covers, and check whether the decoder
+   composes tool calls for them zero-shot. Ground truth stays automatic.
+2. **A small human-scored free-form set.** A few hundred descriptions, scored for
+   factual grounding against the scene graph. Expensive, but it is the only way
+   to measure the thing the decoder is actually for.
+
+Without at least the first, the honest conclusion available from this project is
+"a frozen encoder with tools beats a 7B VLM at aerial waste perception, and the
+decoder's remaining value is untested" -- which is a real result, and better than
+an unsupported claim in either direction.
