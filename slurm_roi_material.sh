@@ -9,7 +9,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --time=03:00:00
+#SBATCH --time=08:00:00
 
 # Ceiling experiment: perfect localisation handed to the model as a crop.
 # Usage:  CKPT=<dir> sbatch slurm_roi_material.sh [aw_m2|aw_m4]
@@ -26,6 +26,6 @@ export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false
 ARGS=""
 [ -n "${CKPT:-}" ] && ARGS="--ckpt $CKPT"
 echo "[slurm] $(hostname) job=${SLURM_JOB_ID:-?} dataset=$DATASET ckpt=${CKPT:-none}"
-"$PYBIN/python" scripts/roi_material.py --generate --dataset "$DATASET" $ARGS \
+"$PYBIN/python" scripts/roi_material.py --generate --resume --dataset "$DATASET" $ARGS \
   --contexts 0.0 0.5 --out "$WROOT/results/roi_material_${DATASET}.json"
 echo "[slurm] done=$(date -Is)"

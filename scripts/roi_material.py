@@ -125,11 +125,30 @@ def generate(args) -> None:
     prompts = cue_prompts(args.dataset, cats)
     recs = [{"image": str(p), "box": list(b), "gt": c} for p, b, c in rois]
 
+    # A full pass is hours of GPU, so let a resubmission pick up whatever the last
+    # one banked rather than paying for it twice.
+    out = pathlib.Path(args.out)
+    if args.resume and out.exists():
+        prev = json.loads(out.read_text())
+        if prev["cats"] == cats and len(prev["rows"]) == len(recs):
+            recs = prev["rows"]
+            done = Counter(k for r in recs for k in r if k not in ("image", "box", "gt"))
+            print("[resume] " + ", ".join(f"{k} {v}/{len(recs)}" for k, v in sorted(done.items())))
+        else:
+            print(f"[resume] {out} does not match this run, starting clean")
+
+    def flush(tag):
+        out.write_text(json.dumps({"cats": cats, "rows": recs}))
+        print(f"[write] {out}  ({tag})", flush=True)
+
     # --- remote-sensing CLIPs -------------------------------------------------
     import open_clip
     for name, (arch, ckpt) in RS_CLIPS.items():
         if not ckpt.exists():
             print(f"[skip] {name}: {ckpt} missing")
+            continue
+        if all(f"{name}@{c}" in r for c in args.contexts for r in recs):
+            print(f"[skip] {name}: already scored")
             continue
         print(f"[roi] {name} ({arch})", flush=True)
         model, _, preprocess = open_clip.create_model_and_transforms(arch)
@@ -160,10 +179,7 @@ def generate(args) -> None:
         del model
         torch.cuda.empty_cache()
 
-    # Write once the CLIP passes are done. They are the expensive half and a
-    # failure in the VLM stage below should not discard them.
-    pathlib.Path(args.out).write_text(json.dumps({"cats": cats, "rows": recs}))
-    print(f"[write] {args.out}  (CLIP stage complete)", flush=True)
+    flush("CLIP stage complete")
 
     # --- our VLM, per-category Yes/No on the crop -----------------------------
     if args.ckpt:
@@ -175,14 +191,19 @@ def generate(args) -> None:
         ad.load()
         print("[roi] VLM yes/no on crops", flush=True)
         for ctx in args.contexts:
+            key = f"vlm@{ctx}"
             for n, (p, b, _c) in enumerate(rois):
+                if key in recs[n]:
+                    continue
                 im = crop(Image.open(p).convert("RGB"), b, ctx)
-                recs[n][f"vlm@{ctx}"] = [ad.decision_margin(im, qs[c]) for c in cats]
+                recs[n][key] = [ad.decision_margin(im, qs[c]) for c in cats]
                 if n % 200 == 0:
                     print(f"   ctx={ctx} {n}/{len(rois)}", flush=True)
+                if n % 500 == 0 and n:
+                    flush(f"{key} {n}/{len(rois)}")
+            flush(f"{key} complete")
 
-    pathlib.Path(args.out).write_text(json.dumps({"cats": cats, "rows": recs}))
-    print(f"[write] {args.out}")
+    flush("done")
 
 
 def report(args) -> None:
@@ -212,6 +233,8 @@ def report(args) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--generate", action="store_true")
+    ap.add_argument("--resume", action="store_true",
+                    help="keep whatever --out already holds and only fill the gaps")
     ap.add_argument("--report")
     ap.add_argument("--dataset", default="aw_m2",
                     choices=["aw_m2", "aw_m4", "dronewaste"])
