@@ -38,22 +38,50 @@ CONSERVATIVE = ["Textile", "Furniture", "Wood", "Rubble", "Scrap",
                 "Foundry", "Asphalt milling", "Vehicles", "Asbestos"]
 
 TEMPLATE = """You are writing text prompts for a vision model that matches aerial \
-drone photographs (taken looking straight down from about 50 metres) to categories \
-of waste.
+drone photographs (looking straight down from about 50 metres) to categories of waste.
 
-Category: {name}
+Category name: {name}
 Official EWC-Stat entry: {code}
 
-The category name is often narrower than what the entry actually covers, and the \
-model is currently missing most examples of it — it only recognises one form. \
-Write 8 short prompts (each under 14 words) spanning the DIFFERENT PHYSICAL FORMS \
-this entry covers as seen from above: baled, loose, heaped, scattered, stacked, \
-sorted, weathered. Vary the wording and include common synonyms for the material.
+IMPORTANT: the category NAME can be misleading and the official entry is what counts. \
+For example "Rubble" is the entry "12.61 Soils", meaning earth and soil spoil, not \
+broken masonry. Write prompts for what the ENTRY describes.
 
-Describe appearance from above — colour, texture, arrangement, shape. Do not \
-mention any other waste category by name.
+The model currently recognises only one form of this material and misses the rest. \
+Write 8 prompts, each under 14 words, describing how the entry's material looks from \
+directly above in DIFFERENT situations. Cover a range: a compacted heap, material \
+spread thinly over ground, a few isolated items, a large mound, weathered or \
+discoloured material, freshly deposited material. Use different opening words for \
+every prompt — do not begin them all the same way. Include ordinary synonyms for \
+the material itself.
 
-Reply with a JSON list of strings only."""
+Describe only colour, texture, shape and arrangement. Never name a different kind \
+of waste.
+
+Reply with ONLY a JSON list of 8 strings, no other text."""
+
+
+BAD_WORDS = None   # filled from the class list at run time
+
+
+def sane(prompt: str, own: str, others) -> bool:
+    """Drop a prompt that names someone else's material.
+
+    The first run produced "Baled fabric scraps form neat rectangles" for Rubble,
+    which is 12.61 Soils. A generated prompt is unverified text and a hallucinated
+    one does not merely fail to help, it actively pulls the class toward its
+    neighbour -- which is the failure this whole expansion is meant to repair.
+    """
+    low = prompt.lower()
+    own_l = own.lower()
+    for o in others:
+        ol = o.lower()
+        if ol == own_l:
+            continue
+        head = ol.split()[0]
+        if len(head) > 3 and head in low and head not in own_l:
+            return False
+    return True
 
 
 def main() -> None:
@@ -81,16 +109,25 @@ def main() -> None:
           f"(the collapsed ones are left alone; widening them makes them worse)")
     for c in targets:
         code = ewc.get(c) or c
-        reply = gen(TEMPLATE.format(name=c, code=f"{code}"), max_new_tokens=500)
-        m = re.search(r"\[.*\]", reply, re.S)
         got = []
-        if m:
-            try:
-                got = [str(x).strip() for x in json.loads(m.group(0)) if str(x).strip()]
-            except json.JSONDecodeError:
-                got = []
-        if not got:   # a class that fails to parse keeps its existing prompts
-            print(f"   {c:38s} parse failed, keeping base")
+        for attempt in range(3):     # 5 of 15 failed to parse on a single try
+            reply = gen(TEMPLATE.format(name=c, code=f"{code}"), max_new_tokens=520)
+            m = re.search(r"\[.*?\]", reply, re.S)
+            if m:
+                try:
+                    got = [str(x).strip() for x in json.loads(m.group(0)) if str(x).strip()]
+                except json.JSONDecodeError:
+                    got = []
+            if not got:
+                continue
+            kept = [g for g in got if sane(g, c, cats)]
+            if len(kept) < len(got):
+                print(f"   {c:38s} dropped {len(got)-len(kept)} naming another class")
+            got = kept
+            if got:
+                break
+        if not got:   # a class that fails keeps its existing prompts rather than losing them
+            print(f"   {c:38s} no usable output, keeping base")
             continue
         out[c] = got
         print(f"   {c:38s} +{len(got)}  e.g. {got[0][:58]!r}")
