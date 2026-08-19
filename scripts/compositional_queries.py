@@ -64,7 +64,12 @@ def load(sites) -> dict:
         out[p]["size"] = (im["width"], im["height"])
         out[p]["objs"].append({
             "cat": cat[a["category_id"]], "box": [x, y, bw, bh],
-            "area": float(a.get("area") or bw * bh),
+            # Box area, not the annotation's polygon area. A detector only ever
+            # produces a box, so grounding the questions in polygon area makes the
+            # ceiling arm unreachable by construction -- it scored 0.977 on
+            # area_compare and 0.974 on superlative purely from this mismatch,
+            # which would then have been read as reasoning error.
+            "area": float(bw * bh),
             "cx": x + bw / 2, "cy": y + bh / 2,
         })
     return dict(out)
