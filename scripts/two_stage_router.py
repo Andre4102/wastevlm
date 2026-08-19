@@ -43,20 +43,27 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-GEN_PROMPT = """You are helping a vision model tell apart similar kinds of waste \
-photographed from a drone, looking straight down from about 50 metres.
+GEN_PROMPT = """You are writing text prompts for a vision model matching aerial \
+drone photographs (straight down, about 50 metres) to categories of waste.
 
-It must choose between exactly these categories:
+It must choose between exactly these, which it currently confuses:
 {cands}
 
-These are being confused with each other. For EACH category, write 3 short visual \
-descriptions (under 14 words each) that would let an aerial image be matched to the \
-right one. Say what it looks like from above — shape, arrangement, colour, texture — \
-and emphasise what separates it from the OTHER categories in this list. Do not \
-mention the category name of a different item.
+Official EWC-Stat entry for each, which is what the category actually means — the \
+NAME is often narrower or plainly misleading, so go by the entry:
+{codes}
 
-Reply with JSON only, of the form:
-{{"Category name": ["description one", "description two", "description three"], ...}}"""
+Here is the style and level of detail wanted, for categories not in this list:
+  Pallets: "stacked wooden pallets in regular rows, uniform rectangles"
+  Tyres: "black rings and dark circular stacks, sharply round"
+  Metal barrels: "cylindrical drums, bright tops, arranged upright in clusters"
+
+For EACH category above write 3 prompts under 14 words. Say what THAT material \
+looks like from above — colour, texture, shape, arrangement — and choose details \
+that separate it from the others listed. State the colour you would actually see, \
+not a guess. Never name another category.
+
+Reply with JSON only: {{"Category name": ["...", "...", "..."], ...}}"""
 
 
 def parse_json_block(text: str) -> dict:
@@ -117,6 +124,8 @@ def main() -> None:
                     help="fraction of least-confident objects sent to stage 2")
     ap.add_argument("--topk", type=int, default=5)
     ap.add_argument("--arms", nargs="+", default=["llm", "fixed"])
+    ap.add_argument("--dump-prompts", action="store_true",
+                    help="print the first few generated banks, to see what they say")
     ap.add_argument("--out-json")
     args = ap.parse_args()
 
@@ -158,15 +167,36 @@ def main() -> None:
 
     encode_text = siglip2_text(device="cuda")
     base_bank = cue_prompts("dronewaste", cats)
+    from scripts.roi_material import _ewc_descriptions
+    ewc = _ewc_descriptions("dronewaste")
     banks = {}
     if "llm" in args.arms:
         gen = load_decoder(args.decoder)
         for n, cand in enumerate(sets):
-            reply = gen(GEN_PROMPT.format(cands="\n".join(f"- {c}" for c in cand)))
+            reply = gen(GEN_PROMPT.format(
+                cands="\n".join(f"- {c}" for c in cand),
+                codes="\n".join(f"- {c}: {ewc.get(c, c)}" for c in cand)))
             got = parse_json_block(reply)
             # only keep names that are actually in the candidate set; a decoder that
             # invents a category must not silently define one
-            banks[cand] = {c: got[c] for c in cand if c in got and got[c]}
+            keep = {}
+            for c in cand:
+                if c not in got or not got[c]:
+                    continue
+                # A generated prompt naming another candidate pulls the object
+                # toward that rival, which is the opposite of disambiguating. The
+                # per-class generator already needed this guard; this template
+                # never had it, and this arm scored 0.212 -> 0.097.
+                others = [o for o in cand if o != c]
+                keep[c] = [g for g in got[c]
+                           if not any(o.split()[0].lower() in g.lower()
+                                      and o.split()[0].lower() not in c.lower()
+                                      for o in others if len(o.split()[0]) > 3)]
+                keep[c] = keep[c] or None
+            banks[cand] = {k: v for k, v in keep.items() if v}
+            if args.dump_prompts and n < 3:
+                print(f"   [sample] {cand}\n     {json.dumps(banks[cand], indent=6)[:700]}",
+                      flush=True)
             if n % 20 == 0:
                 print(f"   generated {n}/{len(sets)}  "
                       f"({len(banks[cand])}/{len(cand)} parsed)", flush=True)
