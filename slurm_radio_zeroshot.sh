@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=objness
-#SBATCH --output=logs/objness_%j.out
-#SBATCH --error=logs/objness_%j.err
+#SBATCH --job-name=radio_zs
+#SBATCH --output=logs/radio_zs_%j.out
+#SBATCH --error=logs/radio_zs_%j.err
 #SBATCH --account=iscrc_fiche
 #SBATCH --partition=boost_usr_prod
 #SBATCH --nodes=1
@@ -9,10 +9,10 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --time=02:00:00
+#SBATCH --time=03:00:00
 
-# Can the encoder we already run produce the proposals?
-# Usage:  sbatch slurm_objectness.sh [dronewaste|aw_m2] [image_size]
+# Zero-shot naming + dense open-vocab segmentation through C-RADIOv4's SigLIP2 head.
+# Usage:  sbatch slurm_radio_zeroshot.sh [dronewaste|aw_m2] [image_size]
 set -euo pipefail
 PROJECT=/leonardo/home/userexternal/adiecidu/scripts/wastevlm
 WROOT=/leonardo_scratch/large/userexternal/adiecidu/waste_vlm
@@ -24,7 +24,7 @@ export WASTE_DATA_ROOT=$WROOT/data
 export HF_HOME=/leonardo_scratch/large/userexternal/adiecidu/hf_cache
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false
 echo "[slurm] $(hostname) job=${SLURM_JOB_ID:-?} dataset=$DATASET img=$IMG"
-"$PYBIN/python" scripts/feature_objectness.py --dataset "$DATASET" --image-size "$IMG" \
-  --limit "${LIMIT:-200}" --project "${PROJECT:-none}" \
-  --out-json "$WROOT/results/objectness_${DATASET}_${IMG}_${PROJECT:-none}.json"
+"$PYBIN/python" scripts/radio_zeroshot.py --dataset "$DATASET" --image-size "$IMG" \
+  --modes ${MODES:-crop-summary roi-dense dense-seg} \
+  --out-json "$WROOT/results/radio_zs_${DATASET}_${IMG}.json"
 echo "[slurm] done=$(date -Is)"

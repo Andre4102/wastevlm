@@ -110,6 +110,9 @@ def main() -> None:
     ap.add_argument("--image-size", type=int, default=640)
     ap.add_argument("--limit", type=int, default=200)
     ap.add_argument("--pct", type=float, nargs="*", default=[85.0, 90.0, 95.0])
+    ap.add_argument("--project", default="none", choices=["none", "sam3", "siglip2-g"],
+                    help="run the teacher projection before scoring objectness; "
+                         "raw features are heuristics, sam3 is the head trained for this")
     ap.add_argument("--out-json")
     args = ap.parse_args()
 
@@ -126,6 +129,11 @@ def main() -> None:
 
     enc = VisionEncoder(args.encoder, image_size=args.image_size)
     g = enc.image_size // enc.patch_size
+    proj = None
+    if args.project != "none":
+        from src.radio_adaptors import load_projection
+        proj = load_projection(args.project, "features", args.encoder, device=enc.device)
+        print(f"[obj] projecting patches into {args.project} space")
     print(f"[obj] {args.encoder} @{args.image_size} -> {g}x{g} grid, "
           f"{enc.image_size / g:.1f}px per token")
 
@@ -135,7 +143,10 @@ def main() -> None:
     for n, path in enumerate(paths):
         img = Image.open(path).convert("RGB")
         with torch.no_grad():
-            F = enc.encode([img]).patches[0].float().cpu().numpy()
+            P = enc.encode([img]).patches
+            if proj is not None:
+                P = proj(P.to(next(proj.parameters()).dtype))
+            F = P[0].float().cpu().numpy()
         gt = by_image[path]
         maps = {"border": border_objectness(F, g), "spectral": spectral_objectness(F, g)}
         for mname, a in maps.items():
