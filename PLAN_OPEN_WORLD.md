@@ -259,3 +259,68 @@ Without at least the first, the honest conclusion available from this project is
 "a frozen encoder with tools beats a 7B VLM at aerial waste perception, and the
 decoder's remaining value is untested" -- which is a real result, and better than
 an unsupported claim in either direction.
+
+## Constraint: no supervision anywhere in the pipeline (2026-08-19)
+
+Nothing in the deployed system is trained on waste. This is a stronger claim than
+"training-free" as used earlier in this document, which still allowed a logistic
+regression over frozen features, and it removes components that were carrying the
+best numbers. Recording what goes, what stays, and what it costs.
+
+### What leaves the pipeline
+
+| component | was | why it goes |
+|---|---|---|
+| ROI tokens + linear naming head | 0.665 AerialWaste / 0.733 DroneWaste | fitted on labelled objects |
+| linear presence gate | AUC 0.970 | fitted on labelled images |
+| our LoRA-finetuned decoder | gate micro-F1 0.601 | finetuned on a waste mix |
+
+The finetuned decoder goes too. Its LoRA never saw AerialWaste or DroneWaste, so
+it is zero-shot with respect to the evaluation, but it is not untrained on waste
+and the claim should not need that footnote. **The composer becomes base
+Qwen2.5-7B-Instruct**, which is already on disk. Nothing in the pipeline has then
+seen a waste label.
+
+### What the pipeline is now
+
+```
+C-RADIOv4 (frozen, one pass) ─┬─ →SAM3 → FPN → DETR → boxes + masks
+                              └─ →SigLIP2 summary → naming from text
+Grounding DINO (frozen) ────────► boxes, where its recall still leads
+base Qwen2.5-7B-Instruct ───────► writes the queries, composes the answer
+```
+
+Gating stops being a trained head and becomes a text comparison through the same
+SigLIP2 space, or SAM3's own detection score. Both need measuring; neither needs
+fitting.
+
+### What it costs, stated plainly
+
+Naming drops from the supervised 0.733 to the zero-shot **0.442** on DroneWaste
+(still 6.66x chance against 20 classes, on a 0.198 majority). On AerialWaste
+zero-shot naming sits at or below the majority baseline, so **the material branch
+is not viable there without supervision** -- AerialWaste carries detection only.
+
+The supervised probes do not disappear from the thesis, they change role. They are
+the reference for what a trained model extracts from the same features, which is
+both the upper bound on any zero-shot readout and the natural stand-in for the
+Faster R-CNN / YOLO comparison. Measuring the gap is the result; shipping the
+probe is what stops.
+
+### The leak to watch
+
+A zero-shot pipeline still has thresholds -- SAM3's detection score, the SigLIP2
+margin used for gating, the IoU used for matching. **Choosing them on labelled
+data is supervision by another name**, and it is the easiest way for a
+"no supervision" claim to be quietly false. Three defensible options, in order of
+strength:
+
+1. fix them a priori and never tune them;
+2. select on one held-out site and report the result on the others, so the
+   selection cost is visible;
+3. report a sweep and show the conclusion does not depend on the choice.
+
+Whichever is used has to be stated. The threshold sweep already run on SAM3
+(0.05 / 0.15 / 0.30) exists for this reason, and moved recall from 0.277 to 0.446 --
+a range wide enough that picking the best one on the test set would be a real
+distortion rather than a technicality.
