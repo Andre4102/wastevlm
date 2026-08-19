@@ -109,6 +109,7 @@ def cue_prompts(dataset: str, cats: list[str]) -> dict[str, list[str]]:
     stem = {"dronewaste": "paper10"}.get(dataset, dataset)
     path = pathlib.Path(__file__).resolve().parents[1] / "src" / f"{stem}_descriptions.json"
     d = json.loads(path.read_text()) if path.exists() else {}
+    ewc = _ewc_descriptions(dataset)
     out = {}
     for c in cats:
         p = [f"an aerial photo of {c.lower()}",
@@ -117,7 +118,37 @@ def cue_prompts(dataset: str, cats: list[str]) -> dict[str, list[str]]:
         cue = (d.get(c) or {}).get("aerial_cue")
         if cue:
             p.append(f"an aerial photo of {cue.split('—')[0].strip()}")
+        # The class names are shorthand for EWC-Stat entries and several are
+        # actively misleading read literally: "Foundry" is 12.42, slags and ashes
+        # from thermal treatment, not a building; "Asphalt milling" is 12.12,
+        # waste road-surfacing material. Handing a text encoder the bare name asks
+        # it for the wrong thing, and it is the rare classes that carry the worst
+        # names -- which is exactly where the zero-shot argument is being tested.
+        if ewc.get(c):
+            p.append(f"an aerial photo of {ewc[c].lower()}")
         out[c] = p
+    return out
+
+
+def _ewc_descriptions(dataset: str) -> dict:
+    """DroneWaste's info.txt maps each class to its EWC-Stat code and wording."""
+    if dataset != "dronewaste":
+        return {}
+    f = DATA / "dronewaste" / "info.txt"
+    if not f.exists():
+        return {}
+    out, in_cats = {}, False
+    for line in f.read_text().splitlines():
+        if line.startswith("categories:"):
+            in_cats = True
+            continue
+        if in_cats:
+            if not line.startswith("  ") or ":" not in line:
+                break
+            name, _, rest = line.strip().partition(":")
+            parts = rest.strip().split(" ", 1)
+            if len(parts) == 2:
+                out[name] = parts[1].strip()
     return out
 
 

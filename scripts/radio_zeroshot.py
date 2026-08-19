@@ -154,18 +154,34 @@ def main() -> None:
 
     if "crop-summary" in args.modes:
         head = load_projection("siglip2-g", "summary", args.encoder, device=dev)
-        S = []
+        hdim = head.fc1.weight.shape[1] if hasattr(head, "fc1") else 1152
+        # RADIO returns its CLS tokens concatenated. This build emits 2304 = 2 x
+        # 1152, which matches the two teachers whose config sets use_summary
+        # (siglip2-g and dino_v3_7b; sam3 does not), so the SigLIP2 token should
+        # be the first slice. "Should be" is not a measurement, so both slices are
+        # scored and the answer is read off rather than assumed.
+        nslice = 1
+        S = None
         for n in range(0, len(rois), 16):
             ims = [crop(Image.open(p).convert("RGB"), b, args.ctx)
                    for p, b, _c in rois[n:n + 16]]
             with torch.no_grad():
-                e = head(enc.encode(ims).cls.to(next(head.parameters()).dtype))
-                e = torch.nn.functional.normalize(e.float(), dim=-1)
-            S.append((e @ T.T).cpu().numpy())
+                cls = enc.encode(ims).cls
+                if S is None:
+                    nslice = max(1, cls.shape[-1] // hdim)
+                    S = [[] for _ in range(nslice)]
+                    print(f"[zs] CLS {cls.shape[-1]} = {nslice} x {hdim}; "
+                          f"scoring every slice", flush=True)
+                for k in range(nslice):
+                    e = head(cls[:, k * hdim:(k + 1) * hdim].to(
+                        next(head.parameters()).dtype))
+                    e = torch.nn.functional.normalize(e.float(), dim=-1)
+                    S[k].append((e @ T.T).cpu().numpy())
             if n % 640 == 0:
                 print(f"   crop-summary {n}/{len(rois)}", flush=True)
-        rep["modes"]["crop-summary"] = report("crop-summary", y_true,
-                                              np.concatenate(S).argmax(1), cats, prev)
+        for k in range(nslice):
+            rep["modes"][f"crop-summary[cls{k}]"] = report(
+                f"crop-sum[cls{k}]", y_true, np.concatenate(S[k]).argmax(1), cats, prev)
 
     if "roi-dense" in args.modes or "dense-seg" in args.modes:
         fp = load_projection("siglip2-g", "features", args.encoder, device=dev)
