@@ -93,10 +93,10 @@ def encode(enc, rois, pad, batch_size):
         by_image.setdefault(str(p), []).append(i)
     paths = sorted(by_image)
 
-    # RADIO's summary vector is wider than its patch tokens, so the CLS array
-    # cannot be sized from feature_dim; allocate it once the first batch is in.
-    D = enc.feature_dim
-    out = {k: np.zeros((len(rois), D), dtype=np.float32) for k in ("roi_mean", "roi_max")}
+    # RADIO's summary vector and its patch tokens have different widths
+    # (feature_dim is the CLS dim, patch_dim the tokens'), so neither array is
+    # sized from a constant -- both are allocated once the first batch is in.
+    out = {}
     cls = None
     ntok = []
     for i in range(0, len(paths), batch_size):
@@ -107,6 +107,8 @@ def encode(enc, rois, pad, batch_size):
             o = enc.encode(imgs)
         if cls is None:
             cls = np.zeros((len(rois), o.cls.shape[-1]), dtype=np.float32)
+            out = {k: np.zeros((len(rois), o.patches.shape[-1]), dtype=np.float32)
+                   for k in ("roi_mean", "roi_max")}
         for b, p in enumerate(chunk):
             for j in by_image[p]:
                 m, mx, n = roi_pool(o.patches[b], grid, rois[j][1], sizes[b], pad)
