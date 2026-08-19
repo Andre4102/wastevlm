@@ -25,6 +25,6 @@ export HF_HOME=/leonardo_scratch/large/userexternal/adiecidu/hf_cache
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false
 echo "[slurm] $(hostname) job=${SLURM_JOB_ID:-?} dataset=$DATASET img=$IMG"
 "$PYBIN/python" scripts/feature_objectness.py --dataset "$DATASET" --image-size "$IMG" \
-  --limit "${LIMIT:-200}" --project "${PROJECT:-none}" \
-  --out-json "$WROOT/results/objectness_${DATASET}_${IMG}_${PROJECT:-none}.json"
+  --limit "${LIMIT:-200}" --project "${TEACHER:-none}" \
+  --out-json "$WROOT/results/objectness_${DATASET}_${IMG}_${TEACHER:-none}.json"
 echo "[slurm] done=$(date -Is)"

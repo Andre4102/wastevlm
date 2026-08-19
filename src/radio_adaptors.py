@@ -100,20 +100,54 @@ def load_projection(teacher: str = "siglip2-g", kind: str = "features",
 
 @functools.lru_cache(maxsize=1)
 def siglip2_text(version: str = "google/siglip2-giant-opt-patch16-384", device="cuda"):
-    """-> (encode_fn, ) where encode_fn(list[str]) gives L2-normalised text embeddings.
+    """-> encode(list[str]) giving L2-normalised SigLIP2 text embeddings.
 
-    Matches the version string the release's SigLIP2Adaptor maps `siglip2-g-384`
-    to, so the text side lands in the same space the projection targets.
+    Built by hand rather than through AutoModel because this checkpoint's text
+    tower is not square: its config declares text_config.projection_size 1536
+    while the hidden size is 1152, and transformers 4.49 builds the final head as
+    nn.Linear(hidden, hidden). from_pretrained therefore refuses the head with a
+    shape mismatch, and the suggested ignore_mismatched_sizes would silently
+    randomise the very projection that carries the alignment -- the text side
+    would still produce vectors, they just would not mean anything.
+
+    So the head is resized to what the checkpoint holds and the weights are
+    loaded strictly. Upgrading transformers would also work, but not while the
+    rest of the stack is pinned around it.
     """
-    from transformers import AutoModel, AutoTokenizer
+    import glob
+    import json
 
-    tok = AutoTokenizer.from_pretrained(version)
-    model = AutoModel.from_pretrained(version).to(device).eval()
+    import torch
+    from safetensors.torch import load_file
+    from transformers import AutoTokenizer, SiglipTextConfig, SiglipTextModel
+
+    d = _snapshot(version)
+    cfg_all = json.loads((pathlib.Path(d) / "config.json").read_text())
+    tc = dict(cfg_all["text_config"])
+    proj = tc.pop("projection_size", None) or tc["hidden_size"]
+    model = SiglipTextModel(SiglipTextConfig(**tc))
+    if proj != tc["hidden_size"]:
+        model.text_model.head = torch.nn.Linear(tc["hidden_size"], proj)
+
+    sd = {}
+    for f in sorted(glob.glob(str(pathlib.Path(d) / "*.safetensors"))):
+        sd.update({k: v for k, v in load_file(f).items() if k.startswith("text_model.")})
+    missing, unexpected = model.load_state_dict(sd, strict=False)
+    if missing:
+        raise RuntimeError(f"SigLIP2 text tower incomplete, missing {missing[:5]}")
+    model = model.to(device).eval()
+    tok = AutoTokenizer.from_pretrained(d)
 
     @torch.no_grad()
     def encode(texts):
-        b = tok(texts, padding="max_length", truncation=True, return_tensors="pt").to(device)
-        e = model.get_text_features(**b).float()
+        b = tok(list(texts), padding="max_length", truncation=True,
+                max_length=64, return_tensors="pt").to(device)
+        e = model(**b).pooler_output.float()
         return torch.nn.functional.normalize(e, dim=-1)
 
     return encode
+
+
+def _snapshot(version: str) -> str:
+    from huggingface_hub import snapshot_download
+    return snapshot_download(version, local_files_only=True)
