@@ -1391,3 +1391,46 @@ they boxed. Whatever a model recovers, it is bounded by a target that its own
 authors could not assign a quarter of the time -- alongside ordinary annotator
 noise, which the label set gives no way to estimate without a re-annotated
 subset.
+
+## Attribution maps: it looks at the waste, and at the same waste whatever you ask (2026-08-19)
+
+`src/attribution.py` maps the Yes/No margin back onto the 24x24 visual token grid.
+The margin is one scalar from one prefill and the projected tokens are an ordinary
+tensor spliced into the prompt, so the path is differentiable end to end -- no
+attention weights, which are a poor attribution signal and behind fused kernels
+anyway. Integrated gradients over 40 AerialWaste images with drawn boxes, plus
+token-block occlusion on 12 as the assumption-free reference.
+
+| | mass-in-box | lift over uniform | peak inside box |
+|---|---:|---:|---:|
+| uniform null (= box area fraction) | 0.055 | +0.000 | -- |
+| centre prior | 0.096 | +0.040 | 60% |
+| **integrated gradients** | **0.393** | **+0.338** | **70%** |
+| token occlusion (12 imgs) | 0.257 | +0.193 | 25% |
+
+Evidence for "yes, waste" lands on the annotated waste at **8.5x the lift of a
+centre-weighted map that never saw the image** -- which matters because
+AerialWaste piles are often central and a centre prior would inherit that for
+free. The two estimators agree in direction and magnitude, so the cheap one is
+usable at scale.
+
+Note the two columns disagree for the centre prior: it wins 60% peak-inside-box
+while scoring lift +0.040. Peak position is easy to get right by accident on
+centred data; mass is not. Lift is the column to read.
+
+### The same map, whatever material is asked about
+
+| correlation | |
+|---|---:|
+| between two DIFFERENT category maps | **+0.791** |
+| between a category map and the presence map | **+0.824** |
+
+Asking "is there plastic" and asking "is there rubble" produce the same map, and
+both are essentially the map for "is there waste". This is the occlusion result --
+72% of the category effect was presence rather than identity -- reproduced by an
+independent method, and it is now visible rather than inferred.
+
+**Consequence.** The decoder is a usable, training-free *localiser* and not a
+namer. Open-vocabulary naming cannot be obtained by varying the question text on
+this stack, because the attribution does not respond to the question's content.
+Naming has to come from a text-aligned encoder.
