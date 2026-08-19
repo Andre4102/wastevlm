@@ -204,8 +204,14 @@ def main() -> None:
             if n % 640 == 0:
                 print(f"   crop-summary {n}/{len(rois)}", flush=True)
         for k in range(nslice):
-            yp = np.concatenate(S[k]).argmax(1)
+            sim = np.concatenate(S[k])
+            yp = sim.argmax(1)
             rep["pred"][f"crop-summary[cls{k}]"] = yp.tolist()
+            # Keep the whole similarity vector, not just its argmax. Whether the
+            # encoder knows it is confused is a property of the runners-up, and
+            # recomputing them costs another GPU pass.
+            if k == 0:
+                rep["sims"] = np.round(sim, 4).tolist()
             rep["modes"][f"crop-summary[cls{k}]"] = report(
                 f"crop-sum[cls{k}]", y_true, yp, cats, prev)
 
