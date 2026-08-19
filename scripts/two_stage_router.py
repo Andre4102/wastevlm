@@ -86,13 +86,16 @@ def load_decoder(path: str, device: str = "cuda"):
     model = AutoModelForCausalLM.from_pretrained(
         path, torch_dtype=torch.bfloat16, device_map=device).eval()
 
-    def generate(prompt: str, max_new_tokens: int = 700) -> str:
+    def generate(prompt: str, max_new_tokens: int = 700, temperature: float = 0.0) -> str:
         msgs = [{"role": "user", "content": prompt}]
         ids = tok.apply_chat_template(msgs, add_generation_prompt=True,
                                       return_tensors="pt").to(model.device)
+        kw = dict(do_sample=False)
+        if temperature > 0:
+            kw = dict(do_sample=True, temperature=temperature, top_p=0.95)
         with torch.no_grad():
-            out = model.generate(ids, max_new_tokens=max_new_tokens, do_sample=False,
-                                 pad_token_id=tok.eos_token_id)
+            out = model.generate(ids, max_new_tokens=max_new_tokens,
+                                 pad_token_id=tok.eos_token_id, **kw)
         return tok.decode(out[0, ids.shape[1]:], skip_special_tokens=True)
 
     return generate
@@ -123,7 +126,9 @@ def main() -> None:
     ap.add_argument("--defer", type=float, default=0.30,
                     help="fraction of least-confident objects sent to stage 2")
     ap.add_argument("--topk", type=int, default=5)
-    ap.add_argument("--arms", nargs="+", default=["llm", "fixed"])
+    ap.add_argument("--arms", nargs="+", default=["llm", "llm-loop", "fixed"])
+    ap.add_argument("--samples", type=int, default=4,
+                    help="prompt sets sampled per candidate group for llm-loop")
     ap.add_argument("--dump-prompts", action="store_true",
                     help="print the first few generated banks, to see what they say")
     ap.add_argument("--out-json")
@@ -169,9 +174,10 @@ def main() -> None:
     base_bank = cue_prompts("dronewaste", cats)
     from scripts.roi_material import _ewc_descriptions
     ewc = _ewc_descriptions("dronewaste")
-    banks = {}
-    if "llm" in args.arms:
+    banks, banks_loop = {}, {}
+    if {"llm", "llm-loop"} & set(args.arms):
         gen = load_decoder(args.decoder)
+    if "llm" in args.arms:
         for n, cand in enumerate(sets):
             reply = gen(GEN_PROMPT.format(
                 cands="\n".join(f"- {c}" for c in cand),
@@ -201,6 +207,43 @@ def main() -> None:
                 print(f"   generated {n}/{len(sets)}  "
                       f"({len(banks[cand])}/{len(cand)} parsed)", flush=True)
 
+    # --- closed loop: sample several prompt sets per candidate group and keep the
+    # one that SEPARATES the candidates best on the actual image embeddings. The
+    # decoder has only ever been tested open-loop, and the hand-written prompts it
+    # loses to were written after reading a confusion matrix -- so what has been
+    # measured so far is generation without feedback, not generation. Mean margin
+    # is the selection signal because margin is already known to track correctness
+    # here at AUROC 0.82; no labels are used.
+    if "llm-loop" in args.arms:
+        import torch as _t
+        for n, (cand, idxs) in enumerate(sets.items()):
+            cl = list(cand)
+            best, best_sep = None, -1e9
+            for k in range(args.samples):
+                reply = gen(GEN_PROMPT.format(
+                    cands="\n".join(f"- {c}" for c in cl),
+                    codes="\n".join(f"- {c}: {ewc.get(c, c)}" for c in cl)),
+                    temperature=0.0 if k == 0 else 0.9)
+                got = parse_json_block(reply)
+                pm = {c: got[c] for c in cl if c in got and got[c]}
+                if len(pm) < len(cl):
+                    continue
+                V = []
+                for c in cl:
+                    t = encode_text(pm[c])
+                    V.append(_t.nn.functional.normalize(t.mean(0), dim=-1).cpu().numpy())
+                V = np.stack(V)
+                sims = emb[idxs] @ V.T
+                srt = np.sort(sims, 1)
+                sep = float((srt[:, -1] - srt[:, -2]).mean())
+                if sep > best_sep:
+                    best_sep, best = sep, pm
+            if best:
+                banks_loop[cand] = best
+            if n % 40 == 0:
+                print(f"   loop {n}/{len(sets)}  best separation {best_sep:.4f}",
+                      flush=True)
+
     out = {"stage1": float(correct1.mean()), "defer": args.defer,
            "deferred_stage1": float(correct1[deferred].mean()),
            "oracle_topk": float(cont), "n_sets": len(sets), "arms": {}}
@@ -208,8 +251,12 @@ def main() -> None:
     for arm in args.arms:
         pred2 = pred1.copy()
         for cand, idxs in sets.items():
-            pm = banks.get(cand, {}) if arm == "llm" else {
-                c: (CONTRASTIVE.get(c) or base_bank.get(c)) for c in cand}
+            if arm == "llm":
+                pm = banks.get(cand, {})
+            elif arm == "llm-loop":
+                pm = banks_loop.get(cand, {})
+            else:
+                pm = {c: (CONTRASTIVE.get(c) or base_bank.get(c)) for c in cand}
             if not pm:
                 continue
             for i in idxs:
