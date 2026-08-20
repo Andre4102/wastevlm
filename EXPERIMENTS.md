@@ -1819,3 +1819,93 @@ similarity matrix so `argmax` returns 0 for every object. The true value is
 **0.696**. `fit_centroid` now drops classes with no exemplar from the prototype set
 instead of averaging nothing; the same fix applies to the `a=0` column of the
 hybrid sweep, whose first printing was NaN-poisoned for the same reason.
+
+## Where the exemplar gain lands, and whether text is carrying meaning (2026-08-20)
+
+Two questions, both answered off the cached embeddings, no GPU.
+
+### The gain concentrates on the classes text mispoints
+
+5-shot at a=0.5 against text alone, per class, on the held-out test splits. `rank`
+is where the class's own train centroid sits in its text vector's ranking -- the
+label-free diagnostic from the previous section.
+
+dronewaste (2090 test objects):
+
+| class | n | rank | text F1 | 5-shot F1 | gain |
+|---|---:|---:|---:|---:|---:|
+| Textile | 162 | 4 | 0.230 | 0.771 | **+0.541** |
+| Plastic packaging | 182 | 1 | 0.000 | 0.515 | **+0.515** |
+| Paper | 9 | 1 | 0.273 | 0.415 | +0.142 |
+| Furniture | 72 | 2 | 0.510 | 0.622 | +0.112 |
+| Asbestos | 53 | 2 | 0.693 | 0.800 | +0.108 |
+| **Plastic** | 48 | **6** | 0.072 | 0.168 | **+0.096** |
+| Rubble | 104 | 1 | 0.471 | 0.553 | +0.083 |
+| Construction and demolition | 198 | 2 | 0.576 | 0.619 | +0.044 |
+| Tyres | 225 | 1 | 0.975 | 0.965 | −0.010 |
+| Pallets | 489 | 1 | 0.901 | 0.859 | −0.043 |
+| Metal barrels | 63 | 1 | 0.559 | 0.479 | −0.079 |
+| Appliances | 17 | 1 | 0.364 | 0.249 | −0.114 |
+
+| group | n | mean text F1 | mean 5-shot F1 | mean gain |
+|---|---:|---:|---:|---:|
+| text points correctly (rank 1) | 10 | 0.505 | 0.543 | **+0.038** |
+| text mispoints (rank > 1) | 7 | 0.437 | 0.558 | **+0.121** |
+
+correlation(gain, text-only F1) = **−0.358** on dronewaste and **−0.901** on
+aw_m2. The gain goes where text was failing, and the classes text already solved
+move slightly DOWN. This is a targeted fix for a diagnosed failure, not generic
+few-shot improvement -- and the diagnostic that identifies the targets needs no
+labels.
+
+Answering the specific question: **5-shot does lift Plastic, 0.072 -> 0.168**, but
+it stays the worst class in the set. Its centroid is 0.946 from Plastic packaging,
+so five exemplars sharpen the boundary without moving the two clusters apart.
+Textile (+0.541) and Plastic packaging (+0.515) are where the mass of the gain is.
+
+aw_m2 (1350 test objects): Unknown material 0.000 -> 0.331, Plastic 0.025 -> 0.238,
+Rubble 0.577 -> 0.662, Containers 0.385 -> 0.450, Bulky items 0.504 -> 0.556.
+
+### The gain is semantic, not shrinkage
+
+A 1-shot mean is noisy, so any stable anchor would reduce its variance. Two nulls,
+both at a=0.75, twelve seeds:
+
+| shots | exemplar only | + real text | + random anchor | + permuted text |
+|---|---:|---:|---:|---:|
+| **aw_m2** 1 | 0.3305 | **0.4251** | 0.2451 | 0.2309 |
+| 2 | 0.3542 | **0.4396** | 0.2414 | 0.2118 |
+| 5 | 0.4557 | 0.4448 | 0.2564 | 0.2164 |
+| **dronewaste** 1 | 0.4437 | **0.6173** | 0.2591 | 0.0996 |
+| 2 | 0.5503 | **0.6362** | 0.2626 | 0.1000 |
+| 5 | 0.6222 | 0.6478 | 0.2817 | 0.1076 |
+
+Neither null recovers any of the gain. Only the class's OWN text vector helps, so
+the low-shot benefit is the semantic content and not regularisation. Caveat on
+reading the nulls: at a=0.75 the anchor is most of the prototype, so a wrong
+anchor is expected to be destructive; what the controls establish is that the
+gain requires the RIGHT vector, which is the claim at issue.
+
+### Correction to a prediction, including the shape of the AerialWaste table
+
+The prediction was that on AerialWaste `a=1` would land at the bar and the optimal
+`a` would be **0 at every shot count** -- no crossover, because there is no prior
+worth having. The first half holds: text alone is 0.4096 against a 0.3993 bar,
++0.010. The second half does not. The optimal `a` is 0.75, 0.75, 0.50, 0.50, 0.25,
+0.00 as shots go 1, 2, 5, 10, 25, all -- the same monotone shape as dronewaste,
+with exemplars overtaking text at about 5 per class on BOTH datasets.
+
+The reason is worth keeping, because it is a measurement trap. **"Lands at the
+bar" is not "carries no information."** Text's aggregate accuracy on aw_m2 sits at
+the majority baseline because it collapses on two large classes -- Unknown
+material F1 0.000 and Plastic 0.025, together 32% of the test objects -- while
+scoring 0.577 / 0.504 / 0.385 on the other three. Accuracy against a majority bar
+cannot see a prior that is informative on part of the label space, and both nulls
+above confirm the information is real (0.4251 real vs 0.2309 permuted at 1-shot).
+
+So the clean two-regime story -- text useful where the tower covers the concept,
+worthless otherwise -- is NOT what the data shows. What survives, and is better
+supported, is narrower: the *shape* is universal (text carries the low-shot
+regime, exemplars overtake at ~5 per class), the *magnitude* differs by dataset
+(text is +0.361 over bar on dronewaste, +0.010 on aw_m2), and the text-to-centroid
+rank predicts WHICH CLASSES the exemplars will rescue, within either dataset.
