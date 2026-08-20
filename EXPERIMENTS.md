@@ -2324,3 +2324,87 @@ at accuracy 1.000 while detection at the scene-graph operating point is 0.051.
 Naming is solved; detection was the entire problem; Grounding DINO takes detection
 to 0.978. One class, both stages, opposite verdicts, and a fix that touches only
 the detector.
+
+## AerialWaste with the catch-all removed (2026-08-20)
+
+Two thirds of labelled AerialWaste images carry `Unknown material`, so every m2
+number is partly a measurement of predicting "not identifiable". Removing it asks
+the question that matters: when the material IS identifiable, can it be named?
+Objects labelled Unknown are dropped from BOTH splits and the class from the
+vocabulary (keeping the objects without the class would leave them unanswerable).
+All from cached embeddings.
+
+**How much of the dataset the catch-all is** (m2 split, train+val+test, 6096 images):
+
+| | count | % of all images | % of labelled images |
+|---|---:|---:|---:|
+| labelled with any category | 2013 | 33.0% | — |
+| tagged `Unknown material` | 1313 | 21.5% | **65.2%** |
+| `Unknown material` as the ONLY label | 101 | 1.7% | 5.0% |
+| boxes tagged `Unknown material` | 3743 / 16058 | — | 23.3% |
+
+The m4 split is worse: `Other waste` is on **92.3%** of labelled images, is the
+sole label on 34.3% of them, and accounts for **75.7% of all boxes**. m4 is
+substantially a binary problem wearing a six-class taxonomy, which is why its
+constant-predictor floor (0.359) beats InternVL3, Qwen2.5-VL and our n1.
+
+### The headline: removing it does NOT unlock AerialWaste
+
+| readout | 5-class (as reported) | 4-class (no Unknown) |
+|---|---:|---:|
+| test objects | 1350 | 1002 |
+| majority bar | 0.3993 | **0.5379** |
+| zero-shot text | 0.4096 (**+0.0104**) | 0.5579 (**+0.0200**) |
+| nearest image centroid | 0.5719 (+0.1726) | 0.6607 (+0.1228) |
+| probe, SigLIP2 summary space | 0.6541 (+0.2548) | 0.7725 (+0.2345) |
+| probe, RADIO raw pooled | 0.6652 (+0.2659) | 0.7854 (+0.2475) |
+| probe, whole image (no ROI) | 0.3459 (−0.0534) | 0.4092 (−0.1287) |
+
+Absolute accuracy rises everywhere -- text 0.41 -> 0.56, probe 0.65 -> 0.77 -- but
+**the bar rises with it**, from 0.399 to 0.538, because Bulky items becomes the
+majority. The lift over the bar is unchanged to slightly smaller: text +0.010 ->
++0.020, probe +0.255 -> +0.235. The catch-all was not what was suppressing the
+numbers, and any quoted improvement has to be stated against the new bar.
+
+### Where it genuinely helps: per class, and abstention
+
+| class | n | F1 with Unknown | F1 without |
+|---|---:|---:|---:|
+| Rubble | 160 | 0.577 | **0.745** |
+| Bulky items | 539 | 0.504 | **0.603** |
+| Containers | 224 | 0.385 | **0.421** |
+| Plastic | 79 | 0.025 | 0.025 |
+
+The catch-all was absorbing predictions that belonged to real classes; removing it
+lifts every identifiable material except Plastic, which text cannot do at all
+(precision 1.000 on a single predicted object out of 79).
+
+Abstention becomes viable, which it was not before:
+
+| system | full-coverage acc | cov @ P>=0.95 | @ P>=0.90 | @ P>=0.80 |
+|---|---:|---:|---:|---:|
+| 5-class, zero-shot text | 0.410 | 0.3% | 0.3% | 0.4% |
+| 5-class, 5-shot medoid | 0.536 | 3.6% | 5.3% | 11.6% |
+| **4-class, zero-shot text** | 0.558 | 4.0% | 4.5% | 8.2% |
+| **4-class, 5-shot medoid** | 0.640 | **12.2%** | **18.3%** | **43.0%** |
+
+Naming 43% of identifiable AerialWaste objects at 80% precision, or 12% at 95%,
+is a usable triage product where the 5-class version had none.
+
+The hybrid keeps its shape: 1-shot medoid at a=0.50 reaches 0.6497 against a
+0.5379 bar and 0.5579 for text alone, so one representative exemplar per class
+again beats text.
+
+Geometry barely moves -- text-to-centroid diagonal margin +0.013 -> +0.017,
+diagonal is the row argmax 3/4 instead of 3/5 -- consistent with the lift being
+unchanged.
+
+**Reading for the two-turn design.** Deriving the catch-all in conversation is
+sound: it is 65% of labelled images and only 5% of them are purely unknown, so it
+is a per-object refusal rather than a class of scenes. But the four-class problem
+that remains is not materially easier relative to its own baseline, and Plastic
+stays unnameable. What the removal buys is a **calibrated subset**, not a better
+classifier.
+
+Not rerun: the m4 taxonomy without `Other waste`, which needs a fresh ROI pass
+(no cached m4 embeddings) and would leave a small and heavily skewed remainder.
