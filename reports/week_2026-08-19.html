@@ -1,0 +1,700 @@
+<title>Waste-VLM 13–19 August</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Serif:ital,wght@0,500;0,600;1,500&display=swap">
+
+<style>
+:root{
+  --paper:#f4f5f2;
+  --surface:#ffffff;
+  --surface-2:#eceeea;
+  --ink:#14201d;
+  --muted:#5a6b66;
+  --faint:#8a9a94;
+  --rule:#d8ddd9;
+  --accent:#1d5b63;
+  --accent-soft:#e2edee;
+  --pos:#2f6b45;
+  --neg:#9b3226;
+  --warn:#8a6314;
+  --shadow:0 1px 2px rgba(20,32,29,.05);
+
+  --f-display:"IBM Plex Serif",Georgia,"Times New Roman",serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+
+  --measure:68ch;
+  --wide:1120px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#101614;
+    --surface:#17201d;
+    --surface-2:#1d2724;
+    --ink:#e6ebe8;
+    --muted:#93a39d;
+    --faint:#6d7f79;
+    --rule:#2a3733;
+    --accent:#5fb3bd;
+    --accent-soft:#1a2e31;
+    --pos:#6fbf8e;
+    --neg:#e07a6b;
+    --warn:#d4a94a;
+    --shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#101614;
+  --surface:#17201d;
+  --surface-2:#1d2724;
+  --ink:#e6ebe8;
+  --muted:#93a39d;
+  --faint:#6d7f79;
+  --rule:#2a3733;
+  --accent:#5fb3bd;
+  --accent-soft:#1a2e31;
+  --pos:#6fbf8e;
+  --neg:#e07a6b;
+  --warn:#d4a94a;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:16.5px;
+  line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:var(--wide);margin:0 auto;padding:0 28px 96px}
+.col{max-width:var(--measure)}
+p,ul,ol{max-width:var(--measure)}
+
+/* ---------- masthead ---------- */
+.masthead{
+  border-bottom:2px solid var(--ink);
+  padding:56px 0 22px;
+  margin-bottom:40px;
+}
+.kicker{
+  font-family:var(--f-mono);
+  font-size:11.5px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--accent);
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px 18px;
+  margin-bottom:20px;
+}
+.kicker span::before{content:"";display:inline-block}
+h1{
+  font-family:var(--f-display);
+  font-weight:600;
+  font-size:clamp(2.1rem,4.6vw,3.15rem);
+  line-height:1.08;
+  letter-spacing:-.015em;
+  margin:0 0 18px;
+  text-wrap:balance;
+  max-width:22ch;
+}
+.standfirst{
+  font-size:1.14rem;
+  line-height:1.55;
+  color:var(--muted);
+  max-width:60ch;
+  margin:0;
+}
+.standfirst strong{color:var(--ink);font-weight:600}
+
+/* ---------- section scaffolding ---------- */
+section{margin-top:64px}
+.sec-head{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:6px;
+  padding-bottom:14px;
+  margin-bottom:26px;
+  border-bottom:1px solid var(--rule);
+}
+.sec-num{
+  font-family:var(--f-mono);
+  font-size:11.5px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--faint);
+}
+h2{
+  font-family:var(--f-display);
+  font-weight:600;
+  font-size:clamp(1.45rem,2.6vw,1.85rem);
+  line-height:1.2;
+  letter-spacing:-.01em;
+  margin:0;
+  text-wrap:balance;
+}
+h3{
+  font-family:var(--f-body);
+  font-weight:600;
+  font-size:1.06rem;
+  letter-spacing:.002em;
+  margin:38px 0 10px;
+  text-wrap:balance;
+}
+h4{
+  font-family:var(--f-mono);
+  font-weight:600;
+  font-size:11.5px;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin:30px 0 10px;
+}
+p{margin:0 0 15px}
+ul{padding-left:20px;margin:0 0 15px}
+li{margin-bottom:7px}
+a{color:var(--accent)}
+code,.mono{font-family:var(--f-mono);font-size:.88em}
+code{background:var(--surface-2);padding:1px 5px;border-radius:3px}
+em{font-style:italic}
+
+/* ---------- at a glance ---------- */
+.glance{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:1px;
+  background:var(--rule);
+  border:1px solid var(--rule);
+  margin:34px 0 0;
+}
+.stat{background:var(--surface);padding:18px 20px 16px}
+.stat .n{
+  font-family:var(--f-mono);
+  font-weight:500;
+  font-size:1.75rem;
+  line-height:1.1;
+  letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;
+  display:block;
+  margin-bottom:5px;
+}
+.stat .l{
+  font-size:13.2px;
+  line-height:1.4;
+  color:var(--muted);
+  display:block;
+}
+.stat .l b{color:var(--ink);font-weight:600}
+
+/* ---------- tables ---------- */
+.tbl{
+  overflow-x:auto;
+  margin:20px 0 8px;
+  border:1px solid var(--rule);
+  background:var(--surface);
+}
+table{
+  border-collapse:collapse;
+  width:100%;
+  min-width:520px;
+  font-size:14.4px;
+  font-variant-numeric:tabular-nums;
+}
+caption{
+  caption-side:top;
+  text-align:left;
+  font-family:var(--f-mono);
+  font-size:11.5px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--muted);
+  padding:13px 16px 11px;
+  border-bottom:1px solid var(--rule);
+  background:var(--surface-2);
+}
+th,td{
+  padding:8px 14px;
+  text-align:right;
+  border-bottom:1px solid var(--rule);
+  white-space:nowrap;
+}
+th:first-child,td:first-child{text-align:left;white-space:normal;min-width:150px}
+thead th{
+  font-family:var(--f-mono);
+  font-weight:500;
+  font-size:11.5px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--muted);
+  border-bottom:1px solid var(--ink);
+  vertical-align:bottom;
+}
+tbody tr:last-child td{border-bottom:none}
+tbody tr.total td{
+  border-top:1px solid var(--ink);
+  font-weight:600;
+  background:var(--surface-2);
+}
+tbody tr.ref td{color:var(--muted);font-style:italic}
+tbody tr.ref td:first-child{font-style:italic}
+td.num,th.num{font-family:var(--f-mono);font-weight:400}
+.pos{color:var(--pos);font-weight:500}
+.neg{color:var(--neg);font-weight:500}
+.bar{color:var(--faint)}
+.win{font-weight:600}
+.note{
+  font-size:13.4px;
+  line-height:1.55;
+  color:var(--muted);
+  max-width:var(--measure);
+  margin:10px 0 0;
+}
+
+/* ---------- callouts ---------- */
+.call{
+  border-left:3px solid var(--accent);
+  background:var(--surface);
+  padding:16px 20px;
+  margin:24px 0;
+  max-width:var(--measure);
+  box-shadow:var(--shadow);
+}
+.call.retract{border-left-color:var(--neg)}
+.call.warn{border-left-color:var(--warn)}
+.call .tag{
+  font-family:var(--f-mono);
+  font-size:11px;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+  color:var(--accent);
+  display:block;
+  margin-bottom:7px;
+}
+.call.retract .tag{color:var(--neg)}
+.call.warn .tag{color:var(--warn)}
+.call p{margin:0 0 10px;font-size:15px}
+.call p:last-child{margin-bottom:0}
+
+/* ---------- pipeline diagram ---------- */
+.flow{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:stretch;
+  gap:10px;
+  margin:26px 0 8px;
+}
+.node{
+  flex:1 1 155px;
+  background:var(--surface);
+  border:1px solid var(--rule);
+  padding:13px 15px;
+}
+.node .role{
+  font-family:var(--f-mono);
+  font-size:10.5px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--faint);
+  display:block;
+  margin-bottom:5px;
+}
+.node .name{font-weight:600;font-size:14.5px;display:block;margin-bottom:4px}
+.node .val{
+  font-family:var(--f-mono);
+  font-size:12.8px;
+  color:var(--muted);
+  display:block;
+}
+.node.hot{border-color:var(--neg);border-width:1px 1px 3px}
+
+/* ---------- retraction list ---------- */
+.retracts{list-style:none;padding:0;max-width:var(--measure)}
+.retracts li{
+  padding:14px 0;
+  border-bottom:1px solid var(--rule);
+  margin:0;
+}
+.retracts li:last-child{border-bottom:none}
+.retracts .was{
+  display:block;
+  color:var(--muted);
+  font-size:14.3px;
+  margin-bottom:3px;
+}
+.retracts .was::before{
+  content:"was ";
+  font-family:var(--f-mono);
+  font-size:11px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--neg);
+}
+.retracts .now{display:block;font-size:15px}
+.retracts .now::before{
+  content:"now ";
+  font-family:var(--f-mono);
+  font-size:11px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--pos);
+}
+
+/* ---------- next steps ---------- */
+.steps{list-style:none;padding:0;counter-reset:s;max-width:var(--measure)}
+.steps li{
+  counter-increment:s;
+  display:grid;
+  grid-template-columns:34px 1fr;
+  gap:14px;
+  padding:15px 0;
+  border-bottom:1px solid var(--rule);
+  margin:0;
+}
+.steps li::before{
+  content:counter(s,decimal-leading-zero);
+  font-family:var(--f-mono);
+  font-size:12.5px;
+  color:var(--accent);
+  padding-top:2px;
+}
+.steps .t{display:block;font-weight:600;margin-bottom:3px}
+.steps .d{display:block;font-size:14.4px;color:var(--muted)}
+
+footer{
+  margin-top:72px;
+  padding-top:22px;
+  border-top:1px solid var(--rule);
+  font-family:var(--f-mono);
+  font-size:12px;
+  color:var(--faint);
+  line-height:1.7;
+}
+
+@media (max-width:600px){
+  .wrap{padding:0 18px 64px}
+  body{font-size:16px}
+  .masthead{padding-top:38px}
+}
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <div class="kicker">
+    <span>Weekly record</span>
+    <span>13 – 19 August 2026</span>
+    <span>231 jobs · 4,217 local-h</span>
+    <span>main @ 3b077c7</span>
+  </div>
+  <h1>Detection is the bound, and the labels are the ceiling</h1>
+  <p class="standfirst">Two tracks ran this week. The supervised VLM track produced <strong>the largest single gain in the project</strong> — AerialWaste detection AUROC 0.8615 → 0.9410 — and still loses to InternVL3-8B on the naming benchmark. The training-free open-world track was built end to end and measured, and it says the ceiling is <strong>detection recall</strong>, not reasoning and not naming.</p>
+
+  <div class="glance">
+    <div class="stat"><span class="n">0.941</span><span class="l">AerialWaste detection <b>AUROC</b> (arm n1), from 0.8615 — closes 73% of the gap to the frozen-feature probe</span></div>
+    <div class="stat"><span class="n">1.000</span><span class="l">Compositional <b>reasoning</b> over ground-truth scenes, 4,496 questions — the solver is exact</span></div>
+    <div class="stat"><span class="n">0.462</span><span class="l">The same solver over <b>predicted</b> scenes. Perception costs 0.538</span></div>
+    <div class="stat"><span class="n">99.1%</span><span class="l">of the <b>compute budget</b> is spent. 741 local-hours remain</span></div>
+  </div>
+</header>
+
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Track B · supervised VLM</span>
+    <h2>What was trained, and against what</h2>
+  </div>
+
+  <p>The model is LLaVA-1.5 in shape: frozen <span class="mono">C-RADIOv4-SO400M</span> → MLP projector → <span class="mono">Qwen2.5-7B</span>, trained in stages. This week added three naming arms on the 150K stage-2 base, differing only in their stage-3 mix.</p>
+
+  <div class="tbl">
+    <table>
+      <caption>Arms trained this week</caption>
+      <thead><tr><th>Arm</th><th class="num">Mix</th><th class="num">Records</th><th class="num">Steps</th><th class="num">Wall</th></tr></thead>
+      <tbody>
+        <tr><td>n1</td><td><code>waste_sft</code> + 25% replay</td><td class="num">24,449</td><td class="num">191</td><td class="num">45 min</td></tr>
+        <tr><td>n2</td><td>n1 + <code>nadir_desc</code></td><td class="num">62,777</td><td class="num">490</td><td class="num">115 min</td></tr>
+        <tr><td>n2d</td><td>n2 + margin BCE</td><td class="num">62,777</td><td class="num">490</td><td class="num">115 min</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Leakage was re-verified before any of these were quoted: MD5 + perceptual hash (Hamming ≤ 6) across all 15,025 AerialWaste and DroneWaste images against every training source. Zero leaks. <strong>Both evaluation datasets are held out entirely</strong> — every number on this page is zero-shot with respect to them.</p>
+
+  <h4>Two methods that changed what we can measure</h4>
+
+  <p><strong>Score the logit margin, not the sampled token.</strong> Every earlier number came from parsing generated text, which fixes one operating point and cannot separate "the model doesn't know" from "the model knows and says it at the wrong threshold." Scoring the Yes-vs-No margin at the first answer token and sweeping it is threshold-free and parser-free. It changed the reading of an entire prior section.</p>
+
+  <p><strong>Price the calibration.</strong> The threshold is one scalar, fit on binary waste/no-waste labels only. It saturates at <strong>n ≈ 50 images</strong> (93% of a full 3,689-image fit) and transfers across taxonomies within a domain — a cut fitted for the 5-class split applies to the 6-class split at 99.5% of its own-fit value. So the multi-label results stay category-zero-shot, and the protocol to quote is "50 binary labels, one parameter."</p>
+
+  <h3>Detection: the result to lead with</h3>
+
+  <div class="tbl">
+    <table>
+      <caption>Detection — AerialWaste m2, threshold fitted on train and applied to test untouched</caption>
+      <thead><tr><th>Arm</th><th class="num">AUROC</th><th class="num">Calibrated J</th><th class="num">J at margin 0</th></tr></thead>
+      <tbody>
+        <tr><td>150K base</td><td class="num">0.8615</td><td class="num">0.6053</td><td class="num">0.066</td></tr>
+        <tr><td class="win">n1</td><td class="num win pos">0.9410</td><td class="num win pos">0.7338</td><td class="num win pos">0.695</td></tr>
+        <tr><td>n2</td><td class="num">0.9171</td><td class="num">0.6778</td><td class="num">0.610</td></tr>
+        <tr><td>n2d</td><td class="num">0.9205</td><td class="num">0.6563</td><td class="num">0.498</td></tr>
+        <tr class="ref"><td>frozen-feature probe (ceiling)</td><td class="num">0.970</td><td class="num">0.853</td><td class="num">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>AUROC is shift-invariant, so this is a genuine ranking improvement rather than a recentred threshold — and the operating point <em>also</em> recentred on its own, J-at-zero moving 0.066 → 0.695, so the model now says it with no calibration at all. That combination is what makes n1 the strongest training result in the project.</p>
+
+  <div class="call">
+    <span class="tag">The control that makes it credible</span>
+    <p>DroneWaste was already calibrated, and fitting a threshold there changes nothing (J 0.673 → 0.671). A threshold sweep cannot manufacture separation where the model is not broken — which is why the 2.5–3.6× gain on AerialWaste reads as a fix rather than an artefact of the sweep.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Track B · comparison</span>
+    <h2>Against Qwen2.5-VL-7B and InternVL3-8B</h2>
+  </div>
+
+  <p>The comparison the thesis needs, and it is mixed. All figures are closed-vocabulary multi-label micro-F1 on the full split. The <span class="bar">constant-predictor floor</span> is included because on one split it beats everything, baselines included.</p>
+
+  <div class="tbl">
+    <table>
+      <caption>Naming — closed-vocabulary micro-F1, full splits</caption>
+      <thead>
+        <tr><th>Model</th><th class="num">DroneWaste</th><th class="num">AerialWaste m2</th><th class="num">AerialWaste m4</th></tr>
+      </thead>
+      <tbody>
+        <tr class="bar"><td>constant predictor (floor)</td><td class="num">0.345</td><td class="num">0.307</td><td class="num">0.359</td></tr>
+        <tr class="ref"><td>Qwen2.5-VL-7B</td><td class="num">0.239</td><td class="num">0.375</td><td class="num">0.266</td></tr>
+        <tr class="ref"><td>InternVL3-8B</td><td class="num">0.368</td><td class="num">0.452</td><td class="num">0.304</td></tr>
+        <tr class="ref"><td>dino.txt (discriminative)</td><td class="num">0.40</td><td class="num">0.37</td><td class="num">0.38</td></tr>
+        <tr><td>ours — 150K base</td><td class="num win">0.310</td><td class="num">0.289</td><td class="num">0.166</td></tr>
+        <tr class="total"><td>ours — n1</td><td class="num">0.212</td><td class="num">0.355</td><td class="num">0.345</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Reading it honestly</h4>
+  <ul>
+    <li><strong>AerialWaste m2 — we lose.</strong> n1 at 0.355 sits below Qwen (0.375) and well below InternVL3 (0.452). It does clear the 0.307 floor, by 0.048.</li>
+    <li><strong>AerialWaste m4 — we win, and it means little.</strong> n1's 0.345 beats InternVL3 (0.304) and Qwen (0.266), but <em>all three lose to a constant predictor</em> at 0.359. m4 on the full split is a benchmark almost nothing beats trivially; only dino.txt clears it.</li>
+    <li><strong>DroneWaste — we beat Qwen, not InternVL3.</strong> The 150K base at 0.310 clears Qwen's 0.239 and the floor, and stays under InternVL3's 0.368.</li>
+    <li><strong>No arm wins both domains.</strong> AerialWaste wants n1, DroneWaste wants the 150K base, and this split is stable across all three readouts. Since the threshold is already per-domain, selecting the model per domain costs nothing operationally — that is the recommendation rather than hunting for one arm that wins everywhere.</li>
+  </ul>
+
+  <div class="call warn">
+    <span class="tag">Three caveats that must travel with this table</span>
+    <p><strong>The splits are not identical.</strong> The baseline rows were run on a previous cluster over 664-image AerialWaste splits; every number of ours is over 581 images. The two are close but not matched, and the baselines cannot be re-scored here — their predictions do not exist on this machine.</p>
+    <p><strong>The detection result has no baseline at all.</strong> AUROC 0.9410 is our strongest number and Qwen and InternVL3 were never scored under the margin protocol, so the comparison that most favours us is the one that has not been run.</p>
+    <p><strong>Fixing both is the same job</strong>, and it is inference-only: re-run the two baselines on the 581-image split under both the parser and the margin readout. That is the highest-value remaining spend on this track.</p>
+  </div>
+
+  <h4>The shared failure mode</h4>
+  <p>Both baselines abstain on most images — empty-parse rates of 53–74%, defaulting to "none". That is the same attractor our own arms kept falling into, in both directions. n1 cuts gate-positive-but-unnamed images to <strong>90 of 581 (15.5%)</strong>, which is the clearest sense in which this week's work addressed the thing the baselines get wrong. The metrics are related rather than matched, so treat it as directional.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Track C · training-free pipeline</span>
+    <h2>One backbone, four jobs, no fixed label vector</h2>
+  </div>
+
+  <p>The architectural constraint driving this track: <strong>every component takes its vocabulary at inference, as text or exemplars.</strong> Training is permitted, including on external waste data; a head emitting fixed class logits is not. The pipeline runs one <span class="mono">C-RADIOv4</span> pass and branches.</p>
+
+  <div class="flow">
+    <div class="node"><span class="role">Encode</span><span class="name">C-RADIOv4-SO400M</span><span class="val">one pass @ 1152px</span></div>
+    <div class="node hot"><span class="role">Detect</span><span class="name">SAM3 decoder</span><span class="val">recall 0.588 bridged</span></div>
+    <div class="node"><span class="role">Name</span><span class="name">SigLIP2 head</span><span class="val">0.478 / 20 classes</span></div>
+    <div class="node"><span class="role">Reason</span><span class="name">symbolic solver</span><span class="val">1.000 verified</span></div>
+    <div class="node"><span class="role">Compose</span><span class="name">decoder</span><span class="val">confidence + free text</span></div>
+  </div>
+  <p class="note">Grid reconciliation is what makes the single pass possible: C-RADIO at patch 16 must run at 1152 px to land on SAM3's 72 × 72 token grid. The teacher heads needed for the naming branch are absent from the HuggingFace snapshot and had to be recovered from the raw checkpoint (<code>src/radio_adaptors.py</code>).</p>
+
+  <h3>Naming works, and it works bimodally</h3>
+
+  <p>Object-level naming over 3,045 DroneWaste objects on the development sites, 20 categories, zero-shot: <strong>0.478 accuracy</strong> against 0.05 chance and a 0.234 majority-class baseline. The aggregate hides the structure that matters.</p>
+
+  <div class="tbl">
+    <table>
+      <caption>Per-class naming — development sites, 18 classes present</caption>
+      <thead><tr><th>Category</th><th class="num">n</th><th class="num">Precision</th><th class="num">Recall</th><th class="num">F1</th></tr></thead>
+      <tbody>
+        <tr><td>Tyres</td><td class="num">86</td><td class="num">0.975</td><td class="num">0.919</td><td class="num pos">0.946</td></tr>
+        <tr><td>Metal barrels</td><td class="num">109</td><td class="num">0.893</td><td class="num">1.000</td><td class="num pos">0.944</td></tr>
+        <tr><td>Pallets</td><td class="num">527</td><td class="num">0.890</td><td class="num">0.937</td><td class="num pos">0.913</td></tr>
+        <tr><td>Vehicles</td><td class="num">83</td><td class="num">0.945</td><td class="num">0.831</td><td class="num pos">0.885</td></tr>
+        <tr><td>Asbestos</td><td class="num">157</td><td class="num">0.673</td><td class="num">0.968</td><td class="num pos">0.794</td></tr>
+        <tr><td>Excavation materials</td><td class="num">85</td><td class="num">0.429</td><td class="num">0.565</td><td class="num">0.487</td></tr>
+        <tr><td>Construction &amp; demolition</td><td class="num">199</td><td class="num">0.350</td><td class="num">0.719</td><td class="num">0.471</td></tr>
+        <tr><td>Scrap</td><td class="num">190</td><td class="num">0.387</td><td class="num">0.558</td><td class="num">0.457</td></tr>
+        <tr><td>Wood</td><td class="num">137</td><td class="num">0.711</td><td class="num">0.234</td><td class="num">0.352</td></tr>
+        <tr><td>Textile</td><td class="num">714</td><td class="num">0.883</td><td class="num neg">0.179</td><td class="num">0.298</td></tr>
+        <tr><td>Mixed items</td><td class="num">263</td><td class="num">0.229</td><td class="num">0.224</td><td class="num">0.226</td></tr>
+        <tr><td>Furniture</td><td class="num">117</td><td class="num">0.846</td><td class="num neg">0.094</td><td class="num">0.169</td></tr>
+        <tr><td>Rubble</td><td class="num">57</td><td class="num">0.312</td><td class="num">0.088</td><td class="num">0.137</td></tr>
+        <tr><td>Plastic</td><td class="num">138</td><td class="num">0.041</td><td class="num">0.087</td><td class="num neg">0.055</td></tr>
+        <tr><td>Plastic packaging</td><td class="num">160</td><td class="num">0.000</td><td class="num">0.000</td><td class="num neg">0.000</td></tr>
+        <tr class="total"><td>overall accuracy</td><td class="num">3,045</td><td class="num">—</td><td class="num">—</td><td class="num">0.478</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Paper (n=2), Appliances (n=18) and Foundry (n=3) omitted from the table for sample size; all are included in the overall figure.</p>
+
+  <p><strong>Five classes are effectively solved zero-shot</strong> — every discrete, named, manufactured object. Everything amorphous fails, and it fails in two distinguishable ways: <em>conservative</em> classes hold high precision and lose recall (Textile 0.883 / 0.179, Furniture 0.846 / 0.094), while <em>collapsed</em> classes lose both (Plastic packaging 0.000). The distinction matters because the two want opposite fixes — widening versus disambiguation — and both can be detected without labels.</p>
+
+  <p>That last point is its own small result. Precision and recall are unavailable at deployment, so the rule that identifies under-covered classes has to run off the similarity matrix alone. Two signals validate: <span class="mono">win_margin</span> against recall (ρ = +0.840) and <span class="mono">rival_entropy</span> against the precision-minus-recall gap (ρ = −0.710).</p>
+
+  <h3>Confidence, routing, and what the decoder cannot do</h3>
+
+  <p>The encoder knows when it is guessing: entropy separates its correct from its incorrect answers at <strong>AUROC 0.817</strong>. Deferring the least-confident 30% and re-scoring against only the top-5 candidates lifts that subset from 0.212 to 0.348 and the whole set from 0.478 to 0.519.</p>
+
+  <p>Every point of that comes from hand-written prompts. The decoder-written arm — the one job in the design with no non-LLM substitute, since the candidate set does not exist until inference — makes the deferred subset <em>worse than leaving it alone</em>, including in the closed-loop form that finished this week.</p>
+
+  <div class="tbl">
+    <table>
+      <caption>Deferred set — 913 objects, four ways of choosing prompts</caption>
+      <thead><tr><th>Arm</th><th class="num">Accuracy</th></tr></thead>
+      <tbody>
+        <tr><td>no routing (leave it alone)</td><td class="num">0.212</td></tr>
+        <tr><td>decoder prompts, first template</td><td class="num neg">0.097</td></tr>
+        <tr><td>decoder prompts, EWC-grounded + guards</td><td class="num neg">0.133</td></tr>
+        <tr><td>decoder prompts, <strong>closed-loop selection</strong></td><td class="num neg">0.161</td></tr>
+        <tr><td class="win">hand-written contrastive prompts</td><td class="num win pos">0.348</td></tr>
+        <tr class="ref"><td>oracle — top-5 containment</td><td class="num">0.802</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The closed-loop arm was the last untested version of this idea: generate 236 candidate prompt sets, keep whichever separates best on the cached image embeddings, using no labels. It beats open-loop (0.161 vs 0.133) and still lands below doing nothing. <strong>A decoder writing prompts from names and definitions is worse than not routing, with or without a label-free selection signal.</strong></p>
+
+  <p>Worth stating the asymmetry before this hardens into a general claim: the hand-written prompts were written <em>after reading the confusion matrix</em>, so they encode which classes collide. The decoder writes blind. What the result rules out is the open-world configuration, which is the one the architecture actually requires.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Track C · the bound</span>
+    <h2>Detection, measured four ways</h2>
+  </div>
+
+  <p>The compositional harness separates perception error from reasoning error, which an end-to-end evaluation cannot. 4,496 questions over 759 images, seven families, each scored against its own trivial bar — majority class, or a presence oracle where that is the stronger null.</p>
+
+  <div class="tbl">
+    <table>
+      <caption>Compositional harness — development sites</caption>
+      <thead><tr><th>Family</th><th class="num">n</th><th class="num">Trivial bar</th><th class="num">Solver / GT</th><th class="num">Solver / predicted</th></tr></thead>
+      <tbody>
+        <tr><td>presence (control)</td><td class="num">500</td><td class="num bar">1.000</td><td class="num">1.000</td><td class="num">0.692</td></tr>
+        <tr><td>area_compare</td><td class="num">118</td><td class="num bar">0.508</td><td class="num">1.000</td><td class="num pos">0.585</td></tr>
+        <tr><td>negation_spatial</td><td class="num">89</td><td class="num bar">0.517</td><td class="num">1.000</td><td class="num pos">0.584</td></tr>
+        <tr><td>spatial</td><td class="num">254</td><td class="num bar">0.508</td><td class="num">1.000</td><td class="num pos">0.551</td></tr>
+        <tr><td>count_compare</td><td class="num">84</td><td class="num bar">0.536</td><td class="num">1.000</td><td class="num">0.524</td></tr>
+        <tr><td>superlative</td><td class="num">123</td><td class="num bar">0.268</td><td class="num">1.000</td><td class="num pos">0.309</td></tr>
+        <tr><td>count</td><td class="num">465</td><td class="num bar">0.604</td><td class="num">1.000</td><td class="num neg">0.142</td></tr>
+        <tr class="total"><td>overall</td><td class="num">4,496</td><td class="num">—</td><td class="num">1.000</td><td class="num">0.462</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p><strong>Reasoning is exact and perception costs 0.538.</strong> The solver was verified at 2721/2721 over ground-truth scenes before it was allowed to score anything, which is what licenses attributing the entire gap to the scene graph.</p>
+
+  <p>The obvious explanation was over-proposal — 29.3 detections per image against 4.8 real objects. It is wrong. Every box-reducing operation tried made things worse: score filtering, NMS, area filtering, adjacency merging, and overlap merging, five for five. Against the best unconsolidated configuration (0.479, reached at a 0.05 score threshold; 0.462 unfiltered), merging fragments into regions by intersection-over-smaller reaches 0.448, and single-linkage adjacency chains catastrophically — collapsing 86.7 regions into 6.5 — for 0.442. Filtering to the ground truth's own density of 4.1 boxes per image scores 0.404, the worst of all.</p>
+
+  <div class="call">
+    <span class="tag">What the consistency actually says</span>
+    <p>Five different operations losing in the same direction is a statement about the <em>query set</em>, not the pipeline. Most families are existential — "is there any A to the left of any B" — so they reward recall and never charge for false positives. The one family where over-prediction genuinely costs is <span class="mono">count</span>, and it is pinned at 0.142 against a 0.604 bar in every configuration tried.</p>
+    <p>This needs fixing before the held-out test run, or the headline number will flatter whichever detector produces the most boxes.</p>
+  </div>
+
+  <h3>The detectors are complementary</h3>
+
+  <div class="tbl">
+    <table>
+      <caption>Proposal quality — DroneWaste, IoU 0.5, 4.795 objects per image</caption>
+      <thead><tr><th>Detector</th><th class="num">Recall</th><th class="num">Precision</th><th class="num">Boxes/img</th><th class="num">Small</th><th class="num">Medium</th><th class="num">Large</th></tr></thead>
+      <tbody>
+        <tr><td>Grounding DINO</td><td class="num">0.693</td><td class="num pos">0.293</td><td class="num">40.4</td><td class="num neg">0.273</td><td class="num">0.578</td><td class="num pos">0.909</td></tr>
+        <tr><td>SAM3 (native backbone)</td><td class="num pos">0.731</td><td class="num">0.070</td><td class="num">94.5</td><td class="num pos">0.682</td><td class="num pos">0.749</td><td class="num">0.716</td></tr>
+        <tr><td>SAM3 (bridged from C-RADIO)</td><td class="num">0.588</td><td class="num">0.068</td><td class="num">80.7</td><td class="num">0.485</td><td class="num">0.606</td><td class="num">0.582</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Driving SAM3's decoder from C-RADIO features retains <strong>82% of native recall</strong>, which is what makes the shared-backbone design viable at all. And the two detectors fail on opposite objects: Grounding DINO is 0.909 on large and 0.273 on small; SAM3 is flat at 0.68–0.72 across all sizes. Their union is the one lever that moves the 0.462, and it has not been tried.</p>
+
+  <div class="call retract">
+    <span class="tag">Correction found while assembling this report</span>
+    <p>The experiment log states that "at a proposal budget matched to the number of objects present, the bridged arm recalls 0.258 and native SAM3 0.340," and concludes that three quarters of objects are unavailable to reason over. Those two figures are the <strong>budget-of-one</strong> numbers. At a budget genuinely matched to the 4.795 objects per image, recall is roughly 0.43–0.53 bridged and 0.56–0.67 native.</p>
+    <p>The direction of the conclusion survives — detection is still the binding constraint — but the magnitude does not. Roughly half the objects are missing at a sane budget, not three quarters. I will correct the log.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Record</span>
+    <h2>What this week retracted</h2>
+  </div>
+
+  <p>Six claims were withdrawn on evidence, four of them mine from earlier in the same week. They are listed because the retractions carry as much information as the results.</p>
+
+  <ul class="retracts">
+    <li><span class="was">AerialWaste's sub-token objects mean resolution is the lever for naming.</span><span class="now">Flat and then slightly down across 768 / 1024 / 1536 px (0.727 / 0.727 / 0.720), and flat across three backbones. Neither resolution nor encoder choice moves material naming.</span></li>
+    <li><span class="was">The decoder loses the visual signal.</span><span class="now">False for the presence decision. Removing the annotated waste drops the margin by 1.782 against +0.086 for an equal area elsewhere, p = 8e-26. This is the strongest positive result in the project.</span></li>
+    <li><span class="was">The material branch has no headroom.</span><span class="now">True for AerialWaste only. On DroneWaste every readout clears its baseline — 4.89× chance macro-recall over 20 classes. The material head is worth building, on the right dataset.</span></li>
+    <li><span class="was">AerialWaste's labels come from site inspection records.</span><span class="now">They are hand annotations made from the imagery, and genuinely per-object: 88.5% of multi-box images carry boxes with differing categories. The earlier provenance claim was wrong in both halves.</span></li>
+    <li><span class="was">Stage 3 caused dose-response learning damage.</span><span class="now">Threshold displacement. The arm scoring J = 0.000 has a <em>better</em> AUROC than its control (0.869 vs 0.837) — it simply says No to all 581 images.</span></li>
+    <li><span class="was">Detections don't correspond to annotations at any operating point.</span><span class="now">Too strong. 76.4% of covered objects have a single prediction at IoU ≥ 0.5, median 0.826. The failure is coverage plus fragment noise, not correspondence.</span></li>
+  </ul>
+
+  <div class="call retract">
+    <span class="tag">Standing caveat on the whole material task</span>
+    <p><strong>25.8% of AerialWaste's annotated objects are labelled "Unknown material."</strong> Annotators working from the full image, at full resolution, with scene context, declined to name a quarter of what they boxed. Whatever a model recovers there is bounded by a target its own authors could not assign a quarter of the time.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Constraint</span>
+    <h2>The budget is the immediate problem</h2>
+  </div>
+
+  <div class="tbl">
+    <table>
+      <caption>Account IscrC_FICHE, as of 20 August 2026</caption>
+      <thead><tr><th>Quantity</th><th class="num">Local hours</th></tr></thead>
+      <tbody>
+        <tr><td>Total allocation</td><td class="num">80,000</td></tr>
+        <tr><td>Consumed</td><td class="num">79,259 <span class="neg">(99.1%)</span></td></tr>
+        <tr class="total"><td>Remaining</td><td class="num neg">741</td></tr>
+        <tr><td>Billed this week (231 jobs)</td><td class="num">4,217</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>At this week's rate the remaining budget is <strong>under two days</strong>. This changes the sequencing question from "what is most interesting" to "what must be measured before the account closes," and it makes the case for moving the project stronger than it was when we last discussed it. Everything below is ordered on that basis — inference-only work first, since it is cheap and it is what the thesis is missing.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Next</span>
+    <h2>What to spend the remainder on</h2>
+  </div>
+
+  <ol class="steps">
+    <li><span class="t">Re-run Qwen2.5-VL and InternVL3 on the 581-image split</span><span class="d">Inference only, and it fixes the two weakest points in the comparison at once: the split mismatch, and the absence of any baseline under the margin readout where our result is strongest.</span></li>
+    <li><span class="t">Union Grounding DINO with SAM3</span><span class="d">The single lever that moves 0.462. They are complementary by object size and by class, and the union has never been scored.</span></li>
+    <li><span class="t">Rebalance the query set so precision is charged</span><span class="d">Most families are existential and reward over-detection. Until this is fixed the harness cannot rank detectors, and the held-out run would inherit the flaw.</span></li>
+    <li><span class="t">Then the held-out test sites</span><span class="d">All Track C numbers on this page are development-site numbers. The test sites stay untouched until development is finished — which it is not, on the two counts above.</span></li>
+  </ol>
+
+  <p class="note" style="margin-top:26px">The decoder arms of the harness are deliberately last. They redistribute what survives detection, and detection is the bound.</p>
+</section>
+
+<footer>
+  Waste-VLM · weekly record · 13–19 August 2026<br>
+  Source: <span class="mono">EXPERIMENTS.md</span>, <span class="mono">PLAN_OPEN_WORLD.md</span>, results under <span class="mono">$SCRATCH/waste_vlm/results/</span><br>
+  Branch <span class="mono">main</span> @ <span class="mono">3b077c7</span>, 45 commits ahead of origin (unpushed)
+</footer>
+
+</div>

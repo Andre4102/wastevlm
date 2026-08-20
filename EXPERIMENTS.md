@@ -1513,9 +1513,16 @@ almost exactly. Counting never recovers, at 0.142, 0.140 and 0.103.
 
 So the detections do not correspond to the annotated objects at any operating point,
 and matching the count does not make them the right objects. That agrees with the
-detector measured directly: at a proposal budget matched to the number of objects
-present, the bridged arm recalls 0.258 and native SAM3 0.340. Three quarters of the
-objects are not there to reason over.
+detector measured directly: at a proposal budget of one the bridged arm recalls
+0.258 and native SAM3 0.340, and at a budget matched to the 4.795 objects actually
+present, 0.43-0.53 and 0.56-0.67 (interpolating the budget-3 and budget-10 rows of
+`sam3_obj_dronewaste.json`). Roughly half the objects are not there to reason over.
+
+CORRECTION (2026-08-20). This paragraph previously described the budget-of-one
+figures, 0.258 and 0.340, as "matched to the number of objects present" and
+concluded that three quarters of the objects are missing. The budget was 1, not
+4.795. The conclusion holds in direction -- detection is the binding constraint --
+but the magnitude was overstated by roughly a factor of two.
 
 ### Consequence
 
@@ -1526,3 +1533,30 @@ amount of work on them can recover what was never detected. The complementarity
 already measured -- Grounding DINO 0.909 on large objects and 0.273 on small, SAM3
 0.716 and 0.682 -- makes their union the first thing to try, ahead of any further
 work on the language half.
+
+### Closed-loop prompt selection, the last untested arm (2026-08-19, job 52881523)
+
+The open-loop result left one version of the decoder's prompt-writing role alive:
+generate several candidate prompt sets and keep whichever separates the candidates
+best on the cached image embeddings, using no labels. 236 distinct candidate sets
+over the 913 deferred objects, best separation rising 0.0164 -> 0.0347.
+
+| deferred set, 913 objects | accuracy |
+|---|---:|
+| stage 1, no routing | 0.212 |
+| decoder prompts, open-loop, first template | 0.097 |
+| decoder prompts, open-loop, EWC-grounded | 0.133 |
+| **decoder prompts, closed-loop selection** | **0.161** |
+| hand-written contrastive prompts | 0.348 |
+| oracle: top-5 containment | 0.802 |
+
+Closed-loop beats open-loop and still loses to doing nothing. Overall it moves the
+full set 0.478 -> 0.462, i.e. routing with decoder prompts is a net cost, where
+routing with hand-written prompts gives 0.478 -> 0.519.
+
+**The claim is now unconditional for this design**: a decoder writing prompts from
+names and definitions is worse than not routing, with or without a label-free
+selection signal. The separation signal it optimises is real (margin tracks
+correctness at AUROC 0.82) but confidently-wrong prompts score high separation too,
+which is the failure mode the development labels were held for. Nothing further to
+try on this axis; the remaining lever is detection recall.
