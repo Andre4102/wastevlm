@@ -373,6 +373,26 @@ footer{
   line-height:1.7;
 }
 
+/* ---------- verdict pills ---------- */
+.pill{
+  display:inline-block;
+  font-family:var(--f-mono);
+  font-size:10.5px;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  padding:2px 7px;
+  border:1px solid currentColor;
+  border-radius:2px;
+  white-space:nowrap;
+}
+.pill.no{color:var(--neg)}
+.pill.yes{color:var(--pos)}
+.pill.part{color:var(--warn)}
+td .pill{font-size:10px}
+.tbl.ruled table{min-width:640px}
+.tbl.ruled td:first-child{min-width:230px}
+.tbl.ruled td:nth-child(2){text-align:left;white-space:normal;min-width:210px;color:var(--muted);font-size:13.6px}
+
 @media (max-width:600px){
   .wrap{padding:0 18px 64px}
   body{font-size:16px}
@@ -387,15 +407,17 @@ footer{
     <span>Weekly record</span>
     <span>13 – 19 August 2026</span>
     <span>231 jobs · 4,217 local-h</span>
-    <span>main @ 3b077c7</span>
+    <span>main @ f8b83ac</span>
   </div>
   <h1>Detection is the bound, and the labels are the ceiling</h1>
-  <p class="standfirst">Two tracks ran this week. The supervised VLM track produced <strong>the largest single gain in the project</strong> — AerialWaste detection AUROC 0.8615 → 0.9410 — and still loses to InternVL3-8B on the naming benchmark. The training-free open-world track was built end to end and measured, and it says the ceiling is <strong>detection recall</strong>, not reasoning and not naming.</p>
+  <p class="standfirst">Two tracks ran this week. The supervised VLM track produced <strong>the largest single gain in the project</strong> — AerialWaste detection AUROC 0.8615 → 0.9410 — and still loses to InternVL3-8B on the naming benchmark. The training-free open-world system was built end to end on one shared backbone and measured at every joint. It says the ceiling is <strong>detection recall</strong>, and that AerialWaste's material signal was there all along — <strong>no text-aligned readout can reach it</strong>.</p>
 
   <div class="glance">
     <div class="stat"><span class="n">0.941</span><span class="l">AerialWaste detection <b>AUROC</b> (arm n1), from 0.8615 — closes 73% of the gap to the frozen-feature probe</span></div>
     <div class="stat"><span class="n">1.000</span><span class="l">Compositional <b>reasoning</b> over ground-truth scenes, 4,496 questions — the solver is exact</span></div>
     <div class="stat"><span class="n">0.462</span><span class="l">The same solver over <b>predicted</b> scenes. Perception costs 0.538</span></div>
+    <div class="stat"><span class="n">+0.266</span><span class="l">A linear probe on ROI-pooled tokens over AerialWaste's <b>majority bar</b> — where every zero-shot readout sits at it</span></div>
+    <div class="stat"><span class="n">13</span><span class="l">approaches <b>ruled out</b> on evidence, and six earlier claims withdrawn</span></div>
     <div class="stat"><span class="n">99.1%</span><span class="l">of the <b>compute budget</b> is spent. 741 local-hours remain</span></div>
   </div>
 </header>
@@ -449,6 +471,57 @@ footer{
     <span class="tag">The control that makes it credible</span>
     <p>DroneWaste was already calibrated, and fitting a threshold there changes nothing (J 0.673 → 0.671). A threshold sweep cannot manufacture separation where the model is not broken — which is why the 2.5–3.6× gain on AerialWaste reads as a fix rather than an artefact of the sweep.</p>
   </div>
+
+  <h3>Descriptions, where the arm ranking reverses</h3>
+
+  <p>The naming table above scores the taxonomy commit. Scoring the <em>description</em> instead puts the same arms in a different order &mdash; and for an open-vocabulary product, that is the metric that matters, because a closed vocabulary is exactly what the thesis is trying to avoid.</p>
+
+  <div class="tbl">
+    <table>
+      <caption>Caption conditioning &mdash; AerialWaste m2, turn-1 description</caption>
+      <thead><tr><th>Arm</th><th class="num">"pile" gt+ &minus; gt&minus;</th><th class="num">Waste term on gt+</th><th class="num">on gt&minus;</th><th class="num">Distinct captions</th><th class="num">Mean length</th></tr></thead>
+      <tbody>
+        <tr><td>819K control</td><td class="num">+2.8</td><td class="num neg">3.8%</td><td class="num">0.5%</td><td class="num">330/581</td><td class="num">13w</td></tr>
+        <tr><td>s3b</td><td class="num">+11.9</td><td class="num">12.6%</td><td class="num">1.5%</td><td class="num">544/581</td><td class="num">26w</td></tr>
+        <tr><td>n1</td><td class="num neg">&minus;35.3</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td class="num">468/581</td><td class="num">&mdash;</td></tr>
+        <tr><td>n2</td><td class="num">+31.0</td><td class="num">38.5%</td><td class="num">10.8%</td><td class="num">574/581</td><td class="num">38w</td></tr>
+        <tr class="total"><td>n2d</td><td class="num pos">+35.8</td><td class="num pos">61.0%</td><td class="num">32.6%</td><td class="num">570/581</td><td class="num">38w</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p><strong>n2d triples the best previous caption conditioning</strong> and mentions a waste term on 61% of AerialWaste positives against the control's 3.8% &mdash; 92.5% on DroneWaste. The template is broken (570 of 581 distinct, modal opening 3%). A sampled turn-1: <em>"There is a small pile of debris in the bottom-left corner, which appears to be scattered or dumped materials."</em></p>
+
+  <p>Two things this exposed. <strong>n1's open-vocabulary collapse is substitution, not muteness</strong> &mdash; its "pile" conditioning is &minus;35.3 while "solid waste" is +46.7, because it learned one training corpus's single class name and uses it in place of every material word. Under a supplied menu it names correctly (0.355). The capability is intact; the open vocabulary was overwritten. And <strong>s3b describes the scene and misses the waste</strong>: fluent, grounded captions about parking lots on images that contain dumping. Lexical diversity is not conditioning, which is why its captions looked good while its detection sat at 0.801.</p>
+
+  <div class="call">
+    <span class="tag">Recommended stack for open descriptions</span>
+    <p><strong>1. Decide</strong> with the calibrated gate on n2d &mdash; one prefill, AUROC 0.9205 / 0.8751, threshold from 50 in-domain binary labels. <strong>2. Describe</strong> with n2d's turn-1, only when the gate fires. <strong>3. Do not use the taxonomy commit</strong> &mdash; it answers "none" on images it has just described as containing debris. It is the broken component, and an open-description product does not need it.</p>
+    <p>The cost of n2d is over-mention: waste terms on 32.6% of negatives. Gating first is what contains that.</p>
+  </div>
+
+  <h3>What the VLM is actually doing</h3>
+
+  <p>Two independent methods, one conclusion. <strong>Occlusion:</strong> removing the annotated waste &mdash; 2.44% of the tile &mdash; drops the Yes/No margin by 1.782, against +0.086 for removing an equal area elsewhere (p = 8e-26, 84% of images). Sign flips Yes&rarr;No 44 times versus once. <strong>Attribution:</strong> integrated gradients over the 24&times;24 token grid put 0.393 of the evidence mass inside the drawn boxes.</p>
+
+  <div class="tbl">
+    <table>
+      <caption>Attribution &mdash; where the "yes, waste" evidence lands, 40 AerialWaste images</caption>
+      <thead><tr><th>Estimator</th><th class="num">Mass in box</th><th class="num">Lift over uniform</th><th class="num">Peak inside</th></tr></thead>
+      <tbody>
+        <tr class="ref"><td>uniform null (= box area fraction)</td><td class="num">0.055</td><td class="num">+0.000</td><td class="num">&mdash;</td></tr>
+        <tr class="ref"><td>centre prior (never sees the image)</td><td class="num">0.096</td><td class="num">+0.040</td><td class="num">60%</td></tr>
+        <tr class="total"><td>integrated gradients</td><td class="num pos">0.393</td><td class="num pos">+0.338</td><td class="num">70%</td></tr>
+        <tr><td>token occlusion (12 images)</td><td class="num">0.257</td><td class="num">+0.193</td><td class="num">25%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">The centre prior is the control that matters: AerialWaste piles are often central, so a centre-weighted map inherits 60% peak-inside for free while scoring lift +0.040. Mass is hard to get right by accident; peak position is not. Read the lift column.</p>
+
+  <p>But the map <strong>does not respond to the question</strong>. Maps for "is there plastic" and "is there rubble" correlate at <strong>+0.791</strong>, and each correlates with the plain presence map at +0.824. This reproduces the occlusion finding that 72% of the category effect was presence rather than identity &mdash; by an independent method, and now visible rather than inferred.</p>
+
+  <p>That is the measurement the whole architecture rests on: <strong>the decoder is a usable training-free localiser and not a namer.</strong> Open-vocabulary naming cannot be obtained by varying the question text on this stack. It has to come from a text-aligned encoder &mdash; which is what Track C is.</p>
+
 </section>
 
 <section>
@@ -546,6 +619,62 @@ footer{
 
   <p>That last point is its own small result. Precision and recall are unavailable at deployment, so the rule that identifies under-covered classes has to run off the similarity matrix alone. Two signals validate: <span class="mono">win_margin</span> against recall (ρ = +0.840) and <span class="mono">rival_entropy</span> against the precision-minus-recall gap (ρ = −0.710).</p>
 
+  <h3>The readout is the ceiling, not the imagery</h3>
+
+  <p>The most consequential result of the week, and it was nearly missed because it sat in a log file rather than the record. The ceiling experiment crops each annotated object and re-encodes the crop. <span class="mono">roi_token_probe.py</span> does the opposite: encode the image <em>once</em> at native resolution, then mean-pool the patch tokens falling inside the box. The readout is a linear probe on frozen features &mdash; supervised, so it measures what the features <em>contain</em>, not what the open-world pipeline can currently extract.</p>
+
+  <div class="tbl">
+    <table>
+      <caption>The same 1350 AerialWaste objects, five readouts</caption>
+      <thead><tr><th>Readout</th><th class="num">Accuracy</th><th class="num">vs majority 0.399</th></tr></thead>
+      <tbody>
+        <tr><td>GeoRSCLIP ViT-L/14 &mdash; crop, re-encode</td><td class="num">0.384</td><td class="num neg">&minus;0.015</td></tr>
+        <tr><td>RemoteCLIP ViT-L/14 &mdash; crop, re-encode</td><td class="num">0.375</td><td class="num neg">&minus;0.024</td></tr>
+        <tr><td>our VLM &mdash; Yes/No on crop</td><td class="num">0.345</td><td class="num neg">&minus;0.054</td></tr>
+        <tr><td>C-RADIOv4 &rarr; SigLIP2 head, zero-shot</td><td class="num">0.395</td><td class="num neg">&minus;0.004</td></tr>
+        <tr class="total"><td>C-RADIOv4 ROI-pool + linear probe</td><td class="num pos">0.665</td><td class="num pos">+0.266</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="call retract">
+    <span class="tag">This refutes the ceiling conclusion</span>
+    <p>The ceiling experiment concluded that AerialWaste's five categories are "not recoverable from this imagery &mdash; a statement about the task, not the method." <strong>That is wrong.</strong> A linear probe on ROI-pooled tokens clears the majority bar by 0.266 and predicts all five classes. The information is in the imagery and in the features.</p>
+    <p>What fails is every <em>text-aligned zero-shot</em> readout &mdash; all four sit within &plusmn;0.05 of the bar. The honest claim is about the readout: <strong>AerialWaste material identity is linearly decodable from frozen features and unreachable by any open-vocabulary text comparison tried.</strong></p>
+    <p>That prices the architectural constraint. On this dataset, insisting on no fixed label vector costs roughly <strong>0.27 accuracy</strong> on the material branch. It is a real cost, and it is a defensible one to pay &mdash; but it should be stated as a design choice, not reported as a property of the data.</p>
+  </div>
+
+  <div class="tbl">
+    <table>
+      <caption>ROI-pooling against the same probe with no localisation</caption>
+      <thead><tr><th>Readout</th><th class="num">AerialWaste (5 cls)</th><th class="num">DroneWaste (20 cls)</th></tr></thead>
+      <tbody>
+        <tr class="bar"><td>majority-class bar</td><td class="num">0.399</td><td class="num">0.234</td></tr>
+        <tr><td><code>cls</code> &mdash; whole image, no ROI</td><td class="num neg">0.346</td><td class="num">0.473</td></tr>
+        <tr><td><code>roi_max</code> &mdash; tokens inside the box</td><td class="num">0.668</td><td class="num">0.689</td></tr>
+        <tr class="total"><td><code>roi_mean</code> &mdash; tokens inside the box</td><td class="num pos">0.665</td><td class="num pos">0.733</td></tr>
+        <tr class="ref"><td>macro-recall as a multiple of chance</td><td class="num">3.52&times;</td><td class="num">11.72&times;</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Two controls make the reading specific. <strong>Localisation is what unlocks it, not the probe:</strong> the identical classifier reading a whole-image vector scores <em>below</em> the bar on AerialWaste (0.346). Pooling the right tokens is worth +0.32 and +0.26. And <code>roi_max</code> tracks <code>roi_mean</code>, so this is not an artefact of the pooling operator. DroneWaste is split by site (2090 held-out objects); AerialWaste uses the dataset's own split.</p>
+
+  <h4>Which SigLIP2 head, and why one of them cannot work</h4>
+
+  <p>C-RADIOv4 carries two SigLIP2 heads and they are not interchangeable. <code>_heads.siglip2-g</code> distils the <em>pooled, text-aligned</em> embedding; <code>_feature_projections.siglip2-g</code> distils the <em>patch</em> space, which is not text-aligned. Comparing patch-space vectors against text embeddings is a type error, and it shows:</p>
+
+  <div class="tbl">
+    <table>
+      <caption>Zero-shot naming by readout path</caption>
+      <thead><tr><th>Mode</th><th class="num">AerialWaste (bar 0.399)</th><th class="num">DroneWaste (bar 0.234)</th></tr></thead>
+      <tbody>
+        <tr><td><code>crop-summary</code> &mdash; via the summary head</td><td class="num">0.395</td><td class="num pos">0.552</td></tr>
+        <tr><td><code>roi-dense</code> &mdash; via the patch projection</td><td class="num neg">0.107</td><td class="num neg">0.080</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">The dense segmentation arm says the same thing directly: mass-in-mask lift over mask area is <strong>0.0021</strong>, i.e. nothing. So the pooled-token naming branch must route through the summary head &mdash; which is what <code>roi-head</code> does, and what every routing number on this page uses. Recovering these heads at all required pulling them from the raw checkpoint; the HuggingFace snapshot ships 330 tensors with <code>adaptor_names: null</code> and no teacher heads.</p>
+
   <h3>Confidence, routing, and what the decoder cannot do</h3>
 
   <p>The encoder knows when it is guessing: entropy separates its correct from its incorrect answers at <strong>AUROC 0.817</strong>. Deferring the least-confident 30% and re-scoring against only the top-5 candidates lifts that subset from 0.212 to 0.348 and the whole set from 0.478 to 0.519.</p>
@@ -623,6 +752,24 @@ footer{
 
   <p>Driving SAM3's decoder from C-RADIO features retains <strong>82% of native recall</strong>, which is what makes the shared-backbone design viable at all. And the two detectors fail on opposite objects: Grounding DINO is 0.909 on large and 0.273 on small; SAM3 is flat at 0.68–0.72 across all sizes. Their union is the one lever that moves the 0.462, and it has not been tried.</p>
 
+  <h4>Can the encoder propose on its own?</h4>
+
+  <p>Worth asking, because if C-RADIO's own features could produce boxes the SAM3 decoder would be unnecessary and the system would lose a component. Two training-free objectness signals were tried over the feature grid &mdash; a border/edge energy and a spectral (graph-cut style) score:</p>
+
+  <div class="tbl">
+    <table>
+      <caption>Training-free objectness from encoder features &mdash; DroneWaste, best operating points</caption>
+      <thead><tr><th>Signal</th><th class="num">Recall @ IoU 0.25</th><th class="num">Recall @ IoU 0.5</th><th class="num">Boxes/img</th></tr></thead>
+      <tbody>
+        <tr><td>border @ 85th pct</td><td class="num">0.392</td><td class="num neg">0.194</td><td class="num">45.0</td></tr>
+        <tr><td>border @ 90th pct</td><td class="num">0.340</td><td class="num">0.143</td><td class="num">35.6</td></tr>
+        <tr><td>spectral @ 85th pct</td><td class="num">0.090</td><td class="num neg">0.023</td><td class="num">51.4</td></tr>
+        <tr class="ref"><td>SAM3 decoder, for scale</td><td class="num">&mdash;</td><td class="num">0.731</td><td class="num">94.5</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Best case 0.194 against the decoder's 0.731 at a comparable box budget, and worse on AerialWaste (0.067). <strong>The decoder earns its place.</strong> Raw feature structure does not localise waste; something trained to segment has to sit on top.</p>
+
   <div class="call retract">
     <span class="tag">Correction found while assembling this report</span>
     <p>The experiment log states that "at a proposal budget matched to the number of objects present, the bridged arm recalls 0.258 and native SAM3 0.340," and concludes that three quarters of objects are unavailable to reason over. Those two figures are the <strong>budget-of-one</strong> numbers. At a budget genuinely matched to the 4.795 objects per image, recall is roughly 0.43–0.53 bridged and 0.56–0.67 native.</p>
@@ -632,13 +779,90 @@ footer{
 
 <section>
   <div class="sec-head">
+    <span class="sec-num">Negative results</span>
+    <h2>Thirteen things that did not work</h2>
+  </div>
+
+  <p>Most of the week's compute went here, and it is the part most likely to be undersold in a write-up. Each row is a real arm that ran to completion against a measured control.</p>
+
+  <div class="tbl ruled">
+    <table>
+      <caption>Ruled out on evidence</caption>
+      <thead><tr><th>Approach</th><th>Result against its control</th><th class="num">Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Higher input resolution for naming</td><td>0.727 / 0.727 / 0.720 at 768 / 1024 / 1536 px</td><td class="num"><span class="pill no">flat</span></td></tr>
+        <tr><td>A stronger backbone for naming</td><td>C-RADIOv4-H 0.734, DINOv3-L 0.730, SO400M 0.727 &mdash; all within noise of the constant predictor</td><td class="num"><span class="pill no">flat</span></td></tr>
+        <tr><td>Decoder-written prompts, open-loop</td><td>0.097 then 0.133, against 0.212 for no routing</td><td class="num"><span class="pill no">worse</span></td></tr>
+        <tr><td>Decoder-written prompts, closed-loop selection</td><td>0.161 over 236 candidate sets &mdash; still below 0.212</td><td class="num"><span class="pill no">worse</span></td></tr>
+        <tr><td>Moving the text vectors instead of rewriting text</td><td>centred 0.475, global-shift 0.470, whitened 0.454, against 0.478 as-is</td><td class="num"><span class="pill no">worse</span></td></tr>
+        <tr><td>Per-class choice of prompt bank</td><td>0.451&ndash;0.458 versus 0.478; even the <em>oracle</em> choice reaches only 0.487</td><td class="num"><span class="pill no">no headroom</span></td></tr>
+        <tr><td>Prompt expansion from EWC synonyms</td><td>0.450 against 0.478 for the hand-written contrastive set</td><td class="num"><span class="pill no">worse</span></td></tr>
+        <tr><td>Score filtering and NMS on the scene graph</td><td>0.447 at 10.1 boxes/img, 0.404 at 4.1, against 0.462 unfiltered</td><td class="num"><span class="pill no">worse</span></td></tr>
+        <tr><td>Merging fragments into regions</td><td>0.448 by overlap, 0.442 by adjacency, against 0.479</td><td class="num"><span class="pill no">worse</span></td></tr>
+        <tr><td>Naming via the per-patch projection</td><td>0.107 and 0.080, both far below their bars &mdash; wrong embedding space</td><td class="num"><span class="pill no">type error</span></td></tr>
+        <tr><td>Dense segmentation from the same projection</td><td>mass-in-mask lift 0.0021</td><td class="num"><span class="pill no">nothing</span></td></tr>
+        <tr><td>Encoder features as a proposal source</td><td>recall 0.194 against the decoder's 0.731</td><td class="num"><span class="pill no">insufficient</span></td></tr>
+        <tr><td>Margin BCE on the 150K base</td><td>won on the 819K base, splits here and costs naming everywhere</td><td class="num"><span class="pill part">base-dependent</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Three of these are worth reading together. Prompt rewriting, prompt expansion, per-class bank selection and embedding transforms are four different attacks on the same problem &mdash; making the text side better &mdash; and all four fail, with the oracle showing only <strong>+0.009</strong> of headroom available. That is a strong statement: <em>the text side is close to saturated</em>, and further effort there is misallocated.</p>
+
+  <p>Separately, one arm was a real regression rather than a null: adding the nadir description corpus cut false alarms exactly as designed (negatives scoring positive 0.26 &rarr; 0.03) but <em>collapsed</em> AerialWaste naming from 0.355 to 0.089. Its vocabulary is land cover, and it competes with waste vocabulary for the same answer slot. Suppressing false positives is not the same as restoring discrimination, and the arm design conflated them.</p>
+</section>
+
+<section>
+  <div class="sec-head">
+    <span class="sec-num">Comparison</span>
+    <h2>The other baselines</h2>
+  </div>
+
+  <p>Qwen and InternVL3 answer the multi-label classification question. The open-world system is doing a different job, and it has its own set of comparisons &mdash; all zero-shot, none trained on either evaluation dataset.</p>
+
+  <div class="tbl">
+    <table>
+      <caption>Localisation &mdash; box recall @ IoU 0.5, zero waste-specific training</caption>
+      <thead><tr><th>Model</th><th class="num">AerialWaste</th><th class="num">DroneWaste</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>Grounding DINO (base)</td><td class="num neg">0.150</td><td class="num pos">0.693</td><td>strong on large objects (0.909), weak on small (0.273)</td></tr>
+        <tr><td>SAM3, native backbone</td><td class="num">&mdash;</td><td class="num pos">0.731</td><td>flat across object sizes; 94.5 boxes/img</td></tr>
+        <tr><td>SAM3, bridged from C-RADIO</td><td class="num">&mdash;</td><td class="num">0.588</td><td>82% of native, on a shared backbone pass</td></tr>
+        <tr class="ref"><td>Kosmos-2</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td>returns one whole-image box and a language-prior caption</td></tr>
+        <tr class="ref"><td>GeoChat</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td>runs, emits well-formed boxes; not yet scored</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The 0.90 versus 7.96 tokens-per-object gap between the two datasets tracks the recall gap almost exactly. Generic open-vocabulary grounding <strong>transfers</strong> to aerial waste when objects are resolvable and collapses when they are not &mdash; a statement about object scale, not about method, which is why AerialWaste grounding numbers should not be reported as a method result.</p>
+
+  <p>Kosmos-2 is the instructive failure. Asked to point at waste it returns the whole image and the caption <em>"garbage or dumped waste is a major problem in the world"</em> &mdash; and on a DroneWaste negative, <em>"...seen in this false-color image from NASA's Mars Reconnaissance Orbiter."</em> Fluent, confident, and completely ungrounded. That is precisely the failure mode the grounded architecture exists to avoid, and it is worth one figure in the thesis.</p>
+
+  <div class="tbl">
+    <table>
+      <caption>Open-vocabulary naming on ground-truth crops</caption>
+      <thead><tr><th>Model</th><th class="num">AerialWaste (5 cls, bar 0.399)</th><th class="num">DroneWaste (20 cls, bar 0.198)</th></tr></thead>
+      <tbody>
+        <tr><td>GeoRSCLIP ViT-L/14</td><td class="num neg">0.384</td><td class="num pos">0.314</td></tr>
+        <tr><td>RemoteCLIP ViT-L/14</td><td class="num neg">0.375</td><td class="num">0.273</td></tr>
+        <tr><td>our VLM (Yes/No on crop)</td><td class="num neg">0.345</td><td class="num">&mdash;</td></tr>
+        <tr class="total"><td>C-RADIOv4 &rarr; SigLIP2, zero-shot</td><td class="num neg">0.395</td><td class="num pos">0.552</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Our zero-shot readout is the best of the four on both datasets &mdash; and on AerialWaste that still means sitting at the bar, which is the point of the correction above. DroneWaste's 0.552 is on the held-out-site test split (2090 objects); the 0.478 figure quoted earlier is a different mode on the development split. GeoChat and a scored Kosmos-2 arm remain open.</p>
+</section>
+
+<section>
+  <div class="sec-head">
     <span class="sec-num">Record</span>
     <h2>What this week retracted</h2>
   </div>
 
-  <p>Six claims were withdrawn on evidence, four of them mine from earlier in the same week. They are listed because the retractions carry as much information as the results.</p>
+  <p>Seven claims were withdrawn on evidence, most of them mine from earlier in the same week. They are listed because the retractions carry as much information as the results.</p>
 
   <ul class="retracts">
+    <li><span class="was">AerialWaste's five material categories are not recoverable from this imagery &mdash; a statement about the task, not the method.</span><span class="now">A linear probe on ROI-pooled tokens clears the majority bar by 0.266 on the identical 1350 objects. The signal is in the imagery; no text-aligned zero-shot readout can reach it. Found while assembling this report, from runs that never reached the log.</span></li>
     <li><span class="was">AerialWaste's sub-token objects mean resolution is the lever for naming.</span><span class="now">Flat and then slightly down across 768 / 1024 / 1536 px (0.727 / 0.727 / 0.720), and flat across three backbones. Neither resolution nor encoder choice moves material naming.</span></li>
     <li><span class="was">The decoder loses the visual signal.</span><span class="now">False for the presence decision. Removing the annotated waste drops the margin by 1.782 against +0.086 for an equal area elsewhere, p = 8e-26. This is the strongest positive result in the project.</span></li>
     <li><span class="was">The material branch has no headroom.</span><span class="now">True for AerialWaste only. On DroneWaste every readout clears its baseline — 4.89× chance macro-recall over 20 classes. The material head is worth building, on the right dataset.</span></li>
@@ -686,6 +910,7 @@ footer{
     <li><span class="t">Union Grounding DINO with SAM3</span><span class="d">The single lever that moves 0.462. They are complementary by object size and by class, and the union has never been scored.</span></li>
     <li><span class="t">Rebalance the query set so precision is charged</span><span class="d">Most families are existential and reward over-detection. Until this is fixed the harness cannot rank detectors, and the held-out run would inherit the flaw.</span></li>
     <li><span class="t">Then the held-out test sites</span><span class="d">All Track C numbers on this page are development-site numbers. The test sites stay untouched until development is finished — which it is not, on the two counts above.</span></li>
+    <li><span class="t">Close the write-up gap</span><span class="d">The ROI-pool probe sat in a log for a day, and it overturns a headline claim. Results that do not reach <span class="mono">EXPERIMENTS.md</span> the day they land get contradicted later by weaker experiments. Both are now recorded.</span></li>
   </ol>
 
   <p class="note" style="margin-top:26px">The decoder arms of the harness are deliberately last. They redistribute what survives detection, and detection is the bound.</p>
@@ -694,7 +919,7 @@ footer{
 <footer>
   Waste-VLM · weekly record · 13–19 August 2026<br>
   Source: <span class="mono">EXPERIMENTS.md</span>, <span class="mono">PLAN_OPEN_WORLD.md</span>, results under <span class="mono">$SCRATCH/waste_vlm/results/</span><br>
-  Branch <span class="mono">main</span> @ <span class="mono">3b077c7</span>, 45 commits ahead of origin (unpushed)
+  Branch <span class="mono">main</span> @ <span class="mono">f8b83ac</span>, 47 commits ahead of origin (unpushed)
 </footer>
 
 </div>
