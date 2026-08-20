@@ -63,6 +63,9 @@ _CONFIGS: dict[str, dict] = {
     "dinov2-l": {"family": "dinov2", "hf_id": "facebook/dinov2-large", "patch": 14, "size": 518},
     "dinov3-b": {"family": "dinov3", "variant": "vitb16", "local": "dinov3-vitb16-pretrain-lvd1689m", "patch": 16, "size": 512},
     "dinov3-l": {"family": "dinov3", "variant": "vitl16-lvd", "local": "dinov3-vitl16-pretrain-lvd1689m", "patch": 16, "size": 512},
+    # Same architecture, satellite pretraining instead of web. The pair is the
+    # encoder-level test of whether generic satellite data transfers to waste.
+    "dinov3-l-sat": {"family": "dinov3", "variant": "vitl16-sat", "local": "dinov3-vitl16-pretrain-sat493m", "patch": 16, "size": 512},
     "radio-b":  {"family": "radio",  "local": "RADIO-B",               "patch": 16, "size": 512},
     "radio-l":  {"family": "radio",  "local": "RADIO-L",               "patch": 16, "size": 512},
     "radio-h":  {"family": "radio",  "local": "RADIO-H",               "patch": 16, "size": 512},

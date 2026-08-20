@@ -2535,16 +2535,31 @@ the tile instead of naming the material. It did do the one thing it was added fo
 -- AW negatives scoring positive fell 0.26 -> 0.03 -- so this is a trade, not a
 failure of the corpus.
 
-**Instance 2, encoder / probe level.** The same shape appears in the frozen-probe
-work, where added generic capacity or context does not transfer to the waste task:
-the conv head lifts DINOv2 by +2.2 pp mAP but *overfits* DINOv3 (val 0.486 -> test
-0.408), and tile-TTA -- more effective resolution, less context -- costs both
-backbones (DINOv3 mIoU 0.4191 -> 0.3986, RADIO-L 0.4160 -> 0.3767).
+**Instance 2, encoder pretraining.** DINOv3 ships two pretrainings of the same
+architecture: **LVD-1689M** (curated web images) and **SAT-493M** (satellite
+imagery). On this task the satellite-pretrained variant performed WORSE than the
+web-pretrained one -- the natural-fit choice for aerial imagery, and it lost. The
+project's own planning note predicted the opposite: `tracks/track_dino_radio.md`
+says "For aerial imagery, DINOv3-Sat (the satellite-trained variant) is the
+natural fit". That prediction is the intuition this thread exists to correct.
 
-CAVEAT ON THE PAIRING: instance 1 is precise and reproduced from logged runs.
-Instance 2 is my best match to the finding referred to as "the DINOv3
-negative-transfer result"; the logs contain no section under that name, and the
-two candidates above are about added head capacity and removed context rather than
-about added generic data. If the intended finding is a different one, this section
-should be re-pointed -- the thread is worth having, but only if both instances are
-the same phenomenon rather than two things that merely both went down.
+PROVENANCE: the SAT-vs-LVD comparison was run on the previous cluster and its
+numbers are not in this repository -- no `encoder_probe` results, no log, and only
+the LVD weights were on disk here. `src/vision_encoder.py` did retain both loaders
+(`vitl16-sat` / `vitl16-lvd`), so the comparison is re-runnable rather than lost.
+SAT-493M weights are now downloaded (1.2 GB) and a `dinov3-l-sat` encoder id
+added, with matched LVD-vs-SAT ROI-pool probes queued on both datasets under the
+current protocol (DroneWaste on the 12/5 site split, AerialWaste on its own
+split). Until those land, instance 2 is a recollection, and the numbers quoted for
+it should be the re-run's, not the previous cluster's.
+
+**The shape the two share.** Data that looks closer to the target domain --
+satellite pretraining, nadir land-cover captions -- transfers negatively to waste,
+at two different layers of the stack and against the prior in both cases. The
+plausible common mechanism is that the generic remote-sensing signal is dominated
+by land cover, which is exactly the axis waste must be distinguished FROM: a
+dumping site and the field beside it are the same land cover. Optimising a
+representation for land cover therefore spends capacity on the nuisance variable.
+That is a hypothesis, not a measured mechanism; the n2 caption evidence supports
+it (the model describes the tile instead of naming the material) and nothing at
+the encoder level tests it yet.

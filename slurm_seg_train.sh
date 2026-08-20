@@ -13,7 +13,7 @@
 
 set -euo pipefail
 
-PROJECT=/home/ids/diecidue/scripts/waste_vlm
+PROJECT=/leonardo/home/userexternal/adiecidu/scripts/wastevlm
 RESULTS=/leonardo_scratch/large/userexternal/adiecidu/waste_vlm/results/seg
 PYTHON=${PYTHON:-/leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/bin/python}
 cd /leonardo/home/userexternal/adiecidu/scripts/wastevlm

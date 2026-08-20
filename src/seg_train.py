@@ -10,6 +10,8 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
+import pathlib
 import json
 import sys
 import time
@@ -195,7 +197,8 @@ def main() -> int:
     # Resolve backbone_id defaults per type.
     backbone_id = args.backbone_id
     if args.backbone_type == "radio" and backbone_id == "facebook/dinov2-base":
-        backbone_id = "/home/ids/diecidue/results/waste_vlm/weights/RADIO-L"
+        backbone_id = str(pathlib.Path(os.environ.get(
+            "WASTE_VLM_WEIGHTS", "/home/ids/diecidue/results/waste_vlm/weights")) / "RADIO-L")
     if args.backbone_type == "frcnn":
         backbone_id = "torchvision/fasterrcnn_resnet50_fpn"  # sentinel; loaded internally
     if args.backbone_type == "dinov3" and backbone_id == "facebook/dinov2-base":
