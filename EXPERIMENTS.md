@@ -1688,3 +1688,134 @@ class names contain slashes, than for DroneWaste, whose do not.
 file predates the fix and is therefore ~0.007 pessimistic. The ranking of arms is
 unaffected (the text change is common to all of them), and the probe, detection
 and compositional numbers do not touch the text tower at all.
+
+## Why the text prototypes miss: the geometry (2026-08-20, jobs 53203373-53210604)
+
+Follow-up to the ROI-pool probe. Same 1350 AerialWaste objects and 2090 held-out
+DroneWaste objects, everything in SigLIP2's summary space.
+
+### The projection is not the bottleneck; the text comparison is
+
+| readout | aw_m2 (bar 0.399) | dronewaste (bar 0.234) |
+|---|---:|---:|
+| linear probe on RADIO's raw pooled tokens | 0.665 | 0.733 |
+| linear probe after `_heads.siglip2-g` | 0.653 | 0.724 |
+| nearest centroid, image prototypes | 0.572 | 0.696 |
+| nearest prototype, TEXT prototypes | 0.410 | 0.595 |
+| majority bar | 0.399 | 0.234 |
+
+The projection into the text-aligned space costs **0.012 / 0.009**. Holding the
+readout form fixed at five (or eighteen) prototypes and swapping only where they
+come from costs **0.162 / 0.101**. So text embeddings are bad prototypes; the
+space they live in is fine. This retires the "0.27 is the price of text alignment"
+reading from the previous section -- the price is the text QUERY, not the space.
+
+### Where the text lands (aw_m2, text x image-centroid cosine)
+
+|  | Bulky | Contain | Plastic | Rubble | Unknown |
+|---|---:|---:|---:|---:|---:|
+| Bulky items | 0.141 | 0.140 | **0.142** | 0.127 | 0.142 |
+| Containers | 0.132 | **0.138** | 0.125 | 0.109 | 0.124 |
+| Plastic | 0.094 | 0.089 | **0.105** | 0.090 | 0.101 |
+| Rubble | 0.112 | 0.102 | 0.123 | **0.147** | 0.129 |
+| Unknown material | 0.101 | 0.097 | 0.111 | **0.120** | 0.112 |
+
+Diagonal mean 0.129, off-diagonal 0.115 -- a margin of **0.014**, and the diagonal
+is the row argmax only 3/5 times. Two numbers explain it:
+
+- **the image centroids are nearly one point**: mutual cosine **0.979**
+- **the modality gap**: mean text-to-image cosine **0.108**, against
+  image-to-image **0.830**
+
+So a cosine against text is dominated by a shared offset, and the class-carrying
+component is a ~0.01 perturbation on top of it. The probe reaches 0.653 because it
+can use directions the centroid difference does not expose.
+
+Centering, the standard remedy for exactly this geometry, was tested and **fails**:
+0.410 raw -> 0.316 centering images -> 0.413 centering text -> 0.320 centering both
+-> 0.201 centred and whitened. It does raise macro-recall (0.376 -> 0.403) by
+breaking the majority attractor, but accuracy falls. This matches the DroneWaste
+`embedding_router` result, so moving the vectors is now refuted on both datasets.
+
+### DroneWaste, per class -- and it predicts the F1 column
+
+| class | n | text-vs-own centroid | rank | F1 | best-matching centroid |
+|---|---:|---:|---:|---:|---|
+| Tyres | 86 | 0.197 | 1 | 0.947 | itself |
+| Metal barrels | 109 | 0.188 | 1 | 0.920 | itself |
+| Pallets | 527 | 0.191 | 1 | 0.915 | itself |
+| Vehicles | 83 | 0.146 | 1 | 0.886 | itself |
+| Asbestos | 157 | 0.130 | 2 | 0.826 | Paper |
+| Scrap | 190 | 0.146 | 3 | 0.457 | Paper |
+| Textile | 714 | 0.120 | 4 | 0.328 | Paper |
+| Furniture | 117 | 0.121 | 2 | 0.182 | Paper |
+| **Plastic** | 138 | 0.112 | **6** | **0.040** | **Plastic packaging** |
+| Plastic packaging | 160 | 0.133 | 1 | 0.000 | itself |
+
+Diagonal is the argmax for 11/18 classes, and where it is not, F1 collapses. The
+classes that work are discrete manufactured objects whose centroids are actually
+apart; the ones that fail sit on top of each other:
+
+| pair | centroid cosine |
+|---|---:|
+| Tyres x Metal barrels | 0.819 |
+| Textile x Mixed items | 0.888 |
+| Plastic x Plastic packaging | 0.946 |
+| Plastic x Mixed items | 0.958 |
+| Rubble x Construction and demolition | 0.981 |
+| Rubble x Excavation materials | **0.994** |
+
+Rubble and Excavation materials are 0.994 apart in cosine -- no text query
+separates two classes that the encoder places at the same point. That is a
+statement about the taxonomy meeting the encoder, not about prompt wording, and it
+is why four separate prompt-side attacks all returned nothing.
+
+Caveat: `Paper` has n=2, so its centroid is noise, and it acts as a spurious
+attractor for six classes. Treat its column as an artefact of sample size.
+
+### Text plus exemplars: text is worth about four labelled objects per class
+
+Prototype = `normalise(a * text + (1-a) * normalise(mean of k exemplars))`,
+exemplars drawn from train, scored on the untouched test split, 12 seeds.
+
+aw_m2 (bar 0.399):
+
+| shots | a=0.00 | a=0.25 | a=0.50 | a=0.75 | a=1.00 (text) |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 0.331 | 0.352 | 0.395 | **0.425** | 0.410 |
+| 2 | 0.354 | 0.384 | 0.425 | **0.440** | 0.410 |
+| 5 | 0.456 | 0.477 | **0.491** | 0.445 | 0.410 |
+| 10 | 0.438 | 0.467 | **0.484** | 0.439 | 0.410 |
+| 25 | 0.505 | **0.517** | 0.501 | 0.444 | 0.410 |
+| all | **0.572** | 0.566 | 0.517 | 0.440 | 0.410 |
+
+dronewaste (bar 0.234):
+
+| shots | a=0.00 | a=0.25 | a=0.50 | a=0.75 | a=1.00 (text) |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 0.444 | 0.493 | 0.565 | **0.617** | 0.595 |
+| 2 | 0.550 | 0.590 | 0.628 | **0.636** | 0.595 |
+| 5 | 0.622 | 0.638 | **0.656** | 0.648 | 0.595 |
+| 10 | 0.660 | 0.668 | **0.668** | 0.646 | 0.595 |
+| 25 | **0.684** | 0.683 | 0.677 | 0.652 | 0.595 |
+| all | **0.696** | 0.692 | 0.682 | 0.655 | 0.595 |
+
+**The optimal mixing weight falls monotonically with the number of exemplars** on
+both datasets -- 0.75, 0.75, 0.50, 0.50, 0.25, 0.00 -- which is the predicted
+shape: text is free and carries the low-shot regime, and becomes pure cost once
+enough exemplars exist. One exemplar per class plus text beats text alone
+(+0.015 / +0.022) and beats that exemplar alone (+0.095 / +0.174). Exemplars
+overtake text outright at about **5 per class** on both datasets.
+
+This is the design consequence: the vocabulary stays open (text handles unseen
+classes with zero examples), and any class for which even a handful of exemplars
+can be pointed at gets most of the probe's advantage without a fixed label vector.
+
+### Correction: the DroneWaste centroid column in job 53210604 is a bug
+
+It printed `acc 0.000, predicts 1/20`. Two of the twenty classes have no training
+exemplar, `mean` of an empty slice is NaN, and NaN propagates through the
+similarity matrix so `argmax` returns 0 for every object. The true value is
+**0.696**. `fit_centroid` now drops classes with no exemplar from the prototype set
+instead of averaging nothing; the same fix applies to the `a=0` column of the
+hybrid sweep, whose first printing was NaN-poisoned for the same reason.

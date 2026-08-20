@@ -123,6 +123,77 @@ def encode(enc, rois, pad, batch_size):
     return out, ntok
 
 
+def project_siglip2(out: dict, encoder_id: str, device="cuda") -> dict:
+    """Add readouts living in SigLIP2's text-aligned summary space.
+
+    The probe above reads RADIO's own features. That leaves the interesting
+    question open: is the +0.266 over the bar a property of the FEATURES, or does
+    it survive the projection that makes them text-comparable? Same vectors, same
+    probe, one extra matmul -- so the only thing that varies is the space.
+
+    `_heads.siglip2-g` is the summary head, which is what `roi-head` naming uses;
+    the CLS slice is taken at index 0 because the model concatenates the summary
+    tokens of the teachers that set use_summary (siglip2-g, then dino_v3_7b).
+    """
+    import torch
+
+    from src.radio_adaptors import load_projection
+
+    head = load_projection("siglip2-g", "summary", encoder_id, device=device)
+    hin = head.fc1.weight.shape[1] if hasattr(head, "fc1") else None
+    dt = next(head.parameters()).dtype
+    add = {}
+    for src in ("roi_mean", "roi_max", "cls"):
+        if src not in out:
+            continue
+        X = out[src]
+        if hin is not None and X.shape[1] != hin:
+            if X.shape[1] % hin:
+                print(f"  [siglip2] skip {src}: {X.shape[1]}d does not fit the "
+                      f"head's {hin}d input")
+                continue
+            X = X[:, :hin]        # CLS is the teachers' summaries concatenated
+            print(f"  [siglip2] {src}: taking slice 0 of {out[src].shape[1]}d "
+                  f"-> {hin}d (siglip2-g's own summary token)")
+        Z = np.zeros((len(X), head.final[2].out_features), dtype=np.float32)
+        with torch.no_grad():
+            for i in range(0, len(X), 2048):
+                b = torch.from_numpy(X[i:i + 2048]).to(device=device, dtype=dt)
+                Z[i:i + 2048] = head(b).float().cpu().numpy()
+        add[f"{src}@siglip2"] = Z
+    out.update(add)
+    return out
+
+
+def fit_centroid(X_tr, y_tr, X_te, y_te, cats):
+    """Nearest class-centroid, cosine -- the same functional form as text matching.
+
+    The logistic probe has 5 x D free parameters; a text comparison has 5 fixed
+    points and picks the nearest. Those are not comparable readouts, so a probe
+    beating text does not by itself show that the TEXT is the weak part. This
+    control keeps the form (5 prototypes, nearest wins) and only swaps where the
+    prototypes come from: class means of the training images, instead of the text
+    encoder. If it lands near the probe, text embeddings are bad prototypes; if it
+    lands near the text arm, the prototype form is the limit.
+    """
+    from sklearn.preprocessing import normalize
+
+    Xtr, Xte = normalize(X_tr), normalize(X_te)
+    # A class with no training exemplar has no centroid. Averaging an empty slice
+    # gives NaN, which propagates through the whole similarity matrix and makes
+    # argmax return 0 for every object -- a silent collapse that reads as
+    # "accuracy 0.000, predicts 1/20" rather than as an error. Such classes are
+    # excluded from the prototype set instead, so they are simply never predicted.
+    have = np.array([c for c in range(len(cats)) if (y_tr == c).sum() > 0])
+    C = np.stack([Xtr[y_tr == c].mean(0) for c in have])
+    C /= np.linalg.norm(C, axis=1, keepdims=True)
+    pred = have[(Xte @ C.T).argmax(1)]
+    acc = float((pred == y_te).mean())
+    rec = [float((pred[y_te == c] == c).mean()) for c in range(len(cats))
+           if (y_te == c).sum()]
+    return acc, float(np.mean(rec)), len(set(pred.tolist()))
+
+
 def fit_multiclass(X_tr, y_tr, X_te, y_te, cats, keep=None):
     from sklearn.linear_model import LogisticRegression
     from sklearn.preprocessing import normalize
@@ -147,6 +218,10 @@ def main() -> None:
     ap.add_argument("--pad", type=float, default=0.0,
                     help="grow the box by this fraction before selecting tokens")
     ap.add_argument("--batch-size", type=int, default=2)
+    ap.add_argument("--siglip2", action="store_true",
+                    help="also probe the same vectors after the SigLIP2 summary "
+                         "head, to separate the features from their space")
+    ap.add_argument("--dump-emb", help="path stem for saving the feature arrays")
     ap.add_argument("--out-json")
     args = ap.parse_args()
 
@@ -165,6 +240,9 @@ def main() -> None:
     idx = {c: i for i, c in enumerate(cats)}
     print("[encode] train"); F_tr, n_tr = encode(enc, tr_rois, args.pad, args.batch_size)
     print("[encode] test");  F_te, n_te = encode(enc, rois, args.pad, args.batch_size)
+    if args.siglip2:
+        print("[project] train"); F_tr = project_siglip2(F_tr, args.encoder)
+        print("[project] test");  F_te = project_siglip2(F_te, args.encoder)
     y_tr = np.array([idx[c] for _p, _b, c in tr_rois])
     y_te = np.array([idx[c] for _p, _b, c in rois])
 
@@ -178,15 +256,41 @@ def main() -> None:
     rep = {"dataset": args.dataset, "image_size": args.image_size, "cats": cats,
            "majority": base, "tokens_per_object_median": int(np.median(n_te)),
            "y_true": y_te.tolist(), "pred": {}, "readouts": {}}
-    for k in ("roi_mean", "roi_max", "cls"):
+    keys = [k for k in ("roi_mean", "roi_max", "cls",
+                        "roi_mean@siglip2", "roi_max@siglip2", "cls@siglip2")
+            if k in F_tr and k in F_te]
+    for k in keys:
         keep = []
         acc, mrec, npred = fit_multiclass(F_tr[k], y_tr, F_te[k], y_te, cats, keep)
         rep["pred"][k] = keep[0]
-        tag = "whole image, no ROI" if k == "cls" else "tokens inside the box"
-        print(f"  {k:9s} acc {acc:.3f} ({acc - base:+.3f} vs majority)  "
+        tag = "whole image, no ROI" if k.startswith("cls") else "tokens inside the box"
+        if k.endswith("@siglip2"):
+            tag += ", SigLIP2 summary space"
+        print(f"  {k:17s} acc {acc:.3f} ({acc - base:+.3f} vs majority)  "
               f"macro-recall {mrec:.3f} = {mrec * len(cats):.2f}x chance  "
               f"predicts {npred}/{len(cats)}   [{tag}]")
         rep["readouts"][k] = {"acc": acc, "macro_recall": mrec, "n_predicted": npred}
+        cacc, cmrec, cnp = fit_centroid(F_tr[k], y_tr, F_te[k], y_te, cats)
+        print(f"  {'':17s} centroid {cacc:.3f} ({cacc - base:+.3f})  "
+              f"macro-recall {cmrec:.3f}  predicts {cnp}/{len(cats)}")
+        rep["readouts"][k + "|centroid"] = {"acc": cacc, "macro_recall": cmrec,
+                                           "n_predicted": cnp}
+
+    if args.dump_emb:
+        # The probe reports accuracy; it cannot say WHY a text query misses. That
+        # needs the vectors themselves -- class centroids on one side, text
+        # embeddings on the other -- so dump the projected features and do the
+        # geometry offline on CPU.
+        import numpy as _np
+        stem = pathlib.Path(args.dump_emb)
+        stem.parent.mkdir(parents=True, exist_ok=True)
+        for k in keys:
+            _np.save(f"{stem}_{k.replace('@', '_at_')}_test.npy", F_te[k])
+            _np.save(f"{stem}_{k.replace('@', '_at_')}_train.npy", F_tr[k])
+        _np.save(f"{stem}_y_test.npy", y_te)
+        _np.save(f"{stem}_y_train.npy", y_tr)
+        (stem.parent / (stem.name + "_cats.json")).write_text(json.dumps(cats))
+        print(f"[dump] {stem}_*.npy  ({len(keys)} readouts)")
 
     if args.out_json:
         pathlib.Path(args.out_json).write_text(json.dumps(rep, indent=2))

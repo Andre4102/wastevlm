@@ -25,6 +25,6 @@ export HF_HOME=/leonardo_scratch/large/userexternal/adiecidu/hf_cache
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false
 echo "[slurm] $(hostname) job=${SLURM_JOB_ID:-?} dataset=$DATASET img=$IMG pad=${PAD:-0.0}"
 "$PYBIN/python" scripts/roi_token_probe.py --dataset "$DATASET" --image-size "$IMG" \
-  --pad "${PAD:-0.0}" --batch-size "${BS:-2}" \
-  --out-json "$WROOT/results/roi_token_${DATASET}_${IMG}.json"
+  --pad "${PAD:-0.0}" --batch-size "${BS:-2}" ${SIGLIP2:+--siglip2} ${DUMP:+--dump-emb "$DUMP"} \
+  --out-json "$WROOT/results/roi_token_${DATASET}_${IMG}${SIGLIP2:+_siglip2}.json"
 echo "[slurm] done=$(date -Is)"
