@@ -2481,3 +2481,70 @@ zero-shot with respect to the eval data. `dw5` is every image of the five held-o
 sites (site2/5/9/13/17); `dwall` is the dw_paper10 split, which is site-STRATIFIED
 and therefore not site-disjoint -- it is reported because the existing reference
 rows were scored on it.
+
+## Arm registry: supervision class and eval leakage (standing table)
+
+Every trained arm, labelled by what supervision it saw. Kept as one table so the
+question "what was this trained on?" has a single answer per arm and never has to
+be reconstructed from mix definitions.
+
+**Supervision classes.** `none` = general vision-language instruction data only
+(LLaVA-Instruct-150K, LLaVA-NeXT, Vision-Flan, PixMo, COCO), no waste and no
+remote sensing. `generic-satellite` = nadir/remote-sensing imagery with no waste
+labels (`rs_sft` = DIOR + VRSBench; `nadir_desc` = VRSBench captions + LoveDA).
+`external-waste` = waste imagery from datasets other than the two evaluation sets
+(`waste_sft` = SWAD, UAVVaste, TACO, TrashBox, ZeroWaste).
+
+| arm | stage-2 / stage-3 mix | supervision |
+|---|---|---|
+| `_pretrain` (stage 1) | LCS-558K projector pretrain, LLM frozen | **none** |
+| `_finetune` (150K base) | LLaVA-Instruct-150K | **none** |
+| `_finetune_next` (819K) | LLaVA-NeXT + Vision-Flan | **none** |
+| pilot | 150K + `rs_sft` x3 | **generic-satellite** |
+| a1 | 819K + `rs_sft` x3 | **generic-satellite** |
+| s3 / s3a | 819K warm start + `rs_sft` + replay | **generic-satellite** |
+| s3b / s3bd | 819K warm start + `nadir_desc` + replay | **generic-satellite** |
+| **n1** | `waste_sft` (capped) + 25% `general_150k` | **external-waste** |
+| n2 / n2d | `waste_sft` + `nadir_desc` + 25% `general_150k` | **external-waste + generic-satellite** |
+
+**Eval leakage, applying to every row.** AerialWaste and DroneWaste are excluded
+from every training mix, so all reported numbers are zero-shot with respect to the
+evaluation data. Verified by MD5 plus perceptual hash (Hamming <= 6) over all
+15,025 AW+DW images against every training source: **0 leaks** from SWAD's 1,996
+tiles, 0 from TrashBox / TACO / ZeroWaste, and the single UAVVaste flag manually
+confirmed a false positive. SWAD is 1.8 m/px Henan; AerialWaste is ~0.2 m/px
+Italy.
+
+The open-world pipeline (Track C) carries no supervision at all on the evaluation
+data beyond text prompts; where a probe or exemplar set is fitted, it is fitted on
+the 12 training sites and scored on the 5 held-out ones.
+
+## Negative transfer from generic remote-sensing data (a recurring thread)
+
+Worth naming because it has now appeared at two different layers of the stack, and
+because the intuition it violates -- "more in-domain-looking data should help" --
+is the one a reader will bring.
+
+**Instance 1, instruction tuning (2026-08-17).** `n2` is `n1` plus `nadir_desc`,
+which is generic nadir land cover with no waste labels. It should have supplied
+the nadir prior the model lacked. It lowered AerialWaste presence AUROC from
+**0.9410 to 0.9171**, cost DroneWaste ranking (0.9042 base -> 0.8563), and
+*collapsed* aw_m2 naming from **0.355 to 0.089**. The mechanism is competition for
+the answer slot: `nadir_desc`'s vocabulary is land cover, so the model describes
+the tile instead of naming the material. It did do the one thing it was added for
+-- AW negatives scoring positive fell 0.26 -> 0.03 -- so this is a trade, not a
+failure of the corpus.
+
+**Instance 2, encoder / probe level.** The same shape appears in the frozen-probe
+work, where added generic capacity or context does not transfer to the waste task:
+the conv head lifts DINOv2 by +2.2 pp mAP but *overfits* DINOv3 (val 0.486 -> test
+0.408), and tile-TTA -- more effective resolution, less context -- costs both
+backbones (DINOv3 mIoU 0.4191 -> 0.3986, RADIO-L 0.4160 -> 0.3767).
+
+CAVEAT ON THE PAIRING: instance 1 is precise and reproduced from logged runs.
+Instance 2 is my best match to the finding referred to as "the DINOv3
+negative-transfer result"; the logs contain no section under that name, and the
+two candidates above are about added head capacity and removed context rather than
+about added generic data. If the intended finding is a different one, this section
+should be re-pointed -- the thread is worth having, but only if both instances are
+the same phenomenon rather than two things that merely both went down.
