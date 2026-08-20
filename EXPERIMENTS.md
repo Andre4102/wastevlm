@@ -1909,3 +1909,152 @@ supported, is narrower: the *shape* is universal (text carries the low-shot
 regime, exemplars overtake at ~5 per class), the *magnitude* differs by dataset
 (text is +0.361 over bar on dronewaste, +0.010 on aw_m2), and the text-to-centroid
 rank predicts WHICH CLASSES the exemplars will rescue, within either dataset.
+
+## Validity checks and follow-ups on the exemplar result (2026-08-20)
+
+### Site-disjointness of the exemplar pool
+
+| dataset | guarantee | evidence |
+|---|---|---|
+| dronewaste | **site-disjoint** | 12 train sites vs 5 held-out (site2/5/9/13/17), 0 site overlap, 0 image overlap, 3045 train / 2090 test objects. Exemplars are indexed out of the train array, so a test object's site never contributes one. |
+| aw_m2 | **image-disjoint only** | the dataset's own split; 0 image overlap. AerialWaste exposes no site id or coordinates (`site_type` is a category, not a location), so site-level independence cannot be verified. |
+
+For AerialWaste the detectable failure -- tiles covering the same ground on both
+sides -- was tested with a 64-bit perceptual hash over all 1203 train and 182 test
+tiles carrying objects: **0/182 test tiles within Hamming 8** of any train tile
+(min 12, median 18). Two disjoint tiles of one large landfill would not be caught
+by this and remain a residual, unquantifiable risk.
+
+### Exemplar selection is a real lever
+
+30 random draws per cell, against two informed selections. `medoid` takes the k
+train objects nearest their class centroid -- what a person picking
+"representative" crops approximates -- and uses the full train set to locate that
+centroid, so it is an upper bound on selection quality rather than something
+available from k examples.
+
+| dataset | k | a | random mean | sd | min | max | spread | medoid | diverse |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| dronewaste | 1 | 0.75 | 0.6225 | 0.027 | 0.5746 | 0.6679 | 0.093 | **0.6536** | 0.6536 |
+| | 5 | 0.50 | 0.6589 | 0.018 | 0.6239 | 0.7086 | 0.085 | **0.6799** | 0.6407 |
+| | 5 | 0.00 | 0.6256 | 0.024 | 0.5498 | 0.6703 | 0.121 | **0.6589** | 0.5278 |
+| aw_m2 | 1 | 0.75 | 0.4225 | 0.043 | **0.3526** | 0.5000 | **0.147** | **0.4459** | 0.4459 |
+| | 5 | 0.50 | 0.4694 | 0.035 | 0.4015 | 0.5230 | 0.122 | **0.5148** | 0.4022 |
+| | 5 | 0.00 | 0.4254 | 0.051 | 0.3237 | 0.5163 | 0.193 | **0.5244** | 0.3015 |
+
+The spread is not a rounding detail. On aw_m2 the **worst 1-shot draw (0.3526)
+falls below the majority bar (0.3993)** -- the same protocol that averages to
++0.023 over the bar can land under it. Medoid selection beats the random mean in
+every cell, by up to +0.099, and `diverse` (farthest-point) is usually worse than
+either. So "give us five representative crops" is materially better advice than
+"give us five crops", and the deployment claim has to be stated over draws, not as
+a single mean.
+
+### The k-shot rank is recoverable, but does not translate into a per-class alpha
+
+Agreement between the rank computed from k exemplars and the full-data rank, on
+the binary call that matters (does the class's text point at its own centroid):
+
+| k | dronewaste agree | Spearman | aw_m2 agree | Spearman |
+|---:|---:|---:|---:|---:|
+| 1 | 0.703 | 0.371 | 0.620 | 0.330 |
+| 5 | 0.808 | 0.559 | 0.780 | 0.400 |
+| 25 | 0.861 | 0.726 | 0.870 | 0.675 |
+
+So the diagnostic is usable from the exemplars themselves at k>=5, and noisy at
+k=1. **Using it to set alpha per class does not work.**
+
+First attempt scored 0.230 against a global-alpha 0.627 -- a **measurement
+artefact, not a result**. Prototypes built at different alpha sit at different
+distances from the image cone: mean cosine from test objects to one class's
+prototype is 0.822 at a=0 and 0.072 at a=1. With mixed alpha the argmax is decided
+by alpha rather than by content. Standardising each class's similarity by the mean
+and sd of that class's similarity over the **unlabelled train features** (no
+labels, so still deployable) removes it. After the fix, 5-shot:
+
+| | dronewaste | aw_m2 |
+|---|---:|---:|
+| global best alpha, standardised | **0.5729** | **0.4046** |
+| rule keyed on the k-shot rank | 0.5495 (−0.023) | 0.3964 (−0.008) |
+| the same rule on the FULL-DATA rank | 0.5453 (−0.028) | 0.4059 (+0.001) |
+| per-class oracle, coordinate ascent on test | 0.6143 (+0.041) | 0.4224 (+0.018) |
+
+The rule loses even when handed the full-data rank, so rank noise is not the
+problem -- the rule's premise is wrong. The oracle shows only +0.041 / +0.018 of
+headroom for ANY per-class rule, and its chosen alphas do not follow rank
+(Construction, rank 2, wants a=1.00; Excavation, rank 1, wants a=0.00).
+
+Note also that standardising costs accuracy overall (global raw 0.6545 vs
+standardised 0.5761 at k=5): the per-class score bias it removes was carrying a
+useful prior. **The deployable recommendation stays a single global alpha on raw
+cosine**, with the rank used descriptively to say which classes exemplars will
+rescue, not to set their mixing weight.
+
+### Centroid cosine does not predict separability
+
+The claim that co-located classes are inseparable was too strong. A supervised
+binary probe on frozen features, train objects to test objects:
+
+| pair | centroid cos | majority bar | probe | lift |
+|---|---:|---:|---:|---:|
+| Rubble vs Excavation materials | 0.994 | 0.860 | 0.793 | **−0.067** |
+| Appliances vs Metal barrels | 0.831 | — | — | **−0.200** |
+| Pallets vs Wood | 0.916 | — | — | −0.082 |
+| Plastic vs Plastic packaging | 0.946 | 0.791 | 0.891 | **+0.100** |
+| Rubble vs Construction and demolition | 0.981 | 0.656 | 0.901 | +0.245 |
+| Textile vs Mixed items | 0.888 | 0.614 | 0.951 | +0.337 |
+| Bulky items vs Containers (aw) | 0.994 | 0.706 | 0.827 | +0.121 |
+
+**Co-location predicts that COSINE fails, not that the encoder lacks the
+information.** Bulky items vs Containers sit at 0.994 and are separable at +0.121;
+Appliances vs Metal barrels sit at 0.831 and are the least separable pair in the
+set. Centroid proximity measures mean separation, and the discriminative direction
+need not lie along it.
+
+For the residual failure this is the useful half: **Plastic vs Plastic packaging
+is a cosine ceiling, not an encoder ceiling** (+0.100 over bar), so it is
+recoverable by a better readout. Rubble vs Excavation is a genuine encoder
+ceiling. Small-n pairs (Appliances, 17 test objects) are noisy estimates.
+
+### A coarser taxonomy is worth real accuracy on DroneWaste
+
+First attempt merged by single-linkage over centroid cosine and chained 11 of 18
+classes into one group -- the box-consolidation failure again. With complete
+linkage (every pair inside a group above threshold), scored against each
+taxonomy's own bar:
+
+| grouping | groups | acc | bar | lift |
+|---|---:|---:|---:|---:|
+| no merge | 16 | 0.6061 | 0.2363 | +0.3697 |
+| **complete link >= 0.96** | **10** | **0.6810** | 0.2363 | **+0.4447** |
+| complete link >= 0.98 | 15 | 0.5795 | 0.2363 | +0.3432 |
+| probe-inseparable pairs | 13 | 0.5892 | 0.2547 | +0.3345 |
+
+Ten operationally coarser groups buy **+0.075 accuracy at an unchanged bar**. The
+threshold was swept on the test split, so this demonstrates that a coarser
+taxonomy pays rather than validating 0.96 as the number; and the effect is not
+monotone (0.98 merges fewer classes and scores worse than no merge), because which
+classes merge matters more than how many.
+
+On aw_m2 merging degenerates -- at >=0.96 the five classes collapse to two, the
+bar rises to 0.8815 and accuracy sits below it. There is no coarser taxonomy story
+on AerialWaste.
+
+### Abstention works, and it is the strongest operational result here
+
+Cosine margin (top1 − top2) against correctness, text-only zero-shot:
+
+| coverage | dronewaste acc | aw_m2 acc |
+|---:|---:|---:|
+| 10% | **1.000** | 0.593 |
+| 20% | **1.000** | 0.567 |
+| 30% | 0.973 | 0.528 |
+| 50% | 0.856 | 0.492 |
+| 70% | 0.728 | 0.457 |
+| 100% | 0.600 | 0.410 |
+
+AUROC **0.832** on dronewaste, 0.612 on aw_m2. Naming the most confident 30% of
+objects is right **97.3%** of the time with no labels and no exemplars -- which is
+what triage needs, and it is the honest form of what "Unknown material" was
+encoding. On AerialWaste the margin carries much less (0.593 at 10% coverage), so
+abstention is a DroneWaste capability, not a general one.
