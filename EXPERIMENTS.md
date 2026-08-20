@@ -2543,15 +2543,39 @@ project's own planning note predicted the opposite: `tracks/track_dino_radio.md`
 says "For aerial imagery, DINOv3-Sat (the satellite-trained variant) is the
 natural fit". That prediction is the intuition this thread exists to correct.
 
-PROVENANCE: the SAT-vs-LVD comparison was run on the previous cluster and its
-numbers are not in this repository -- no `encoder_probe` results, no log, and only
-the LVD weights were on disk here. `src/vision_encoder.py` did retain both loaders
-(`vitl16-sat` / `vitl16-lvd`), so the comparison is re-runnable rather than lost.
-SAT-493M weights are now downloaded (1.2 GB) and a `dinov3-l-sat` encoder id
-added, with matched LVD-vs-SAT ROI-pool probes queued on both datasets under the
-current protocol (DroneWaste on the 12/5 site split, AerialWaste on its own
-split). Until those land, instance 2 is a recollection, and the numbers quoted for
-it should be the re-run's, not the previous cluster's.
+MEASURED ON THIS CLUSTER (2026-08-20, jobs 53263120/53263244/53263245/53263246).
+The previous cluster's numbers were not in this repo, so SAT-493M was
+re-downloaded and both variants run through the same ROI-pool linear probe, same
+splits, same resolution -- only the pretraining corpus differs:
+
+| dataset | LVD-1689M (web) | SAT-493M (satellite) | delta |
+|---|---:|---:|---:|
+| DroneWaste, 20 cls, bar 0.234 | **0.707** (10.62x chance) | 0.541 (7.54x) | **−0.166** |
+| AerialWaste m2, 5 cls, bar 0.399 | **0.636** (3.33x) | 0.616 (3.28x) | −0.020 |
+
+The direction reproduces on both datasets. **The magnitude does not fall where the
+land-cover hypothesis predicted.**
+
+### Revision to the proposed mechanism
+
+The hypothesis written above -- that generic remote-sensing signal is dominated by
+land cover, the nuisance axis waste must be distinguished from -- predicts the
+damage should be worst on **AerialWaste**, the genuine nadir satellite tiles at
+~0.2 m/px where land cover is the confounder. It is not. There the two variants
+are within 0.020, which for a single probe fit is close to noise. The loss is
+concentrated on **DroneWaste** (−0.166), low-altitude oblique imagery that looks
+least like SAT-493M's training distribution.
+
+So the better reading is not "land-cover features actively mislead" but
+**specialising the pretraining corpus costs general visual features and returns
+nothing measurable on the target domain**. SAT-493M does not lose because it is
+bad at satellite imagery; it is merely no better there, while being materially
+worse everywhere else. That is a weaker and more ordinary claim than the
+land-cover story, and it is the one the data supports.
+
+LIMITS: one probe fit per cell, no seed variance, and this is the ROI-pool linear
+probe rather than whatever protocol the previous cluster used. It corroborates the
+direction, not necessarily the magnitude, of the earlier result.
 
 **The shape the two share.** Data that looks closer to the target domain --
 satellite pretraining, nadir land-cover captions -- transfers negatively to waste,
