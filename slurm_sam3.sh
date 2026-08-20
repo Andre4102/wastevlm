@@ -18,5 +18,6 @@ export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false
 echo "[slurm] $(hostname) job=${SLURM_JOB_ID:-?} dataset=$DATASET"
 /leonardo_scratch/large/userexternal/adiecidu/envs/waste_sam3/bin/python \
   scripts/sam3_objectness.py --dataset "$DATASET" --limit "${LIMIT:-200}" \
-  --threshold "${THR:-0.3}" --out-json "$WROOT/results/sam3_obj_${DATASET}.json"
+  --threshold "${THR:-0.3}" --out-json "$WROOT/results/sam3_obj_${DATASET}.json" \
+  ${DUMP:+--dump-boxes "$DUMP"}
 echo "[slurm] done=$(date -Is)"

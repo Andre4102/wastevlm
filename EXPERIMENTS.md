@@ -2141,3 +2141,95 @@ area is exactly that distinction.
 annotation geometry and category semantics, not from the annotation protocol. The
 per-class table above is the primary record so any row can be reassigned and the
 aggregate recomputed without rerunning anything.
+
+## Tier 0: stage inversion, abstention composition, and the Tyres failure (2026-08-20)
+
+### Detection and naming fail on DIFFERENT classes
+
+Detection recall is per-box IoU>=0.5 over the 250-tile dev scene dump; naming F1
+is zero-shot text over the dev objects. The two columns come from different object
+sets (all dev sites vs the 250 dumped tiles), so each is internally valid and the
+pairing is indicative rather than matched.
+
+| category | kind | detect | name F1 | bottleneck |
+|---|---|---:|---:|---|
+| Pallets | object | 0.518 | 0.913 | **detection** |
+| Tyres | object | 0.310 | 0.946 | **detection** |
+| Asbestos | pile | 0.051 | 0.794 | **detection** |
+| Vehicles | object | 0.746 | 0.885 | both / neither |
+| Construction and demolition | pile | 0.579 | 0.471 | both / neither |
+| Wood | pile | 0.826 | 0.352 | naming |
+| Mixed items | pile | 0.859 | 0.226 | naming |
+| Plastic | pile | 0.889 | 0.055 | naming |
+| Plastic packaging | pile | 0.889 | 0.000 | naming |
+| Furniture | object | 0.911 | 0.169 | naming |
+| Textile | pile | 0.974 | 0.298 | naming |
+| Scrap | pile | 0.987 | 0.457 | naming |
+
+**correlation(detection, naming) = −0.722.** The stages fail on opposite classes,
+so there is no global answer to "which stage to spend on". Seven of twelve classes
+are already detected at >=0.83 and fail at naming; three are named at >=0.79 and
+fail at detection.
+
+This qualifies the "detection is the bound" headline. It holds for the
+COMPOSITIONAL system, which cannot reason over objects that were never proposed.
+It does not hold for naming, where most classes are detected perfectly well.
+
+### The abstained set is the pile categories
+
+Answering the top 30% by cosine margin, on the held-out sites:
+
+| | share of all objects | of the ANSWERED set | of the DECLINED set |
+|---|---:|---:|---:|
+| pile-annotated | 53.8% | **8.3%** | **73.2%** |
+
+| category | answered | accuracy if answered |
+|---|---:|---:|
+| Tyres | 89.3% | 1.000 |
+| Vehicles | 86.3% | 1.000 |
+| Asbestos | 56.6% | 1.000 |
+| Pallets | 55.2% | 1.000 |
+| Metal barrels | 27.0% | 0.941 |
+| Wood | 7.9% | 0.333 |
+| Scrap | 3.9% | 0.125 |
+| Textile, Rubble, Mixed items, Plastic, Excavation, Appliances, Paper | **0.0%** | — |
+
+So the "0.973 accuracy at 30% coverage" result is not naming a representative
+third of the objects. **It is naming the discrete manufactured objects and
+declining every amorphous pile.** That is still a usable triage product, but the
+claim has to be stated as such: the system is confident about tyres, vehicles,
+pallets, barrels and asbestos, and silent about the material classes. Abstention
+runs on exactly the same axis as naming and annotation granularity, as suspected.
+
+Note Asbestos: answered 56.6% at accuracy 1.000 while its detection recall is
+0.051. Stage inversion in a single row.
+
+### Tyres: stacks present as one mass
+
+Recall 0.310 against SAM3's 0.682 small-object baseline. Three candidates tested:
+
+| explanation | evidence | verdict |
+|---|---|---|
+| size | median side 30.7px, 67% under the 32px "small" cut; recall 0.000 below 24px, 0.286 at 24-32px, 0.500 above | contributes |
+| **crowding** | 16.7 tyres per image where present; the best-matching proposal contains **>1 tyre centre for 76% of objects**, mean **9.12 tyres per proposal** | **the cause** |
+| contrast | delta to surround 24.4 against Pallets 28.2, Metal barrels 28.3, Vehicles 34.7 | not the cause |
+
+The decisive split:
+
+| | recall | n |
+|---|---:|---:|
+| best proposal covers ONE tyre | **1.000** | 10 |
+| best proposal covers MORE than one | **0.094** | 32 |
+
+When SAM3 isolates a tyre it always finds it. The failure is that tyres occur in
+stacks and rows, SAM3 proposes the stack, and the annotation is per tyre.
+
+**This is the opposite of fragmentation, and it is the same problem the `count`
+family fails on (0.142).** Merging would make these classes worse; SPLITTING is
+what they need. Pallets shows the same pattern more mildly -- 19.1 per image, 26%
+of objects in a multi-instance proposal, recall 0.518 -- and Pallets and Tyres are
+exactly the two object-annotated classes with the worst detection.
+
+Textile is the control that shows crowding alone is not fatal: 23.0 per image and
+23% multi-instance, yet recall 0.974, because its annotations are large enough
+that the covering proposal still clears IoU 0.5.

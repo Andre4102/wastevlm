@@ -57,6 +57,9 @@ def main() -> None:
     ap.add_argument("--threshold", type=float, default=0.3)
     ap.add_argument("--text", default="garbage or dumped waste")
     ap.add_argument("--arms", nargs="+", default=["gdino", "native", "bridged"])
+    ap.add_argument("--dump-boxes",
+                    help="write every arm's raw boxes per image, so union and "
+                         "fusion analyses can be done offline without a GPU pass")
     ap.add_argument("--out-json")
     args = ap.parse_args()
 
@@ -120,6 +123,7 @@ def main() -> None:
                  "percls": {}}
              for a in args.arms}
     seen = None
+    dump: dict = {}
     for i, path in enumerate(paths):
         img = Image.open(path).convert("RGB")
         gt = by_image[path]
@@ -149,6 +153,12 @@ def main() -> None:
             scores = r["scores"].tolist() if hasattr(r.get("scores"), "tolist") else list(r.get("scores", []))
             order = sorted(range(len(boxes)), key=lambda i: -(scores[i] if scores else 0.0))
             boxes = [boxes[i] for i in order]
+            scores = [scores[i] for i in order] if scores else []
+            if args.dump_boxes:
+                d = dump.setdefault(path, {"gt": [list(map(float, g)) for g in gt],
+                                           "size": [img.width, img.height], "arms": {}})
+                d["arms"][arm] = {"boxes": [list(map(float, b)) for b in boxes],
+                                  "scores": [float(x) for x in scores]}
             if seen is None:
                 seen = sorted(r.keys())
                 print(f"[sam3] post-process fields: {seen}", flush=True)
@@ -240,6 +250,10 @@ def main() -> None:
                                      for b, v in s["size"].items()}}
     if args.out_json:
         pathlib.Path(args.out_json).write_text(json.dumps(rep, indent=2))
+    if args.dump_boxes:
+        pathlib.Path(args.dump_boxes).write_text(json.dumps(dump))
+        print(f"[write] {args.dump_boxes}  ({len(dump)} images, "
+              f"arms {args.arms}; boxes are xyxy, gt is xywh)")
         print(f"\n[write] {args.out_json}")
 
 
