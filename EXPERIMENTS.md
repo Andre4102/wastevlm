@@ -2058,3 +2058,86 @@ objects is right **97.3%** of the time with no labels and no exemplars -- which 
 what triage needs, and it is the honest form of what "Unknown material" was
 encoding. On AerialWaste the margin carries much less (0.593 at 10% coverage), so
 abstention is a DroneWaste capability, not a general one.
+
+## Union-coverage recall: the merge is not worth writing (2026-08-20)
+
+Per-box recall asks whether ONE proposal matches an annotation. Union-coverage
+asks whether the proposals lying inside it, taken together, do. The gap is the
+ceiling on what any merge step could recover, measurable before writing one.
+
+The union is built with the ground truth choosing which fragments to combine, so
+it is an **oracle** ceiling; a real merge has to find those groups without labels
+and lands below it. Proposals are rasterised on a full-tile canvas so overlapping
+fragments are counted once.
+
+### The ceiling, per class (250 dev tiles, 1391 annotated objects)
+
+| category | n | per-box | union (px) | headroom | GT area covered | fragments | largest |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Pallets | 396 | 0.518 | 0.528 | +0.010 | 0.508 | 2.2 | 0.51 |
+| Textile | 383 | 0.974 | 0.977 | +0.003 | 0.935 | 10.4 | 0.94 |
+| **Asbestos** | 117 | **0.051** | **0.051** | **+0.000** | **0.081** | 4.3 | 0.08 |
+| Mixed items | 92 | 0.859 | 0.924 | +0.065 | 0.919 | 54.1 | 0.89 |
+| Scrap | 78 | 0.987 | 0.987 | +0.000 | 0.958 | 35.3 | 0.97 |
+| Plastic | 63 | 0.889 | 0.889 | +0.000 | 0.883 | 29.1 | 0.87 |
+| Vehicles | 59 | 0.746 | 0.763 | +0.017 | 0.719 | 4.3 | 0.73 |
+| Wood | 46 | 0.826 | 0.870 | +0.043 | 0.844 | 13.9 | 0.84 |
+| Furniture | 45 | 0.911 | 0.911 | +0.000 | 0.920 | 4.1 | 0.92 |
+| **Tyres** | 42 | **0.310** | **0.310** | **+0.000** | **0.295** | **1.1** | 0.31 |
+| Plastic packaging | 36 | 0.889 | 0.972 | +0.083 | 0.897 | 11.2 | 0.86 |
+| Construction and demolition | 19 | 0.579 | 0.579 | +0.000 | 0.621 | 14.1 | 0.61 |
+
+Aggregated over classes with n >= 10, object-weighted:
+
+| group | classes | objects | per-box | union | headroom | GT area covered |
+|---|---:|---:|---:|---:|---:|---:|
+| pile-annotated | 8 | 834 | 0.806 | 0.820 | **+0.014** | 0.798 |
+| object-annotated | 4 | 542 | 0.559 | 0.568 | **+0.009** | 0.549 |
+| all | 12 | 1376 | 0.709 | 0.721 | **+0.012** | 0.700 |
+
+**Coverage recall and per-box recall are the same number, on pile categories as
+much as on object ones.** An oracle merge is worth +0.012 overall and +0.014 where
+it was supposed to help most. The fragments are not covering piles that single
+boxes miss -- the proposals are genuinely misplaced or absent, and the merge stage
+is the wrong thing to optimise.
+
+**Do not wire the merge.** This also explains, retrospectively, why all five
+box-reducing operations lost: there was never anything for them to recover.
+
+### Correction to the fragmentation framing
+
+An earlier figure was captioned "one annotated object drew 30 overlapping
+proposals" and described as the failure in one picture. The multiplicity is real
+-- median 3 proposals per covered object -- but this diagnostic shows it is **not
+the loss mechanism**. Where an object is covered at all, one proposal already
+matches it about as well as all of them together. The failure is elsewhere:
+
+- **Asbestos**: 117 objects, median annotation 101,029 px², proposals cover
+  **8.1%** of the annotated area and per-box recall is 0.051. Nothing to merge --
+  the region is essentially undetected.
+- **Tyres**: 1.1 fragments per annotation, median area 945 px², recall 0.310. A
+  small-object miss, not a decomposition.
+- The classes with many fragments (Scrap 35, Mixed items 54) already sit at
+  0.86-0.99 per-box recall, so their fragmentation costs nothing.
+
+### The decomposition statistic does recover the hand split
+
+Two features per class -- largest fragment as a fraction of the annotation, and
+fragment count -- with leave-one-class-out logistic regression predicting the hand
+assignment:
+
+**11/12 correct (0.917)** against a 0.667 majority baseline. The single miss is
+Asbestos, called `object` because it presents as a few small fragments (largest
+0.08, count 4.3), which is what an undetected region looks like rather than a
+decomposed pile -- the same fact the coverage column reports.
+
+With only 12 classes the estimate is weak (Wilson 95% CI roughly 0.62-0.99), and
+it is now moot for its intended purpose: the gate in front of it says there is no
+merge to configure. Recorded because an automatic pile-vs-object call is useful
+elsewhere -- deciding whether a category should be reported as a count or as an
+area is exactly that distinction.
+
+**Caveat on the split itself.** The pile/object assignment is a proposal from
+annotation geometry and category semantics, not from the annotation protocol. The
+per-class table above is the primary record so any row can be reassigned and the
+aggregate recomputed without rerunning anything.
