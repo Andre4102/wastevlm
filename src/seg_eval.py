@@ -98,13 +98,19 @@ def main() -> int:
     p.add_argument("--batch-size", type=int, default=16)
     p.add_argument("--num-workers", type=int, default=4)
     p.add_argument("--min-area", type=int, default=20)
+    p.add_argument("--site-holdout", default=None,
+                   help="sites held out entirely as test (the 12/5 protocol). "
+                        "Must match what the checkpoint was TRAINED with, or the "
+                        "'test' split silently contains training sites.")
     p.add_argument("--out-json", type=Path, default=None)
     args = p.parse_args()
 
     ckpt = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
     cfg = DinoSegConfig(**ckpt["cfg"])
 
-    ds = DroneWasteSegmentation(split=args.split, image_size=cfg.image_size)
+    _ho = tuple(x.strip() for x in args.site_holdout.split(",")) if args.site_holdout else None
+    ds = DroneWasteSegmentation(split=args.split, image_size=cfg.image_size,
+                                site_holdout=_ho)
     print(f"[data] split={args.split}  n={len(ds)}  classes={len(ds.categories)}")
     loader = DataLoader(
         ds, batch_size=args.batch_size, shuffle=False,

@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.det_dataset import DroneWasteDetection, collate_detection  # noqa: E402
+from src.det_dataset import DEFAULT_ROOT, DroneWasteDetection, collate_detection  # noqa: E402
 from src.det_model import DinoDETR, DinoDETRConfig  # noqa: E402
 
 
@@ -104,7 +104,7 @@ def build_split_gt_coco(ds: DroneWasteDetection) -> dict:
             )
             ann_id += 1
     # Reuse the original category list (with original IDs)
-    with (Path("/home/ids/diecidue/data/dronewaste") / "dronewaste_v1.0.json").open() as f:
+    with (DEFAULT_ROOT / "dronewaste_v1.0.json").open() as f:
         full = json.load(f)
     return {
         "images": images,

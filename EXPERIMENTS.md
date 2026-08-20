@@ -2587,3 +2587,170 @@ representation for land cover therefore spends capacity on the nuisance variable
 That is a hypothesis, not a measured mechanism; the n2 caption evidence supports
 it (the model describes the tile instead of naming the material) and nothing at
 the encoder level tests it yet.
+
+## The baselines, finally under our own protocol (2026-08-20, jobs 53263906-53263912)
+
+Qwen2.5-VL-7B and InternVL3-8B had only ever been scored here through a parser, on
+a 664-image AerialWaste split, on a previous cluster. Both are now run on OUR
+splits with the identical margin readout used for our arms: same question, same
+Yes/No surface forms, same first-answer-token logsumexp, same positive definition
+(`set(extra["gt_categories"]) & set(cats)`), same AUC and Youden code.
+
+| eval | stage-1 | **n1 (ours)** | Qwen2.5-VL-7B | InternVL3-8B |
+|---|---:|---:|---:|---:|
+| aw_m2 (581) | 0.7594 | **0.9410** | 0.9346 | 0.9283 |
+| dw5 (674, five held-out sites) | 0.8355 | 0.8208 | **0.8732** | 0.8639 |
+| dwall (1504, all sites) | 0.8406 | 0.8639 | 0.8779 | **0.8860** |
+
+**Our strongest number is no longer distinctive.** n1's 0.9410 leads Qwen2.5-VL by
+0.006 and InternVL3 by 0.013 -- not differences worth defending on 581 images with
+no seed variance. On DroneWaste we lose on both splits, and on dw5 even our
+STAGE-1 projector (0.8355) beats n1.
+
+### Accuracy and F1, which reorder it further
+
+AUROC is threshold-free; these are at margin 0, i.e. what each model would actually
+answer.
+
+| eval | arm | acc | P | R | F1 | majority acc | all-yes F1 |
+|---|---|---:|---:|---:|---:|---:|---:|
+| aw_m2 | stage-1 | 0.690 | 1.000 | 0.011 | 0.022 | 0.687 | 0.477 |
+| | **n1** | 0.807 | 0.626 | 0.956 | **0.757** | | |
+| | **Qwen2.5-VL** | **0.836** | 0.939 | 0.511 | 0.662 | | |
+| | InternVL3 | 0.826 | 1.000 | 0.445 | 0.616 | | |
+| dw5 | stage-1 | 0.749 | 0.873 | 0.607 | 0.716 | 0.521 | 0.685 |
+| | n1 | 0.678 | 0.626 | 0.949 | 0.754 | | |
+| | **Qwen2.5-VL** | **0.785** | 0.767 | 0.843 | **0.803** | | |
+| | InternVL3 | 0.737 | 0.688 | 0.909 | 0.783 | | |
+| dwall | stage-1 | 0.812 | 0.516 | 0.536 | 0.526 | 0.805 | 0.326 |
+| | n1 | **0.676** | 0.366 | 0.908 | 0.522 | | |
+| | **Qwen2.5-VL** | **0.829** | 0.543 | 0.782 | **0.641** | | |
+| | InternVL3 | 0.745 | 0.425 | 0.870 | 0.571 | | |
+
+- **Qwen2.5-VL wins accuracy on all three evals and F1 on two of three.** Our only
+  win is F1 on aw_m2, bought with recall 0.956 against precision 0.626.
+- **On dwall n1's accuracy (0.676) is BELOW the majority baseline (0.805).**
+  Answering "no" to every image would be more accurate. This is the over-assertion
+  `build_train_mix.py` predicted before the run: `waste_sft` has no aerial
+  negatives.
+- An oracle threshold fitted on test puts all four within 0.02 F1 of each other on
+  aw_m2 (n1 0.817, Qwen 0.813, InternVL 0.800). That column is an upper bound, not
+  a result; the quotable version is a train-fitted cut, which these runs did not
+  compute and which no baseline run has at all.
+
+**Standing conclusion: on binary presence we are at parity with off-the-shelf
+7-8B VLMs on AerialWaste and behind them on DroneWaste.** The calibration story
+survives (n1 J@0 0.6954 on aw_m2 against Qwen's 0.4960); the representation-quality
+story does not.
+
+## Composing the answer: template vs LLM (2026-08-20)
+
+Both arms receive the SAME ground-truth scene graph and must produce a description
+for an inspector. The template can only restate the graph, so it is 0% unsupported
+by construction and serves as the floor.
+
+| arm | unsup-cat | coverage | states a count | count err (when stated) | region unsup | asserts waste on EMPTY graph | words |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **template** | 0.000 | **1.000** | 1.000 | **0.000** | 0.000 | **0.000** | 24 |
+| Qwen2.5-7B-Instruct | 0.000 | 0.967 | 0.170 | 0.137 | 0.017 | 0.000 | 27 |
+| n1 decoder (text-only) | 0.000 | 0.978 | 0.180 | 0.185 | 0.020 | 0.000 | 30 |
+
+300 populated + 100 empty graphs, greedy, seed 0.
+
+- **Neither LLM invents categories, and neither invents waste on an empty graph.**
+  Against the VLM's 32.6% false-mention rate on image negatives, giving the model
+  structured input instead of pixels removes the hallucination problem entirely.
+- **But neither adds anything measurable.** Coverage is slightly lower, regions are
+  occasionally unsupported, output is longer, and counts are stated only 17-18% of
+  the time -- the LLMs describe area percentages instead, which is faithful to the
+  graph but drops the count a user asked for.
+- The template wins or ties every measurable axis. Any case for the LLM here rests
+  on fluency and on answering follow-up questions, neither of which this measures.
+
+METRIC PROVENANCE, because it nearly went the other way: five metric bugs were
+found and fixed by checking that the template scored exactly 0 -- substring
+collisions ("plastic packaging" matching Plastic; "bottom-left" matching left),
+cross-class synonyms, consuming only the first match, "No waste is visible"
+counting as asserting waste, and a count extractor that read `35` out of "35.3% of
+the image" and scored the LLMs at an 85% count error. Every one of them flattered
+or damaged an arm wrongly. The construction-zero floor is what caught them.
+
+## Probe heads on the 12/5 site-disjoint split (2026-08-20, jobs 53263118-53267480)
+
+DINOv3-B frozen, four heads, 20 epochs, evaluated on the FIVE HELD-OUT SITES (674
+images) via `seg_eval --site-holdout` -- not on the validation slice, which comes
+from the twelve training sites.
+
+| head | mIoU_fg | bg_IoU | mAP | AP50 | val mIoU (12 train sites) |
+|---|---:|---:|---:|---:|---:|
+| **linear** | **0.2348** | 0.8880 | **0.0732** | **0.1160** | 0.2965 |
+| conv | 0.2014 | 0.8935 | 0.0609 | 0.0939 | 0.3213 |
+| multiblock {3,7,11} | 0.1997 | 0.8980 | 0.0674 | 0.1045 | 0.3148 |
+| FPN {2,5,8,11} | 0.1585 | 0.8892 | 0.0511 | 0.0774 | 0.2627 |
+
+- **The plain linear head wins every metric on held-out sites.** Every
+  added-capacity head is worse; FPN is worst by 0.076 mIoU.
+- **The head ranking INVERTS between validation and held-out sites**: conv leads
+  linear by 0.025 in-domain and trails it by 0.033 out-of-domain. Extra head
+  capacity fits site-specific appearance and does not transfer.
+- **The split costs roughly a third of the score** (linear 0.2965 -> 0.2348), and
+  the previous cluster's site-stratified figure was 0.419. Most of that gap is the
+  split, not the model.
+- These are SEGMENTATION metrics: per-pixel mIoU over background + 20 foreground
+  classes, and mAP/AP50 from connected components of those masks. Not
+  classification.
+
+Caveats: one run per head, no seed variance, 20 epochs under a 4h cap rather than
+the 50-epoch default. The 0.033 linear-conv gap is not robust; the FPN deficit is.
+
+## Next experiments (agreed 2026-08-20)
+
+### On the other cluster: three stage-1 arms, decoder frozen
+
+Stage 1 here was **2180 steps**, which is very short by any standard (LLaVA-1.5
+uses 558K samples). Every claim about the connector -- including "the projector is
+not what separates us from the baselines", which rests on the observation that all
+three systems use a 4x token reduction into an MLP -- is confounded by a connector
+that may simply be undertrained. Three arms separate the causes:
+
+1. **Optimization** -- same 2-layer MLP, 10-20k steps instead of 2180.
+2. **Capacity** -- deeper/wider connector, or a resampler, at matched steps.
+3. **Coverage** -- add generic nadir captions (VRSBench, LoveDA) to the ALIGNMENT
+   mix. Note this is the corpus that produced instance 1 of the negative-transfer
+   thread at instruction-tuning level, so a null or negative result is a live
+   possibility and would be informative either way.
+
+Match everything else to the six presence runs -- same eval protocol, same 12/5
+site split -- so the numbers drop into the table above. `--llm` handles evaluating
+stage-1-only checkpoints, which save no decoder.
+
+**Why not here.** Job 48184128 (stage-1, 2180 steps, 4xA100, billing=32) took
+11h03 = **354 local-h**, i.e. **0.162 local-h/step**:
+
+| arm | steps | cost | vs 741 local-h remaining |
+|---|---:|---:|---|
+| optimization | 10,000 | **1,624** | 2.2x the whole budget |
+| optimization | 20,000 | **3,248** | 4.4x |
+| capacity (matched) | 2,180 | ~354-500 | half the budget |
+| coverage (matched) | 2,180 | ~354 | half the budget |
+
+The framing inverts on cost: optimization is the cheapest hypothesis and the most
+expensive arm.
+
+### Also moving: the probe-head comparison
+Re-run linear/conv/multiblock/FPN at the full 50-epoch schedule under the same 12/5
+protocol. `src/seg_dataset.py` takes `site_holdout`; `seg_train.py` and
+`seg_eval.py` take `--site-holdout`; both wrappers read `SITE_HOLDOUT`. **The eval
+flag is the one that matters** -- without it `seg_eval` silently scores a
+site-stratified "test" split containing training sites, which reads ~0.30 instead
+of ~0.23. `seg_train` never evaluates test at all.
+
+### Runnable here (queued): native-resolution presence
+n1 and stage-1 at AerialWaste 1024 (native 1000; the grid must be even for
+pixel-shuffle 2) and DroneWaste 640 (exactly native), against the current fixed
+768. Tests whether our fixed square costs us against Qwen's native-resolution ViT
+and InternVL3's dynamic 448px tiling. Inference only, ~12 local-h.
+CAVEAT: n1 was trained at 768, so a drop at 1024 cannot distinguish "resolution
+does not help" from "this model cannot use resolution it never saw". The clean
+version is a stage-1 arm trained at native resolution, which belongs with the
+three arms above.
