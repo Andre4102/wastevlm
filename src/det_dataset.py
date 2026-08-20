@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+import os
 from pathlib import Path
 from typing import Iterable
 
@@ -21,7 +22,10 @@ from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
 
-DEFAULT_ROOT = Path("/home/ids/diecidue/data/dronewaste")
+# Root follows WASTE_DATA_ROOT so the same code runs on either cluster; the old
+# absolute path stays as the fallback for existing callers.
+DEFAULT_ROOT = Path(os.environ.get("WASTE_DATA_ROOT",
+                                   "/home/ids/diecidue/data")) / "dronewaste"
 
 
 def _norm_tx(image_size: int) -> transforms.Compose:

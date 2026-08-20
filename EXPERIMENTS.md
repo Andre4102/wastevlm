@@ -2408,3 +2408,76 @@ classifier.
 
 Not rerun: the m4 taxonomy without `Other waste`, which needs a fresh ROI pass
 (no cached m4 embeddings) and would leave a small and heavily skewed remainder.
+
+## Experiment A: what the stage-2 SFT bought for presence (2026-08-20, jobs 53257331-53257337)
+
+Projector held fixed, decoder varied. Arm 1 is the stage-1 checkpoint -- LLaVA-style
+stage 1 freezes the LLM, so `_pretrain` saves only `projector.pt` and the decoder
+is stock Qwen2.5-7B-Instruct (loaded via a new `--llm` override; the adapter
+previously fell back to the checkpoint dir and would have crashed). Arm 2 is n1.
+Identical margin protocol throughout.
+
+| eval | n (pos) | stage-1, stock decoder | n1, stage-2 SFT | delta |
+|---|---:|---:|---:|---:|
+| aw_m2 | 581 (182) | 0.7594 | **0.9410** | **+0.182** |
+| dw5, the 5 held-out sites | 674 (351) | **0.8355** | 0.8208 | −0.015 |
+| dwall, dw_paper10 all sites | 1504 (293) | 0.8406 | 0.8639 | +0.023 |
+
+n1 reproduces its previously reported 0.9410 exactly, so the harness is consistent.
+
+Youden J at the spoken operating point:
+
+| eval | stage-1 best J / J@0 | n1 best J / J@0 |
+|---|---|---|
+| aw_m2 | 0.4265 / **0.0110** | 0.7527 / 0.6954 |
+| dw5 | 0.5326 / **0.5109** | 0.5061 / **0.3326** |
+| dwall | 0.5476 / 0.4144 | 0.6114 / 0.5280 |
+
+**The SFT's value is entirely on AerialWaste.** On DroneWaste the stage-1 projector
+on a stock decoder already reaches 0.8355 on the held-out sites, marginally ABOVE
+n1, so a single-model build -- stage-1 projector, stock decoder, instruction
+following intact -- is available for that domain and not for AerialWaste.
+
+Stage-1 on aw_m2 also shows the project's recurring pathology in its purest form:
+J@0 of 0.011 against a best-J of 0.4265. It ranks the images and refuses to say
+yes. On dw5 the direction reverses -- stage-1 is BETTER calibrated out of the box
+(J@0 0.5109) and the SFT displaced a working operating point down to 0.3326.
+
+### Correction: the gain is waste supervision, not nadir adaptation
+
+An earlier reading of this table attributed the AerialWaste gain to the SFT
+teaching nadir imagery. That is wrong. n1's mix, after the source caps:
+
+| source | records | share | viewpoint |
+|---|---:|---:|---|
+| trashbox | 6000 | 24.5% | close-up product shots |
+| general_150k (replay) | 6112 | 25.0% | natural images, non-waste |
+| **swad** | 3992 | **16.3%** | **aerial/satellite waste, 1.8 m/px** |
+| wastebench_zerowaste | 3000 | 12.3% | close-up |
+| taco | 2902 | 11.9% | ground-level litter |
+| uavvaste | 1544 | 6.3% | drone waste, oblique |
+| format_anchor_cot | 899 | 3.7% | format anchors |
+
+Every waste source is waste imagery; only 16.3% is nadir, and that is nadir
+*waste*. Generic nadir land cover (`nadir_desc` = VRSBench + LoveDA) is NOT in n1
+-- it enters only at n2/n2d, and **n2 scores 0.9171 on aw_m2 against n1's 0.9410**,
+i.e. adding generic nadir imagery LOWERED the AUROC.
+
+So the +0.182 is waste vocabulary, and the DroneWaste null is a headroom story
+rather than a domain one: low-altitude oblique imagery is close to the general
+pretraining distribution, so stage-1 already sits at 0.836 there and the SFT has
+little to add; AerialWaste at 0.759 was far enough out of distribution to leave
+room.
+
+Consistent with the risk written into `build_train_mix.py` before the run:
+`waste_sft` has **no aerial negatives** -- every swad and uavvaste image contains
+waste, and their ~1000 "no" answers are negated phrasings over positive images. n1
+can teach waste words but not nadir absence, which is the stated mechanism for it
+pushing the operating point up, and dw5's J@0 regression is that prediction
+landing.
+
+Both evaluation sets are held out of every training mix, so all six cells are
+zero-shot with respect to the eval data. `dw5` is every image of the five held-out
+sites (site2/5/9/13/17); `dwall` is the dw_paper10 split, which is site-STRATIFIED
+and therefore not site-disjoint -- it is reported because the existing reference
+rows were scored on it.

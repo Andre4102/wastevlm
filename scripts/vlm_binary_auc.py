@@ -208,6 +208,17 @@ def main() -> None:
     ap.add_argument("--dataset", default="aw_m2", choices=["aw_m2", "aw_m4", "dw_paper10"])
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--question", default=QUESTION)
+    ap.add_argument("--llm", default=None,
+                    help="decoder to load instead of the checkpoint's own; used "
+                         "for the stage-1 arm, which saves no decoder")
+    ap.add_argument("--sites", default=None,
+                    help="comma-separated DroneWaste sites to restrict the test "
+                         "set to (e.g. site2,site5,site9,site13,site17)")
+    ap.add_argument("--sites-all-images", action="store_true",
+                    help="with --sites, use EVERY image of those sites rather "
+                         "than dw_paper10's 70/30 slice of them. The project's "
+                         "site protocol; nothing here trained on DroneWaste, so "
+                         "the extra images are equally zero-shot.")
     ap.add_argument("--out-json", type=pathlib.Path, default=None)
     ap.add_argument("--fit-on-train", action="store_true",
                     help="also score the train split, pick the threshold there, "
@@ -220,9 +231,23 @@ def main() -> None:
 
     spec = DATASETS[args.dataset]
     cats, samples = _load_classification_samples(args.dataset, spec, args.limit)
+    if args.sites:
+        want = {s.strip() for s in args.sites.split(",")}
+        before = len(samples)
+        if args.sites_all_images:
+            from src.datasets import load_dronewaste_multilabel
+            _c, all_s = load_dronewaste_multilabel(
+                str(pathlib.Path(__import__("os").environ["WASTE_DATA_ROOT"]) / "dronewaste"),
+                categories_filter=spec["cats"])
+            samples = [s for s in all_s if s.image_source in want]
+            print(f"[data] sites {sorted(want)}, ALL their images: "
+                  f"{before} (70/30 slice, all sites) -> {len(samples)}")
+        else:
+            samples = [s for s in samples if s.image_source in want]
+            print(f"[data] site filter {sorted(want)}: {before} -> {len(samples)} images")
     print(f"[data] {args.dataset}: {len(samples)} test images, {len(cats)} classes", flush=True)
 
-    adapter = WasteVLMAdapter(args.ckpt, encoder=args.encoder,
+    adapter = WasteVLMAdapter(args.ckpt, llm_path=args.llm, encoder=args.encoder,
                               image_size=args.image_size,
                               pixel_shuffle=args.pixel_shuffle)
     adapter.load("cuda")

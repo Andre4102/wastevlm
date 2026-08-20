@@ -46,6 +46,7 @@ class DroneWasteSegmentation(Dataset):
         split: str = "train",
         seed: int = 0,
         multilabel: bool = False,
+        site_holdout: tuple[str, ...] | None = None,
     ) -> None:
         root = Path(root)
         with (root / "dronewaste_v1.0.json").open() as f:
@@ -71,7 +72,24 @@ class DroneWasteSegmentation(Dataset):
                 }
             )
 
-        tr, va, te = site_stratified_split(all_images, seed=seed)
+        if site_holdout:
+            # Site-DISJOINT split, matching the 12/5 protocol used everywhere else
+            # in this project. site_stratified_split puts images from every site
+            # in every split, and DroneWaste's images are crops of the same few
+            # sites, so a stratified split leaves near-duplicates of the test
+            # crops in training and reports mostly memorisation.
+            want = {s.lower() for s in site_holdout}
+            te = [i for i, im in enumerate(all_images) if str(im["site"]).lower() in want]
+            rest = [i for i, im in enumerate(all_images) if str(im["site"]).lower() not in want]
+            rng = np.random.default_rng(seed)
+            rng.shuffle(rest)
+            cut = int(len(rest) * 0.9)
+            tr, va = sorted(rest[:cut]), sorted(rest[cut:])
+            held = sorted({str(all_images[i]["site"]) for i in te})
+            print(f"[seg_dataset] site-disjoint split: held out {held} "
+                  f"-> {len(tr)} train / {len(va)} val / {len(te)} test images")
+        else:
+            tr, va, te = site_stratified_split(all_images, seed=seed)
         idx_by_split = {"train": tr, "val": va, "test": te}
         if split not in idx_by_split:
             raise ValueError(f"unknown split {split!r}")

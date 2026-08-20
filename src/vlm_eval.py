@@ -936,8 +936,12 @@ class WasteVLMAdapter(VLMAdapter):
 
     def __init__(self, ckpt: Path, encoder: str = "radio-l",
                  image_size: int = 512, pixel_shuffle: int = 1,
-                 max_new_tokens: int = 256):
+                 max_new_tokens: int = 256, llm_path: str | None = None):
         self.ckpt = Path(ckpt)
+        # A stage-1 checkpoint holds only projector.pt -- LLaVA-style stage 1
+        # freezes the LLM, so there is no decoder to save. Pointing at the stock
+        # instruct model reconstructs exactly what existed at the end of stage 1.
+        self.llm_override = llm_path
         self.path = self.ckpt  # for the main() load banner
         self.encoder = encoder
         self.image_size = image_size
@@ -950,12 +954,15 @@ class WasteVLMAdapter(VLMAdapter):
         # custom-qwen2); a normal finetune saves it under llm_merged/. Prefer the
         # pruned one when present. WasteVLM auto-detects custom-qwen2 and loads it
         # through the pruning toolkit.
-        for sub in ("decoder_pruned", "llm_merged"):
-            if (self.ckpt / sub).exists():
-                llm_path = str(self.ckpt / sub)
-                break
+        if self.llm_override:
+            llm_path = self.llm_override
         else:
-            llm_path = str(self.ckpt)
+            for sub in ("decoder_pruned", "llm_merged"):
+                if (self.ckpt / sub).exists():
+                    llm_path = str(self.ckpt / sub)
+                    break
+            else:
+                llm_path = str(self.ckpt)
         print(f"[waste_vlm] decoder = {llm_path}", flush=True)
         self.model = WasteVLM(
             llm_path=llm_path, encoder_id=self.encoder,

@@ -63,7 +63,7 @@ mkdir -p "$RESULTS"
   --image-size "$IMG_SIZE" \
   --pixel-shuffle "$PSHUF" \
   --dataset "$DATASET" \
-  --limit "$LIMIT" $FIT_ARGS \
+  --limit "$LIMIT" $FIT_ARGS ${LLM:+--llm "$LLM"} ${SITES:+--sites "$SITES"} ${SITES_ALL:+--sites-all-images} \
   --out-json "$RESULTS/binary_auc.json"
 
 echo "[slurm] done=$(date -Is)"

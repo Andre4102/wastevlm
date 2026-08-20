@@ -140,6 +140,10 @@ def main() -> int:
                    default="dinov2")
     p.add_argument("--bg-weight", type=float, default=0.1)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--site-holdout", default=None,
+                   help="comma-separated sites to hold out entirely as test, "
+                        "e.g. site2,site5,site9,site13,site17 (the 12/5 protocol). "
+                        "Default keeps the site-stratified split.")
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--log-every", type=int, default=20)
     p.add_argument("--multi-block", type=str, default="",
@@ -167,10 +171,13 @@ def main() -> int:
     torch.manual_seed(args.seed)
     args.out.mkdir(parents=True, exist_ok=True)
 
+    _ho = tuple(x.strip() for x in args.site_holdout.split(",")) if args.site_holdout else None
     train_ds = DroneWasteSegmentation(split="train", image_size=args.image_size,
-                                      seed=args.seed, multilabel=args.multilabel)
+                                      seed=args.seed, multilabel=args.multilabel,
+                                      site_holdout=_ho)
     val_ds = DroneWasteSegmentation(split="val", image_size=args.image_size,
-                                    seed=args.seed, multilabel=args.multilabel)
+                                    seed=args.seed, multilabel=args.multilabel,
+                                    site_holdout=_ho)
     num_classes = train_ds.num_classes
     num_logits = num_classes if args.multilabel else num_classes + 1
     print(f"[data] train={len(train_ds)}  val={len(val_ds)}  fg classes={num_classes}"

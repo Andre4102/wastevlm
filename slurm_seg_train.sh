@@ -2,17 +2,27 @@
 #SBATCH --job-name=dinoseg_train            # overridable via `sbatch --job-name`
 #SBATCH --output=logs/%x_%j.out             # Output file (%x job name, %j job ID)
 #SBATCH --error=logs/%x_%j.err              # Error file
-#SBATCH --partition=L40S
+#SBATCH --partition=boost_usr_prod
+#SBATCH --account=iscrc_fiche
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1                        # Request 1 GPU
 #SBATCH --cpus-per-task=8                   # Request 8 CPU cores
-#SBATCH --mem=32G                           # CPU RAM cap (GPU VRAM is the real constraint)
+#SBATCH --mem=64G                           # CPU RAM cap (GPU VRAM is the real constraint)
 #SBATCH --time=08:00:00                     # Time limit (hh:mm:ss)
 
 set -euo pipefail
 
 PROJECT=/home/ids/diecidue/scripts/waste_vlm
-RESULTS=/home/ids/diecidue/results/waste_vlm
-PYTHON=/home/ids/diecidue/miniconda3/envs/waste_vlm/bin/python
+RESULTS=/leonardo_scratch/large/userexternal/adiecidu/waste_vlm/results/seg
+PYTHON=${PYTHON:-/leonardo/home/userexternal/adiecidu/miniconda3/envs/waste_vlm/bin/python}
+cd /leonardo/home/userexternal/adiecidu/scripts/wastevlm
+WROOT=/leonardo_scratch/large/userexternal/adiecidu/waste_vlm
+export WASTE_DATA_ROOT=$WROOT/data
+export WASTE_VLM_WEIGHTS=$WROOT/weights
+export DINOV3_REPO=$WROOT/dinov3_repo
+export HF_HOME=/leonardo_scratch/large/userexternal/adiecidu/hf_cache
+export TOKENIZERS_PARALLELISM=false
 cd "$PROJECT"
 
 # positional args: BACKBONE_TYPE IMAGE_SIZE EPOCHS BATCH LR OUTNAME [HEAD] [BACKBONE_ID] [MULTI_BLOCK] [MULTILABEL] [FPN_BLOCKS] [FPN_DIM] [FPN_MERGE]
@@ -38,6 +48,9 @@ if [ "$MULTILABEL" = "1" ]; then EXTRA_ARGS+=(--multilabel); fi
 if [ -n "$FPN_BLOCKS" ]; then EXTRA_ARGS+=(--fpn-blocks "$FPN_BLOCKS"); fi
 if [ -n "$FPN_DIM" ];    then EXTRA_ARGS+=(--fpn-dim "$FPN_DIM"); fi
 if [ -n "$FPN_MERGE" ];  then EXTRA_ARGS+=(--fpn-merge "$FPN_MERGE"); fi
+# SITE_HOLDOUT: hold whole sites out as test (the 12/5 protocol) instead of the
+# default site-stratified split, which puts every site on both sides.
+if [ -n "${SITE_HOLDOUT:-}" ]; then EXTRA_ARGS+=(--site-holdout "$SITE_HOLDOUT"); fi
 "$PYTHON" -m src.seg_train \
   --backbone-type "$BTYPE" \
   "${EXTRA_ARGS[@]}" \
