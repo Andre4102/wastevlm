@@ -2233,3 +2233,94 @@ exactly the two object-annotated classes with the worst detection.
 Textile is the control that shows crowding alone is not fatal: 23.0 per image and
 23% multi-instance, yet recall 0.974, because its annotations are large enough
 that the covering proposal still clears IoU 0.5.
+
+## The three gates: union clears, splitting does not, and the correlation holds (2026-08-20)
+
+### Threshold, and a correction to the numbers quoted all week
+
+The `sam3_objectness.py` runs used three different score thresholds -- **0.05,
+0.15, 0.30** -- and the complementarity figures quoted throughout this file
+("GDINO 0.909 large / 0.273 small against SAM3 0.716 / 0.682") come from the
+**0.05** run only. A fresh run at the wrapper default of 0.30 gives GDINO 2.1
+boxes/image and recall **0.175**. Nothing was wrong with either number; they are
+different operating points, and any comparison has to name one. All results below
+are at 0.05 on one matched set of 250 tiles, with every arm's boxes dumped
+(`det_boxes_dronewaste_t005.json`) so future analysis needs no GPU.
+
+### Union gate: CLEARS, +0.103
+
+| arm | boxes/img | recall | small | medium | large |
+|---|---:|---:|---:|---:|---:|
+| gdino | 40.7 | 0.707 | 0.293 | 0.600 | **0.919** |
+| native SAM3 | 101.0 | 0.742 | **0.606** | 0.763 | 0.744 |
+| bridged | 87.1 | 0.614 | 0.444 | 0.637 | 0.619 |
+| **gdino ∪ native** | 141.6 | **0.845** | 0.606 | 0.797 | **0.950** |
+| gdino ∪ bridged | 127.8 | 0.808 | 0.485 | 0.740 | 0.954 |
+
+**+0.103 over the better single arm**, concentrated in large objects (native 0.744
+-> 0.950). On small objects the union adds exactly nothing (0.606 either way):
+Grounding DINO contributes no small-object recall at all.
+
+Per class, which is what scopes the work:
+
+| category | n | gdino | sam3 | union | gain |
+|---|---:|---:|---:|---:|---:|
+| **Asbestos** | 137 | **0.978** | 0.409 | 0.978 | +0.000 |
+| Vehicles | 38 | **0.947** | 0.553 | 0.947 | +0.000 |
+| Scrap | 21 | 0.952 | 0.857 | 0.952 | +0.000 |
+| Mixed items | 140 | 0.914 | 0.907 | 0.950 | +0.036 |
+| Construction and demolition | 31 | 0.710 | 0.774 | 0.871 | +0.097 |
+| Rubble | 36 | 0.889 | 0.917 | 0.972 | +0.056 |
+| Furniture | 43 | 0.744 | 0.930 | 0.977 | +0.047 |
+| Pallets | 402 | 0.517 | 0.689 | 0.726 | +0.037 |
+| Metal barrels | 35 | 0.371 | **0.800** | 0.800 | +0.000 |
+| **Tyres** | 61 | 0.213 | **0.393** | 0.393 | **+0.000** |
+| ALL | 1215 | 0.707 | 0.742 | **0.845** | **+0.103** |
+
+The union is essentially "pick the better detector per class": in 8 of 14 rows the
+union equals the better arm exactly. **Asbestos is the headline** -- Grounding DINO
+reaches 0.978 where SAM3 gets 0.409, and Asbestos was the clearest
+detection-bound class in the inversion table (naming 0.794, detection 0.051 at the
+scene-graph operating point). Switching detectors solves it outright.
+
+**Tyres gains nothing from the union** (0.393 either way), exactly the split
+anticipated: build fusion for large-object recall, handle Tyres separately.
+
+### Splitting gate: the isolating proposals do NOT exist
+
+For each object, over all ~87 proposals on its tile, restricted to proposals
+containing exactly ONE object centre of that class:
+
+| category | objects | recall, all proposals | recall, single-instance only | has ANY single-instance proposal | mean best IoU among them |
+|---|---:|---:|---:|---:|---:|
+| **Tyres** | 42 | 0.310 | 0.262 | **0.476** | **0.457** |
+| Pallets | 396 | 0.518 | 0.439 | 0.629 | 0.627 |
+| Furniture | 45 | 0.911 | 0.844 | 0.978 | 0.776 |
+| Textile | 383 | 0.974 | 0.783 | 1.000 | 0.704 |
+
+**52% of tyres have no proposal anywhere in the set that isolates a single tyre**,
+and where one exists its mean best IoU is 0.457 -- below the 0.5 threshold. Recall
+restricted to single-instance proposals (0.262) is close to full-set recall
+(0.310), so the isolating proposals that do exist are already being used.
+
+This is not a selection fix. SAM3 does not generate the boxes, so the remedy is
+**hierarchical re-proposal** -- running SAM3 again inside each multi-instance
+proposal -- scoped to Tyres and, less urgently, Pallets. Textile is the contrast:
+every object has an isolating proposal, and its recall is 0.974 already.
+
+### The stage-inversion correlation survives its validity check
+
+**Pearson r = −0.722, bootstrap 95% CI [−0.911, −0.500]** over 20,000 resamples,
+Spearman −0.706, n = 12 classes. The interval excludes zero comfortably.
+
+Naming F1 is computed over the **3045 ground-truth object crops**, not over
+detected crops, so a class with poor detection still contributes a full-sized
+naming sample and the correlation is not mechanical. The two columns do come from
+different object sets (all dev sites for naming, the 250 dumped tiles for
+detection), which is why the pairing is indicative rather than matched.
+
+**Asbestos is the single-class illustration**: naming answers 56.6% of its objects
+at accuracy 1.000 while detection at the scene-graph operating point is 0.051.
+Naming is solved; detection was the entire problem; Grounding DINO takes detection
+to 0.978. One class, both stages, opposite verdicts, and a fix that touches only
+the detector.
