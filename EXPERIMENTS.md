@@ -1560,3 +1560,74 @@ selection signal. The separation signal it optimises is real (margin tracks
 correctness at AUROC 0.82) but confidently-wrong prompts score high separation too,
 which is the failure mode the development labels were held for. Nothing further to
 try on this axis; the remaining lever is detection recall.
+
+## The AerialWaste material signal is there; the text readout cannot reach it (2026-08-20, jobs 52667316-52671854)
+
+Written up late -- these runs happened on 2026-08-19 and never made it into this
+file, which matters because they qualify one of the strongest claims in it.
+
+The ceiling experiment cropped each annotated object and re-encoded the crop.
+That throws away the full-resolution context and forces a second forward pass.
+`scripts/roi_token_probe.py` does the opposite: encode the image ONCE at native
+resolution, then mean-pool the patch tokens that fall inside the box. Readouts are
+a linear probe on frozen features -- supervised, so this measures what the
+features CONTAIN, not what the open-world pipeline can currently extract.
+
+| dataset | test objects | classes | majority | `roi_mean` | vs bar | macro-recall |
+|---|---:|---:|---:|---:|---:|---|
+| aw_m2 @1024 | 1350 | 5 | 0.399 | **0.665** | **+0.266** | 0.704 = **3.52x** chance |
+| dronewaste @640 | 2090 | 20 | 0.234 | **0.733** | **+0.500** | 0.586 = **11.72x** chance |
+
+The AerialWaste row is on **the same 1350 objects** as the GT-crop ceiling
+experiment, so it is directly comparable to it:
+
+| readout on the same 1350 AerialWaste objects | accuracy | vs majority 0.399 |
+|---|---:|---:|
+| GeoRSCLIP ViT-L/14 (crop, re-encode) | 0.384 | -0.015 |
+| RemoteCLIP ViT-L/14 (crop, re-encode) | 0.375 | -0.024 |
+| our VLM (Yes/No on crop) | 0.345 | -0.054 |
+| C-RADIOv4 -> SigLIP2 head, zero-shot (crop-summary) | 0.395 | -0.004 |
+| **C-RADIOv4 ROI-pool + linear probe** | **0.665** | **+0.266** |
+
+**CORRECTION.** The ceiling section concluded that AerialWaste's five categories
+are "not recoverable from this imagery -- a statement about the task, not the
+method". That is refuted. A linear probe on ROI-pooled C-RADIO tokens clears the
+majority bar by 0.266 and predicts all 5 classes. The information is in the
+imagery and in the features; what fails is every TEXT-ALIGNED ZERO-SHOT readout,
+all four of which sit within +/-0.05 of the bar.
+
+The honest claim is therefore about the readout, not the data: **AerialWaste
+material identity is linearly decodable from frozen features and is not reachable
+by any open-vocabulary text comparison tried.** That is a much narrower statement,
+and it prices the open-world constraint: on this dataset, insisting on no fixed
+label vector costs ~0.27 accuracy on the material branch.
+
+Two controls that make the reading specific:
+
+- **Localisation is what unlocks it, not the probe.** The `cls` readout is the
+  same supervised probe on the whole-image summary vector with no ROI: aw_m2
+  0.346, BELOW the majority bar, and dronewaste 0.473 against roi_mean's 0.733.
+  Pooling the right tokens is worth +0.32 / +0.26 over having the same classifier
+  read a global vector.
+- **`roi_max` ~ `roi_mean`** (0.668 / 0.689), so this is not an artefact of the
+  pooling operator.
+
+### Why `roi-dense` fails, and what it says about the two SigLIP2 heads
+
+`radio_zeroshot.py --mode roi-dense` pools the same tokens but sends them through
+`_feature_projections.siglip2-g` instead of `_heads.siglip2-g`:
+
+| mode | aw_m2 (5 cls, bar 0.399) | dronewaste (20 cls, bar 0.234) |
+|---|---:|---:|
+| crop-summary | 0.395 | **0.552** |
+| roi-dense | 0.107 | 0.080 |
+
+Both collapse far below their bars. The two heads target different spaces:
+`_heads.siglip2-g` distils SigLIP2's **pooled, text-aligned** embedding, while
+`_feature_projections.siglip2-g` distils its **patch** space, which is NOT
+text-aligned. Comparing patch-space vectors against text embeddings is a type
+error, and the dense segmentation arm shows the same thing directly --
+`dense-seg` lift over mask area is **0.0021**, i.e. nothing.
+
+So the pooled-token naming branch must route through the summary head. That is
+what `roi-head` does, and it is the mode all the routing numbers use.
