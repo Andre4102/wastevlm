@@ -1631,3 +1631,60 @@ error, and the dense segmentation arm shows the same thing directly --
 
 So the pooled-token naming branch must route through the summary head. That is
 what `roi-head` does, and it is the mode all the routing numbers use.
+
+## Adaptor audit against the NVIDIA release (2026-08-20)
+
+Checked `src/radio_adaptors.py` and `src/sam3_bridge.py` against the C-RADIOv4
+release's own code (`adaptor_generic.py`, `adaptor_module_factory.py`,
+`siglip2_adaptor.py`, `radio_model.py`) and the training args in the checkpoint.
+
+| what | release says | what we do | |
+|---|---|---|---|
+| teacher names | `siglip2-g`, `dino_v3_7b`, `sam3` | same three | OK |
+| summary MLP version | `mlp_version = v2` (global) | `v2` | OK |
+| feature MLP version | `spatial_mlp_version` per teacher, else global; siglip2-g sets `attn` | `attn` for siglip2-g, `v2` for sam3/dino | OK |
+| construction call | `create_mlp_from_state(ver, state, prefix, is_summary=...)` | identical | OK |
+| SAM3 summary head | `use_summary = False` | not used; we take `_feature_projections.sam3` only | OK |
+| SAM3 projection width | `_feature_projections.sam3` -> 1024 = SAM3 ViT width | fed to `vision_encoder.neck` | OK |
+| feature normalizer | `feature_normalizer_config: None` -> `nn.Identity`; no normalizer tensors in the checkpoint | none applied | OK |
+| CLS token to use | `cls_token_per_teacher=True`, `summary_idxs` = teachers with `use_summary` = [siglip2-g, dino_v3_7b]; model returns them concatenated | CLS is 2304 = 2 x 1152, we use slice 0 | OK |
+| text tower call | `text_model`, `pooler_output`, `max_length=64`, pad to max_length | identical | OK |
+| **text canonicalisation** | **`canonicalize_text` before tokenising** | **was missing** | **FIXED** |
+
+`feature_normalization = PHI_STANDARDIZE` appears in the training args and briefly
+looked like a missing inverse transform. It is not: the released model's
+`feature_normalizer` is `nn.Identity`, the checkpoint ships no normalizer tensors,
+and `radio_model.forward` applies it to the backbone features before the adaptors,
+so there is nothing to undo on the output side.
+
+Also checked because it would have invalidated the `roi-dense` result:
+`AttnFDHead.forward(self, x, **kwargs)` ignores the `images`/`patch_size` kwargs
+that `GenericAdaptor` passes it, so calling the siglip2 feature projection without
+them is not a bug. `roi-dense` failing is a real result, not a calling error.
+
+### The canonicalisation fix, measured
+
+The release lowercases, strips punctuation, maps underscores to spaces and
+collapses whitespace (`canonicalize_text`, from big_vision) before tokenising --
+this is the text form SigLIP2 was trained on. We tokenised raw. Re-scored on the
+cached DroneWaste development embeddings, text side only:
+
+| text handling | accuracy | macro-recall |
+|---|---:|---:|
+| raw (every number reported before today) | 0.4782 | 0.4610 |
+| **canonicalised (release behaviour)** | **0.4854** | **0.4677** |
+
++0.0072 for free, 141/3045 predictions changed. Small because most prompts were
+already lowercase and unpunctuated; it bites on the contrastive and EWC-seeded
+lines, which carry commas and slashes.
+
+One variant tested and rejected: mapping `/` to a space before stripping
+punctuation, since the faithful transform turns "Rubble/excavated earth and rocks"
+into "rubbleexcavated earth and rocks". It scores 0.4847, marginally WORSE, so the
+release behaviour is kept unmodified. This matters more for AerialWaste, whose
+class names contain slashes, than for DroneWaste, whose do not.
+
+**Scope of the correction.** Every zero-shot naming and routing number in this
+file predates the fix and is therefore ~0.007 pessimistic. The ranking of arms is
+unaffected (the text change is common to all of them), and the probe, detection
+and compositional numbers do not touch the text tower at all.
